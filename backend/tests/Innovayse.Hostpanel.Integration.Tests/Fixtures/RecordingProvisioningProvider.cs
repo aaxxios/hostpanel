@@ -30,7 +30,7 @@ public sealed class RecordingProvisioningProvider : IProvisioningProvider
 
     /// <inheritdoc/>
     public Task<ProvisioningResult> ProvisionAsync(ProvisionAccountOrder req, CancellationToken ct) =>
-        Task.FromResult(new ProvisioningResult(true, "recording-user-123", null));
+        Task.FromResult(ProvisioningResult.Created("recording-user-123"));
 
     /// <inheritdoc/>
     public Task SuspendAsync(SuspendAccountOrder req, CancellationToken ct)

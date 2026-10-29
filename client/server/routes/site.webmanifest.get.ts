@@ -3,14 +3,9 @@
  *
  * The web app manifest, built from the operator's branding rather than shipped as a file.
  *
- * This replaced a static `public/site.webmanifest` that hardcoded one company's name and
- * listed `/android-chrome-192x192.png` and `/android-chrome-512x512.png` — neither of which
- * has ever existed in `public/`. Every install therefore advertised an installable app whose
- * icons 404, and no amount of uploading a favicon in the admin panel changed it, because
- * nothing here read the settings.
- *
- * Now the icons come from the same set the `<link rel="icon">` tags use: the uploaded one
- * when there is an upload, and the committed `public/` set otherwise. Both exist on disk,
+ * A static file would carry one name and fixed icons whatever the operator uploaded. The
+ * icons come from the same set the `<link rel="icon">` tags use: the uploaded one when
+ * there is an upload, and the committed `public/` set otherwise. Both exist on disk,
  * so the install prompt has something real to show either way.
  */
 
@@ -29,7 +24,7 @@ const MANIFEST_ICON_SIZES = [
  *
  * Duplicated from `utils/brandingIcons.ts` on purpose: that file is auto-imported into the
  * Vue app, and Nitro routes do not share those auto-imports. One shared constant would have
- * to move to `server/utils/`, which the app side then could not reach — so the string is
+ * to move to `server/utils/`, which the app side then could not reach, so the string is
  * written twice and each copy says so.
  */
 const UPLOADS_PREFIX = '/uploads/branding/'
@@ -45,8 +40,8 @@ export default defineEventHandler(async (event) => {
 
   const favicon = (settings[PortalSettingKey.Favicon] ?? '').trim()
 
-  // An upload has its generated set in its own directory; anything else -- nothing set, a URL
-  // the operator pasted, or an upload from before the generator existed -- falls back to the
+  // An upload has its generated set in its own directory; anything else (nothing set, a URL
+  // the operator pasted, or an upload from before the generator existed) falls back to the
   // committed set in `public/`. Both are real files, so the manifest never promises an icon
   // that 404s. Sibling names are only guessed inside a generated directory, where this process
   // wrote them and knows they are there.

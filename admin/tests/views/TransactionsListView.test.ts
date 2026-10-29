@@ -18,9 +18,10 @@ const ledger = () =>
   json({
     transactions: {
       items: [transactionFixture(), transactionFixture({ id: 10, description: 'Refund to client', amountIn: 0, amountOut: 20 })],
-      totalCount: 2,
-      page: 1,
+      pageNumber: 1,
       pageSize: 25,
+      totalCount: 2,
+      totalPages: 1,
     },
     totalIn: 120,
     totalOut: 20,
@@ -59,7 +60,7 @@ describe('TransactionsListView', () => {
     stubRoutes({
       'GET /api/transactions?': () =>
         json({
-          transactions: { items: [transactionFixture({ amountIn: 5000, fees: 100, currency: 'AMD' })], totalCount: 1, page: 1, pageSize: 25 },
+          transactions: { items: [transactionFixture({ amountIn: 5000, fees: 100, currency: 'AMD' })], pageNumber: 1, pageSize: 25, totalCount: 1, totalPages: 1 },
           totalIn: 12,
           totalOut: 0,
           totalFees: 0.25,
@@ -99,6 +100,27 @@ describe('TransactionsListView', () => {
     await flushPromises()
 
     expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(true)
+    expect(wrapper.get('[data-testid="billing-transactions-feedback"]').text()).toBe('Record deleted.')
+  })
+
+  it('shows the API sentence when a delete is refused, and sends nothing when dismissed', async () => {
+    const mock = stubRoutes({
+      'GET /api/transactions?': ledger,
+      'DELETE /api/transactions/9': () => problem('Transaction is settled.', 409),
+    })
+    const wrapper = await mountLedger()
+
+    await wrapper.get('[data-testid="billing-transaction-delete-9"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+
+    await wrapper.get('[data-testid="billing-transaction-delete-9"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-transactions-feedback"]').text()).toBe('Transaction is settled.')
+    expect(wrapper.find('[data-testid="billing-transactions-error"]').exists()).toBe(false)
   })
 
   it('shows the API sentence when the load is refused', async () => {
@@ -106,5 +128,21 @@ describe('TransactionsListView', () => {
     const wrapper = await mountLedger()
 
     expect(wrapper.get('[data-testid="billing-transactions-error"]').text()).toContain('Ledger is unavailable.')
+  })
+
+  it('loads the ledger again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/transactions?': () => {
+        calls += 1
+        return calls === 1 ? problem('Ledger is unavailable.', 403) : ledger()
+      },
+    })
+    const wrapper = await mountLedger()
+
+    await wrapper.get('[data-testid="billing-transactions-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="billing-transactions-error"]').exists()).toBe(false)
   })
 })

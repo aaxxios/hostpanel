@@ -17,7 +17,7 @@
     <!-- Footer supplied by the active template -->
     <component :is="footer" />
 
-    <!-- Floating Action Button (Telegram / WhatsApp / Live Chat) -->
+    <!-- Floating Action Button (messenger links and live chat) -->
     <UiFloatingActions />
 
     <!-- Consent bar: public site only, never on the auth pages (they use no layout) -->
@@ -55,7 +55,7 @@ const footer = slot(TemplateSlot.Footer)
 // assets/styles/global.css.
 useHead({ htmlAttrs: { 'data-template': name } })
 
-// The colour mode is not restored here any more: plugins/color-mode.ts renders the
-// visitor's cookie (or the operator's default) into the <html> class on the server,
-// so there is nothing left for the layout to do on mount.
+// The colour mode is not restored here: plugins/color-mode.ts renders the visitor's
+// cookie (or the operator's default) into the <html> class on the server, so there is
+// nothing for the layout to do on mount.
 </script>

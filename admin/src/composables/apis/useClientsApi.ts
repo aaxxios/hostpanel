@@ -12,9 +12,10 @@ import type { AdminCreateClientPayload } from '@/types/admincreateclientpayload'
 import type { ClientDetail, ClientFilters, ClientListItem, ClientSummaryData, ConfiguredCurrency } from '@/types/client'
 import type { CountryOption } from '@/types/countryoption'
 import type { DomainRegistration } from '@/types/domain'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { ServiceListItem } from '@/types/service'
 import type { UserSearchHit } from '@/types/clientuser'
+import type { UpdateClientPayload } from '@/types/updateclientpayload'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -34,8 +35,8 @@ export const useClientsApi = () => {
    * @param filters - Optional search, email, phone and status filters.
    * @returns One page of clients.
    */
-  const list = (page: number, pageSize: number, filters: ClientFilters = {}): Promise<PagedResult<ClientListItem>> =>
-    request<PagedResult<ClientListItem>>(`${ApiPath.Clients}${buildQuery({ page, pageSize, ...filters })}`)
+  const list = (page: number, pageSize: number, filters: ClientFilters = {}): Promise<PaginatedList<ClientListItem>> =>
+    request<PaginatedList<ClientListItem>>(`${ApiPath.Clients}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Loads one client with its detail.
@@ -55,13 +56,13 @@ export const useClientsApi = () => {
     request<void>(`${ApiPath.Clients}/admin`, { method: HttpMethod.Post, body: JSON.stringify(payload) })
 
   /**
-   * Updates a client profile, address, notification and settings.
+   * Replaces a client profile, address, notification and settings (a full PUT, not a patch).
    *
    * @param id - The client id.
-   * @param payload - Updated fields.
+   * @param payload - The complete record.
    * @returns Nothing.
    */
-  const update = (id: number | string, payload: Record<string, unknown>): Promise<void> =>
+  const update = (id: number | string, payload: UpdateClientPayload): Promise<void> =>
     request<void>(`${ApiPath.Clients}/${id}`, { method: HttpMethod.Put, body: JSON.stringify(payload) })
 
   /**
@@ -71,8 +72,8 @@ export const useClientsApi = () => {
    * @param pageSize - Maximum hits.
    * @returns One page of matching users.
    */
-  const searchUsers = (search: string, pageSize: number): Promise<PagedResult<UserSearchHit>> =>
-    request<PagedResult<UserSearchHit>>(`${ApiPath.AdminUsers}${buildQuery({ search, pageSize, page: 1 })}`)
+  const searchUsers = (search: string, pageSize: number): Promise<PaginatedList<UserSearchHit>> =>
+    request<PaginatedList<UserSearchHit>>(`${ApiPath.AdminUsers}${buildQuery({ search, pageSize, page: 1 })}`)
 
   /**
    * Loads the country reference list.
@@ -146,8 +147,8 @@ export const useClientsApi = () => {
    * @param pageSize - Items to return.
    * @returns One page of services.
    */
-  const recentServices = (clientId: number, pageSize: number): Promise<PagedResult<ServiceListItem>> =>
-    request<PagedResult<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, page: 1, pageSize })}`)
+  const recentServices = (clientId: number, pageSize: number): Promise<PaginatedList<ServiceListItem>> =>
+    request<PaginatedList<ServiceListItem>>(`${ApiPath.Services}${buildQuery({ clientId, page: 1, pageSize })}`)
 
   /**
    * Lists a few domains of a client for the summary table.
@@ -156,8 +157,8 @@ export const useClientsApi = () => {
    * @param pageSize - Items to return.
    * @returns One page of domains.
    */
-  const recentDomains = (clientId: number, pageSize: number): Promise<PagedResult<DomainRegistration>> =>
-    request<PagedResult<DomainRegistration>>(`${ApiPath.Domains}${buildQuery({ clientId, page: 1, pageSize })}`)
+  const recentDomains = (clientId: number, pageSize: number): Promise<PaginatedList<DomainRegistration>> =>
+    request<PaginatedList<DomainRegistration>>(`${ApiPath.Domains}${buildQuery({ clientId, page: 1, pageSize })}`)
 
   return {
     list,

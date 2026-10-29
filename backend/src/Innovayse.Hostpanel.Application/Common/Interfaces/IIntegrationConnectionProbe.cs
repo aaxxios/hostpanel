@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 /// </summary>
 public interface IIntegrationConnectionProbe
 {
-    /// <summary>Gets the integration slug this probe checks (e.g. <c>nameam</c>).</summary>
+    /// <summary>Gets the integration slug this probe checks, one of the <see cref="Innovayse.Hostpanel.Domain.Settings.IntegrationSlugs"/> values.</summary>
     string Slug { get; }
 
     /// <summary>

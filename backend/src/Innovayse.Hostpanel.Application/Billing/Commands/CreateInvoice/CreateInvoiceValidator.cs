@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -13,17 +14,16 @@ public sealed class CreateInvoiceValidator : LocalizedValidator<CreateInvoiceCom
 
     /// <summary>Initializes validator with localization service.</summary>
     /// <param name="localizer">String localizer for validation messages.</param>
-    public CreateInvoiceValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
+    /// <param name="clock">The clock today's date is read from.</param>
+    public CreateInvoiceValidator(IStringLocalizer<ApplicationValidationMessages> localizer, IClock clock)
         : base(localizer)
     {
         RuleFor(x => x.ClientId).MustBePositiveId(L["InvoiceClientIdInvalid"]);
 
-        // Compared by date, not by instant. The rule used to read `d > DateTimeOffset.UtcNow`,
-        // and the admin's date picker sends a date-only value that binds to midnight UTC -- so
-        // "due today", an ordinary thing to raise an invoice for, was always already in the past
-        // and would have been refused the moment this validator started running.
+        // Compared by date, not by instant: the admin's date picker sends a date-only value that
+        // binds to midnight UTC, and "due today" must not count as already in the past.
         RuleFor(x => x.DueDate)
-            .Must(d => d.UtcDateTime.Date >= DateTime.UtcNow.Date)
+            .Must(d => d.UtcDateTime.Date >= clock.UtcNow.UtcDateTime.Date)
             .WithMessage(L["InvoiceDueDateInPast"]);
         RuleFor(x => x.Items).NotEmpty().WithMessage(L["InvoiceItemsRequired"]);
         RuleForEach(x => x.Items).ChildRules(item =>

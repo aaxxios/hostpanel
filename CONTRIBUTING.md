@@ -1,6 +1,6 @@
 # Contributing to HostPanel
 
-Thanks for helping. HostPanel is built by a small team at Innovayse, and every issue, fix,
+Thanks for helping. HostPanel is built by a small team, and every issue, fix,
 translation and review makes a real difference.
 
 ---
@@ -42,7 +42,7 @@ open an issue first so we can agree on the approach before you spend time on cod
 
 Follow the [Quick start](README.md#quick-start-with-docker) and [Development](README.md#run-from-source)
 sections of the README. A plain clone builds and runs with `AUTH_MODE=local`; you do not
-need any token or account from Innovayse.
+need any token or account.
 
 ### Running the backend tests while the dev stack is up
 

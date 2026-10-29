@@ -1,14 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>DELETE /api/clients/{id}/users/{userId}</c>: unlinking a non-owner user from a client account.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class RemoveUserFromClientTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -59,5 +55,46 @@ public sealed class RemoveUserFromClientTests(IntegrationTestFactory factory) : 
         var response = await client.DeleteAsync($"/api/clients/{clientId}/users/{ClientsTestSeeds.NoSuchUserId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>The account owner cannot be removed as a user: the answer is 409 <c>CLIENT_OWNER_CANNOT_BE_REMOVED</c>.</summary>
+    [Fact]
+    public async Task RemoveRefusesTheAccountOwner()
+    {
+        var (clientId, ownerUserId) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.DeleteAsync($"/api/clients/{clientId}/users/{ownerUserId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_OWNER_CANNOT_BE_REMOVED);
+    }
+
+    /// <summary>Removing a user who is not linked answers 404 with <c>CLIENT_USER_NOT_LINKED</c>.</summary>
+    [Fact]
+    public async Task RemoveRefusesAUserWhoIsNotLinked()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.DeleteAsync($"/api/clients/{clientId}/users/{ClientsTestSeeds.NoSuchUserId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_USER_NOT_LINKED);
+    }
+
+    /// <summary>Removing a linked user leaves one activity line naming the client and the acting admin.</summary>
+    [Fact]
+    public async Task RemoveIsAuditedWithTheActingAdmin()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var (userId, _) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "remove-user-audit");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/users", new { memberUserId = userId, permissions = 0 }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await admin.DeleteAsync($"/api/clients/{clientId}/users/{userId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Removed User");
     }
 }

@@ -1,8 +1,7 @@
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Application.Reports.Common;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Reports.Queries.AnnualIncome;
 
@@ -16,34 +15,32 @@ public sealed class AnnualIncomeHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public AnnualIncomeHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public AnnualIncomeHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The year to report on; defaults to the current UTC year.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Twelve rows, January first, zero-filled for months with no paid invoices. Never refuses.</returns>
+    /// <returns>Twelve rows, January first, zero-filled for months with no income, in the base currency. Never refuses.</returns>
     public async Task<Result<IReadOnlyList<AnnualIncomeDto>>> HandleAsync(AnnualIncomeQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var year = query.Year ?? DateTime.UtcNow.Year;
+        var year = query.Year ?? _clock.UtcNow.UtcDateTime.Year;
 
-        var monthly = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => i.Status == InvoiceStatus.Paid && i.CreatedAt.Year == year)
-            .GroupBy(i => i.CreatedAt.Month)
-            .Select(g => new { Month = g.Key, Total = g.Sum(i => i.Total) })
-            .ToListAsync(ct);
+        var income = await _context.GetYearIncomeAsync(year, ct);
 
-        IReadOnlyList<AnnualIncomeDto> rows = Enumerable.Range(1, 12).Select(m => new AnnualIncomeDto(
-            Month: MonthNames[m - 1],
-            Amount: monthly.FirstOrDefault(x => x.Month == m)?.Total ?? 0m
-        )).ToList();
+        IReadOnlyList<AnnualIncomeDto> rows = [.. income.Months.Select((amount, index) =>
+            new AnnualIncomeDto(MonthNames[index], amount, income.Currency))];
 
         return Result<IReadOnlyList<AnnualIncomeDto>>.Success(rows);
     }

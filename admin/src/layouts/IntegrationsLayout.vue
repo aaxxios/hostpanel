@@ -5,8 +5,8 @@
  * Built on the kit's sidebar layout, which cancels the app layout's gutter so the sidebar meets
  * the shell edge.
  */
-import { RouterView } from 'vue-router'
 import IntegrationsInnerSidebar from '@/components/integrations/IntegrationsInnerSidebar.vue'
+import RoutedView from '@/components/layout/RoutedView.vue'
 import UiSidebarLayout from '@/components/ui/UiSidebarLayout.vue'
 </script>
 
@@ -15,6 +15,6 @@ import UiSidebarLayout from '@/components/ui/UiSidebarLayout.vue'
     <template #sidebar>
       <IntegrationsInnerSidebar />
     </template>
-    <RouterView />
+    <RoutedView />
   </UiSidebarLayout>
 </template>

@@ -13,6 +13,6 @@ namespace Innovayse.Hostpanel.Domain.Domains.Events;
 /// <param name="Reason">What went wrong, for staff only.</param>
 public record DomainRenewalFailedEvent(int DomainId, int ClientId, string DomainName, int InvoiceId, string Reason) : IDomainEvent
 {
-    /// <summary>Gets when it happened.</summary>
-    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>When the change was made, UTC, given by whoever raised the event.</summary>
+    public required DateTimeOffset OccurredAt { get; init; }
 }

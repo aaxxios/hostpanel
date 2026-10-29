@@ -1,6 +1,6 @@
 /**
  * Tests for ProductFeaturesModal: the product's specification lines through the store at network
- * level — loading, the empty state, adding, removing and a refusal.
+ * level: loading, the empty state, adding, removing and a refusal.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ProductFeaturesModal from '@/components/settings/ProductFeaturesModal.vue'
@@ -84,8 +84,52 @@ describe('ProductFeaturesModal', () => {
     const { wrapper } = await mountScreen(ProductFeaturesModal, { product })
 
     await wrapper.get('[data-testid="product-feature-remove-7"]').trigger('click')
+    expect(requestsOf(mock)).not.toContain('DELETE /product-features/7')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
     await vi.waitFor(() => {
       expect(requestsOf(mock)).toContain('DELETE /product-features/7')
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="product-features-error"]').text()).toBe('Record deleted.')
+    })
+  })
+
+  it('keeps the line when the removal is dismissed or refused', async () => {
+    const mock = stubRouteTable({
+      'GET /product-features': () => json(lines),
+      'DELETE /product-features/7': () => problem('Line is locked.', 409),
+    })
+    const { wrapper } = await mountScreen(ProductFeaturesModal, { product })
+
+    await wrapper.get('[data-testid="product-feature-remove-7"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    expect(requestsOf(mock)).not.toContain('DELETE /product-features/7')
+
+    await wrapper.get('[data-testid="product-feature-remove-7"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="product-features-error"]').text()).toBe('Line is locked.')
+    })
+    expect(wrapper.find('[data-testid="product-feature-label-7"]').exists()).toBe(true)
+  })
+
+  it('offers a retry when the lines cannot be loaded', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /product-features': () => {
+        calls += 1
+        return calls === 1 ? problem('No such product.', 404) : json(lines)
+      },
+    })
+    const { wrapper } = await mountScreen(ProductFeaturesModal, { product })
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="product-features-load-error"]').text()).toBe('No such product.')
+    })
+    await wrapper.get('[data-testid="product-features-load-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="product-feature-label-7"]').exists()).toBe(true)
     })
   })
 

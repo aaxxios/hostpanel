@@ -1,14 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Commands.CheckOverdueInvoicesCron;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -20,7 +18,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 public sealed class CheckOverdueInvoicesCronTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// Back-dates an invoice's due date through the real "update options" endpoint — there is no
+    /// Back-dates an invoice's due date through the real "update options" endpoint. There is no
     /// direct-write shortcut for this, since the cron's own filter, not a seeded row, is what
     /// every case here proves.
     /// </summary>
@@ -78,7 +76,7 @@ public sealed class CheckOverdueInvoicesCronTests(IntegrationTestFactory factory
         reloaded.Status.Should().Be(InvoiceStatus.Unpaid);
     }
 
-    /// <summary>A draft invoice past what would be its due date is never touched — only Unpaid counts.</summary>
+    /// <summary>A draft invoice past what would be its due date is never touched: only Unpaid counts.</summary>
     [Fact]
     public async Task DraftInvoice_IsNeverMarkedOverdue()
     {
@@ -96,5 +94,48 @@ public sealed class CheckOverdueInvoicesCronTests(IntegrationTestFactory factory
         var reloaded = await readContext.Invoices.AsNoTracking()
             .FirstAsync(i => i.Id == invoiceId, CancellationToken.None);
         reloaded.Status.Should().Be(InvoiceStatus.Draft);
+    }
+
+    /// <summary>
+    /// One invoice whose overdue marking cannot be saved does not stop the run: another overdue
+    /// invoice is still marked, and the failing one is left Unpaid for the next run.
+    /// </summary>
+    [Fact]
+    public async Task OneInvoiceThatCannotBeMarked_DoesNotStopTheOthers()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var poisonedId = 0;
+        using var host = FailingSaveHost.Create(
+            factory,
+            new ManualTimeProvider(now),
+            tracker => tracker.Entries<Invoice>().Any(e => e.State == EntityState.Modified && e.Entity.Id == poisonedId));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var failing = await SeedPastDueInvoiceAsync(context, clientId, now);
+        var other = await SeedPastDueInvoiceAsync(context, clientId, now);
+        poisonedId = failing.Id;
+
+        await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync(new CheckOverdueInvoicesCronCommand(), CancellationToken.None);
+
+        var failingAfter = await context.Invoices.AsNoTracking().FirstAsync(i => i.Id == failing.Id, CancellationToken.None);
+        var otherAfter = await context.Invoices.AsNoTracking().FirstAsync(i => i.Id == other.Id, CancellationToken.None);
+        failingAfter.Status.Should().Be(InvoiceStatus.Unpaid);
+        otherAfter.Status.Should().Be(InvoiceStatus.Overdue);
+    }
+
+    /// <summary>Seeds an unpaid invoice that fell due two days before <paramref name="now"/>.</summary>
+    /// <param name="context">The data context to seed through.</param>
+    /// <param name="clientId">The invoiced client.</param>
+    /// <param name="now">The moment of the run.</param>
+    /// <returns>The saved invoice.</returns>
+    private static async Task<Invoice> SeedPastDueInvoiceAsync(IHostpanelDbContext context, int clientId, DateTimeOffset now)
+    {
+        var invoice = Invoice.Create(clientId, now.AddDays(-2), "USD", now.AddDays(-16));
+        invoice.AddItem("Hosting", 10m, 1);
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(CancellationToken.None);
+        return invoice;
     }
 }

@@ -54,7 +54,7 @@ const columns = computed<ReportColumn[]>(() => [
 </script>
 
 <template>
-  <ReportPage
+  <ReportPage :retry="load"
     :title="t('reports.ticketRatingsReviewer.supportTicketRatingsReviewer')"
     :description="t('reports.ticketRatingsReviewer.thisReportIsShowingAll')"
   >

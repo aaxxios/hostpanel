@@ -1,26 +1,24 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Infrastructure.Auth;
+using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
 /// <summary>
 /// The demo-account rule: while demo mode is on, the sign-in email and password of the two
 /// configured demo accounts cannot change (403 <c>DEMO_ACTION_DISABLED</c>), through the password
-/// reset and through a client edit; other profile fields stay editable. With demo mode off the same
-/// calls behave exactly as before.
+/// reset and through a client edit; other profile fields stay editable. Wrong passwords never lock
+/// those two accounts. With demo mode off the same calls behave exactly as before.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DemoAccountGuardTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -68,7 +66,7 @@ public sealed class DemoAccountGuardTests(IntegrationTestFactory factory) : ICla
         (await users.CreateAsync(user, DemoTestHost.ClientPassword)).Succeeded.Should().BeTrue();
 
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Clients.Add(Client.Create(user.Id, "Plain", "Customer", DemoTestHost.ClientEmail));
+        db.Clients.Add(Client.Create(user.Id, "Plain", "Customer", DemoTestHost.ClientEmail, DateTimeOffset.UtcNow));
         await db.SaveChangesAsync();
     }
 
@@ -218,5 +216,26 @@ public sealed class DemoAccountGuardTests(IntegrationTestFactory factory) : ICla
             $"/api/clients/{clientId}", ClientsTestSeeds.UpdateBody(email: $"moved-{Guid.NewGuid():N}@example.test"));
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>Demo on: wrong passwords past the lockout cap never lock a published demo account.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task WhenEnabled_WrongPasswordsNeverLockADemoAccountAsync()
+    {
+        var host = DemoTestHost.Enabled(factory);
+        await SeedDemoAsync(host);
+        var client = host.CreateClient();
+
+        for (var attempt = 0; attempt <= new SignInLockoutOptions().MaxFailedAttempts; attempt++)
+        {
+            var wrong = await client.PostAsJsonAsync(
+                "/api/auth/login", new { email = DemoTestHost.ClientEmail, password = "Wrong-password-1" });
+            wrong.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var login = await client.PostAsJsonAsync(
+            "/api/auth/login", new { email = DemoTestHost.ClientEmail, password = DemoTestHost.ClientPassword });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

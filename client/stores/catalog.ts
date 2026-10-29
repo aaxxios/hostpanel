@@ -3,13 +3,13 @@
  * slides, the country list and the TLD price table.
  *
  * Every public page reads from here. A server-rendered page wraps one of the load actions in
- * `useAsyncData(key, () => catalog.loadX(), { watch: [...] })` and renders store state, which
+ * `useAsyncData(key, () => catalog.loadX(), { watch })` and renders store state, which
  * `@pinia/nuxt` carries from the server render to the browser. The store owns the loading flag
- * and the failure sentence, so a page holds no `catch`; it never builds a URL either --
+ * and the failure sentence, so a page holds no `catch`; it never builds a URL either:
  * transport belongs to {@link useCatalogApi}.
  *
  * Prices are always requested in the payer's own currency (`stores/currency.ts`), never the
- * page's language; see `docs/superpowers/specs/2026-09-13-multi-currency-pricing-design.md` §5.
+ * page's language.
  *
  * @module stores/catalog
  */

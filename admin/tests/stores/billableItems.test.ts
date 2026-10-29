@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useBillableItemsStore } from '@/stores/billableItems'
+import { BillableItemType } from '@/types/billableitem'
 import { json, stubFetch, stubOffline } from '../helpers/fetch'
 
 describe('billableItemsStore.create', () => {
@@ -20,7 +21,7 @@ describe('billableItemsStore.create', () => {
     stubFetch(json({}), json({ items: [{ id: 1 }], totalCount: 1 }))
     const store = useBillableItemsStore()
 
-    expect(await store.create({ clientId: 1, description: 'x', amount: 1, currency: 'USD', type: 'OneTime' })).toBe(true)
+    expect(await store.create({ clientId: 1, description: 'x', amount: 1, currency: 'USD', type: BillableItemType.OneTime })).toBe(true)
     expect(store.items).toEqual([{ id: 1 }])
   })
 
@@ -28,7 +29,7 @@ describe('billableItemsStore.create', () => {
     stubOffline()
     const store = useBillableItemsStore()
 
-    expect(await store.create({ clientId: 1, description: 'x', amount: 1, currency: 'USD', type: 'OneTime' })).toBe(false)
+    expect(await store.create({ clientId: 1, description: 'x', amount: 1, currency: 'USD', type: BillableItemType.OneTime })).toBe(false)
     expect(store.error).toBe('Could not reach the server. Check your connection and try again.')
   })
 })

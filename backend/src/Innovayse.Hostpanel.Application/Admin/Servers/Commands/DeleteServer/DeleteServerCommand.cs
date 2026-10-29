@@ -4,4 +4,4 @@ namespace Innovayse.Hostpanel.Application.Admin.Servers.Commands.DeleteServer;
 /// Deletes a provisioning server by identifier.
 /// </summary>
 /// <param name="Id">The server to delete.</param>
-public record DeleteServerCommand(int Id);
+public sealed record DeleteServerCommand(int Id);

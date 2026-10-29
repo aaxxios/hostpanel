@@ -46,7 +46,7 @@ defineProps<{
 </script>
 
 <template>
-  <ReportPage :title="title" :description="description">
+  <ReportPage :title="title" :description="description" :retry="report.load">
     <template #filters>
       <ReportFilterBar
         printable

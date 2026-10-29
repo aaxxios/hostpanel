@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Ssl;
+
 /// <summary>Cached SSL certificate check result for a domain.</summary>
 public sealed class SslCheck : BaseEntity
 {
@@ -32,29 +33,31 @@ public sealed class SslCheck : BaseEntity
     /// <param name="issuer">Certificate issuer, or null.</param>
     /// <param name="expiresAt">Certificate expiry, or null.</param>
     /// <param name="isActive">Whether the domain still belongs to an active service.</param>
+    /// <param name="checkedAt">When the probe ran, UTC.</param>
     /// <returns>The new check result.</returns>
-    public static SslCheck Create(string domainName, bool hasSSL, string? issuer, DateTimeOffset? expiresAt, bool isActive)
+    public static SslCheck Create(string domainName, bool hasSSL, string? issuer, DateTimeOffset? expiresAt, bool isActive, DateTimeOffset checkedAt)
         => new()
         {
             DomainName = domainName,
             HasSsl = hasSSL,
             Issuer = issuer,
             ExpiresAt = expiresAt,
-            CheckedAt = DateTimeOffset.UtcNow,
+            CheckedAt = checkedAt,
             IsActive = isActive,
         };
 
-    /// <summary>Updates this SSL check with fresh results.</summary>
+    /// <summary>Records the outcome of a fresh check of the domain and stamps when it ran.</summary>
     /// <param name="hasSSL">Whether a certificate was presented.</param>
     /// <param name="issuer">Certificate issuer, or null.</param>
     /// <param name="expiresAt">Certificate expiry, or null.</param>
     /// <param name="isActive">Whether the domain still belongs to an active service.</param>
-    public void Update(bool hasSSL, string? issuer, DateTimeOffset? expiresAt, bool isActive)
+    /// <param name="checkedAt">When the probe ran, UTC.</param>
+    public void RecordCheck(bool hasSSL, string? issuer, DateTimeOffset? expiresAt, bool isActive, DateTimeOffset checkedAt)
     {
         HasSsl = hasSSL;
         Issuer = issuer;
         ExpiresAt = expiresAt;
-        CheckedAt = DateTimeOffset.UtcNow;
+        CheckedAt = checkedAt;
         IsActive = isActive;
     }
 }

@@ -1,14 +1,14 @@
-using System.Globalization;
-using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Constants;
+using Innovayse.Hostpanel.Application.Billing.Currencies.Common;
+using Innovayse.Hostpanel.Application.Billing.Currencies.Queries.ConvertAmounts;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
-using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Domains.Queries.GetTldPricing;
 
@@ -30,18 +30,23 @@ public sealed class GetTldPricingHandler
     /// <summary>The cache the loaded configs are kept in between calls.</summary>
     private readonly IMemoryCache _cache;
 
+    /// <summary>Wolverine bus, used to convert the sell prices through the billing currencies.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Logger used to record cache misses.</summary>
     private readonly ILogger<GetTldPricingHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the enabled configs are loaded from.</param>
     /// <param name="cache">The cache the loaded configs are kept in between calls.</param>
+    /// <param name="bus">Wolverine bus, used to convert the sell prices through the billing currencies.</param>
     /// <param name="logger">Logger used to record cache misses.</param>
     public GetTldPricingHandler(
-        IHostpanelDbContext context, IMemoryCache cache, ILogger<GetTldPricingHandler> logger)
+        IHostpanelDbContext context, IMemoryCache cache, IMessageBus bus, ILogger<GetTldPricingHandler> logger)
     {
         _context = context;
         _cache = cache;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -51,13 +56,20 @@ public sealed class GetTldPricingHandler
     /// </summary>
     /// <param name="query">The TLD pricing query with optional target currency.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success with the TLD pricing data; this query never refuses.</returns>
+    /// <returns>
+    /// Success with the TLD pricing data, <c>BASE_CURRENCY_NOT_CONFIGURED</c> when no currency is
+    /// asked for and no base currency is stored, or <c>CURRENCY_NOT_FOUND</c> when the asked-for
+    /// currency is not configured.
+    /// </returns>
     public async Task<Result<TldPricingDto>> HandleAsync(GetTldPricingQuery query, CancellationToken ct)
     {
         if (!_cache.TryGetValue(CacheKey, out List<TldConfig>? tldConfigs) || tldConfigs is null)
         {
             _logger.LogInformation("Loading enabled TLD configs from database (cache miss)");
+            // Untracked: the cached list outlives this request's data context, so nothing in it may be
+            // attached to that context or be saved through another request's context by accident.
             tldConfigs = await _context.TldConfigs
+                .AsNoTracking()
                 .Where(x => x.IsEnabled)
                 .OrderBy(x => x.SortOrder)
                 .ThenBy(x => x.Tld)
@@ -65,74 +77,66 @@ public sealed class GetTldPricingHandler
             _cache.Set(CacheKey, tldConfigs, CacheDuration);
         }
 
-        var targetCurrency = string.IsNullOrWhiteSpace(query.TargetCurrency) ? "USD" : query.TargetCurrency;
+        // Every sell price of every TLD, in one fixed order: register, transfer, renew per config.
+        var amounts = tldConfigs
+            .SelectMany(config => SellPriceTables(config)
+                .SelectMany(table => table.Select(kv => new CurrencyAmountDto(kv.Value, config.SellCurrency))))
+            .ToList();
 
-        // Rates are read fresh on every call (cheap, a handful of rows) so an admin rate change shows at once.
-        var currencies = await _context.Currencies
-            .AsNoTracking()
-            .ToDictionaryAsync(c => c.Code, StringComparer.OrdinalIgnoreCase, ct);
+        // No currency asked for means the base currency; billing resolves it, so no code is assumed here.
+        var converted = await _bus.InvokeAsync<Result<ConvertedAmountsDto>>(
+            new ConvertAmountsQuery(query.TargetCurrency, amounts), ct);
+        if (converted.IsFailure)
+        {
+            return Result<TldPricingDto>.FailureCode(converted.ErrorCode!);
+        }
 
-        return Result.Success(MapToDto(tldConfigs, targetCurrency, currencies));
+        return Result.Success(MapToDto(tldConfigs, converted.Value!.Currency, converted.Value.Amounts));
     }
 
+    /// <summary>The sell price tables of a TLD, in the order the converted amounts are read back.</summary>
+    /// <param name="config">The TLD configuration.</param>
+    /// <returns>Register, transfer and renew prices keyed by year count.</returns>
+    private static IReadOnlyList<IReadOnlyDictionary<int, decimal>> SellPriceTables(TldConfig config) =>
+        [config.SellRegister, config.SellTransfer, config.SellRenew];
+
     /// <summary>
-    /// Maps <see cref="TldConfig"/> entities to the API response DTO,
-    /// converting sell prices from the TLD's sell currency to the target currency.
+    /// Maps <see cref="TldConfig"/> entities to the API response DTO, reading the converted sell
+    /// prices back in the order they were sent for conversion.
     /// </summary>
     /// <param name="configs">Enabled TLD configurations from the database.</param>
-    /// <param name="targetCurrency">ISO 4217 currency code to convert to.</param>
-    /// <param name="currencies">The stored currencies, keyed by code, whose rates drive the conversion.</param>
+    /// <param name="targetCurrency">ISO 4217 currency code the prices were converted to.</param>
+    /// <param name="converted">The converted sell prices, in <see cref="SellPriceTables"/> order per config.</param>
     /// <returns>Formatted DTO ready for API serialization.</returns>
     private static TldPricingDto MapToDto(
-        List<TldConfig> configs, string targetCurrency, IReadOnlyDictionary<string, Currency> currencies)
+        List<TldConfig> configs, string targetCurrency, IReadOnlyList<ConvertedAmountDto> converted)
     {
         var prefix = CurrencyCodes.SymbolFor(targetCurrency);
-
-        var pricing = new Dictionary<string, TldPriceEntryDto>();
+        var pricing = new List<TldPriceEntryDto>();
+        var next = 0;
 
         foreach (var config in configs)
         {
-            Func<decimal, string> convert = amount =>
-                ConvertAmount(amount, config.SellCurrency, targetCurrency, currencies);
+            // Read back in the order the amounts were sent (the table's own order), then sorted for
+            // the wire; sorting before the read would pair a price with another period's amount.
+            var tables = SellPriceTables(config)
+                .Select(table => table
+                    .Select(kv => new TldPeriodPriceDto(kv.Key, Round(converted[next++])))
+                    .ToList()
+                    .OrderBy(price => price.Years)
+                    .ToList())
+                .ToList();
 
-            var register = config.SellRegister.ToDictionary(
-                kv => kv.Key.ToString(),
-                kv => convert(kv.Value));
-
-            var transfer = config.SellTransfer.ToDictionary(
-                kv => kv.Key.ToString(),
-                kv => convert(kv.Value));
-
-            var renew = config.SellRenew.ToDictionary(
-                kv => kv.Key.ToString(),
-                kv => convert(kv.Value));
-
-            var categories = config.Categories.ToList();
-
-            pricing[config.Tld] = new TldPriceEntryDto(config.SellCurrency, register, transfer, renew, categories);
+            pricing.Add(new TldPriceEntryDto(
+                config.Tld, config.SellCurrency, tables[0], tables[1], tables[2], config.Categories.ToList()));
         }
 
         return new TldPricingDto(new TldCurrencyDto(targetCurrency.ToUpperInvariant(), prefix), pricing);
     }
 
-    /// <summary>
-    /// Converts one amount through the stored currency rates and formats it to the target's decimals.
-    /// A currency without a stored row cannot be converted, so the amount is shown unconverted
-    /// with two decimals rather than guessed at.
-    /// </summary>
-    /// <param name="amount">The amount in the source currency.</param>
-    /// <param name="fromCode">Source currency code.</param>
-    /// <param name="toCode">Target currency code.</param>
-    /// <param name="currencies">The stored currencies, keyed by code.</param>
-    /// <returns>The converted amount as an invariant-culture string.</returns>
-    private static string ConvertAmount(
-        decimal amount, string fromCode, string toCode, IReadOnlyDictionary<string, Currency> currencies)
-    {
-        if (!currencies.TryGetValue(fromCode, out var source) || !currencies.TryGetValue(toCode, out var target))
-        {
-            return amount.ToString("F2", CultureInfo.InvariantCulture);
-        }
-
-        return source.ConvertTo(amount, target).ToString($"F{target.Decimals}", CultureInfo.InvariantCulture);
-    }
+    /// <summary>Rounds a converted amount to the decimals of its currency, half away from zero.</summary>
+    /// <param name="amount">The converted amount.</param>
+    /// <returns>The amount as it is shown and charged.</returns>
+    private static decimal Round(ConvertedAmountDto amount) =>
+        Math.Round(amount.Amount, amount.Decimals, MidpointRounding.AwayFromZero);
 }

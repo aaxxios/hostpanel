@@ -126,6 +126,9 @@
 <data name="PAYMENT_METHOD_NOT_OWNED" xml:space="preserve">
     <value>Этот способ оплаты не принадлежит этому аккаунту.</value>
   </data>
+<data name="PAYMENT_METHOD_UNAVAILABLE" xml:space="preserve">
+    <value>Этот сохранённый способ оплаты нельзя списать: в этом развёртывании не настроен платёжный шлюз для карт.</value>
+  </data>
 <data name="NO_SAVED_PAYMENT_METHODS" xml:space="preserve">
     <value>У этого аккаунта нет сохранённых способов оплаты.</value>
   </data>
@@ -135,14 +138,17 @@
 <data name="GATEWAY_CHARGE_UPSTREAM_FAILED" xml:space="preserve">
     <value>Платёжный шлюз отклонил списание средств.</value>
   </data>
+  <data name="PAYMENT_GATEWAY_SERVICE_UNAVAILABLE" xml:space="preserve">
+    <value>Платёжный шлюз временно недоступен. Повторите попытку чуть позже.</value>
+  </data>
+  <data name="PAYMENT_METHOD_UPSTREAM_FAILED" xml:space="preserve">
+    <value>Платёжный шлюз не смог обработать запрос по вашим сохранённым способам оплаты. Повторите попытку позже или обратитесь в поддержку.</value>
+  </data>
 <data name="GATEWAY_TRANSACTION_MISSING_UPSTREAM_FAILED" xml:space="preserve">
     <value>Платёжный шлюз сообщил об успехе, но не вернул номер транзакции.</value>
   </data>
 <data name="CLIENT_PROFILE_NOT_FOUND" xml:space="preserve">
     <value>У этого аккаунта нет клиентского профиля, поэтому в клиентской зоне нечего показать.</value>
-  </data>
-<data name="MY_CONTACT_NOT_FOUND" xml:space="preserve">
-    <value>Такого контакта нет.</value>
   </data>
 <data name="INVITATION_NOT_FOUND" xml:space="preserve">
     <value>Такого приглашения нет.</value>
@@ -174,14 +180,14 @@
 <data name="CLIENT_CURRENCY_ALREADY_INVOICED" xml:space="preserve">
     <value>Этому клиенту уже выставлялись счета, поэтому его валюту нельзя изменить.</value>
   </data>
-<data name="CLIENT_STATUS_INVALID" xml:space="preserve">
-    <value>Это не статус клиента, который распознаёт эта установка.</value>
-  </data>
 <data name="EMAIL_LOG_NOT_FOUND" xml:space="preserve">
     <value>Такое письмо не найдено.</value>
   </data>
 <data name="EMAIL_TEMPLATE_NOT_FOUND" xml:space="preserve">
     <value>Такой шаблон письма не найден.</value>
+  </data>
+<data name="EMAIL_TEMPLATE_ALREADY_EXISTS" xml:space="preserve">
+    <value>У этого шаблона уже есть версия на этом языке.</value>
   </data>
 <data name="TICKET_NOT_FOUND" xml:space="preserve">
     <value>Такой тикет не найден.</value>
@@ -273,14 +279,14 @@
 <data name="KBCATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Такая категория базы знаний не найдена.</value>
   </data>
+<data name="KBCATEGORY_IN_USE" xml:space="preserve">
+    <value>В этой категории базы знаний ещё есть подкатегории. Сначала перенесите или удалите их.</value>
+  </data>
 <data name="ANNOUNCEMENT_NOT_FOUND" xml:space="preserve">
     <value>Такое объявление не найдено.</value>
   </data>
 <data name="NETWORKISSUE_NOT_FOUND" xml:space="preserve">
     <value>Такая сетевая проблема не найдена.</value>
-  </data>
-<data name="KB_PUBLISHED_ARTICLE_UNAVAILABLE" xml:space="preserve">
-    <value>Такая статья базы знаний недоступна.</value>
   </data>
 <data name="ORDER_NOT_FOUND" xml:space="preserve">
     <value>Такой заказ не найден.</value>
@@ -296,6 +302,12 @@
   </data>
 <data name="ORDER_CURRENCY_UNAVAILABLE" xml:space="preserve">
     <value>Эта валюта не предлагается.</value>
+  </data>
+  <data name="ACCOUNT_EMAIL_EXISTS" xml:space="preserve">
+    <value>Аккаунт с этим адресом электронной почты уже существует. Войдите, чтобы продолжить.</value>
+  </data>
+  <data name="ORDER_NUMBER_RANGE_EXHAUSTED" xml:space="preserve">
+    <value>Сейчас невозможно присвоить номер заказу. Попробуйте позже.</value>
   </data>
 <data name="ORDER_GUEST_DETAILS_REQUIRED" xml:space="preserve">
     <value>Для оформления этого заказа необходимы имя, email и пароль.</value>
@@ -315,11 +327,17 @@
 <data name="DOWNLOAD_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Такая категория загрузок не найдена.</value>
   </data>
+<data name="DOWNLOAD_CATEGORY_IN_USE" xml:space="preserve">
+    <value>В этой категории загрузок ещё есть подкатегории или файлы. Сначала перенесите или удалите их.</value>
+  </data>
 <data name="PREDEFINED_REPLY_NOT_FOUND" xml:space="preserve">
     <value>Такой готовый ответ не найден.</value>
   </data>
 <data name="PREDEFINED_REPLY_CATEGORY_NOT_FOUND" xml:space="preserve">
     <value>Такая категория готовых ответов не найдена.</value>
+  </data>
+<data name="PREDEFINED_REPLY_CATEGORY_IN_USE" xml:space="preserve">
+    <value>В этой категории готовых ответов ещё есть подкатегории или ответы. Сначала перенесите или удалите их.</value>
   </data>
 <data name="CONTACT_NOT_CONFIGURED" xml:space="preserve">
     <value>Форма обратной связи сейчас недоступна. Пожалуйста, напишите или позвоните нам по контактам на этой странице.</value>
@@ -332,6 +350,9 @@
   </data>
 <data name="CANCELLATION_ALREADY_PENDING" xml:space="preserve">
     <value>Для этой услуги уже есть незавершённый запрос на отмену.</value>
+  </data>
+  <data name="SERVICE_ALREADY_TERMINATED" xml:space="preserve">
+    <value>Эта услуга уже прекращена, её нельзя отменить.</value>
   </data>
 <data name="CANCELLATION_REQUEST_NOT_FOUND" xml:space="preserve">
     <value>Такой запрос на отмену не найден.</value>
@@ -351,8 +372,11 @@
 <data name="PROVISIONING_UPSTREAM_FAILED" xml:space="preserve">
     <value>Не удалось развернуть услугу. Пожалуйста, повторите попытку или обратитесь в поддержку.</value>
   </data>
-<data name="INVALID_SERVICE_STATUS" xml:space="preserve">
-    <value>Это неизвестный статус услуги.</value>
+<data name="SERVICE_FIRST_INVOICE_UNPAID" xml:space="preserve">
+    <value>Эту услугу можно будет настроить после полной оплаты первого счёта.</value>
+  </data>
+<data name="PROVISIONING_ACCOUNT_CONFLICT" xml:space="preserve">
+    <value>Имя хостинг-аккаунта уже занято на сервере. Наша команда уведомлена и завершит настройку.</value>
   </data>
 <data name="SERVICE_NOT_PROVISIONED" xml:space="preserve">
     <value>Эта услуга ещё не развёрнута.</value>
@@ -393,12 +417,6 @@
 <data name="SLIDE_NOT_FOUND" xml:space="preserve">
     <value>Такой слайд не найден.</value>
   </data>
-<data name="SLIDE_IMAGE_TYPE_INVALID" xml:space="preserve">
-    <value>Этот тип файла не поддерживается. Загрузите изображение JPEG, PNG, WebP, GIF или SVG.</value>
-  </data>
-<data name="SLIDE_IMAGE_EXCEEDS_LIMIT" xml:space="preserve">
-    <value>Это изображение слишком большое. Загрузите файл размером менее 5 МБ.</value>
-  </data>
 <data name="SETUP_ALREADY_COMPLETED" xml:space="preserve">
     <value>Эта установка уже настроена, и роль администратора уже кому-то принадлежит. Попросите его выдать вам доступ.</value>
   </data>
@@ -411,14 +429,14 @@
 <data name="SIGN_IN_UNAUTHORIZED" xml:space="preserve">
     <value>Неверный адрес электронной почты или пароль.</value>
   </data>
+<data name="SIGN_IN_ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Слишком много неверных паролей. Учётная запись временно заблокирована, попробуйте позже.</value>
+  </data>
 <data name="PENDING_TOKEN_UNAUTHORIZED" xml:space="preserve">
     <value>Этот шаг входа истёк или недействителен. Войдите снова.</value>
   </data>
 <data name="TWO_FACTOR_CODE_UNAUTHORIZED" xml:space="preserve">
     <value>Код не совпадает. Проверьте приложение-аутентификатор и повторите попытку.</value>
-  </data>
-<data name="SESSION_UNAUTHORIZED" xml:space="preserve">
-    <value>Сессия истекла. Войдите снова.</value>
   </data>
 <data name="TOKEN_INVALID_OR_EXPIRED" xml:space="preserve">
     <value>Ссылка недействительна или устарела. Запросите новую.</value>
@@ -426,14 +444,26 @@
 <data name="REGISTRATION_FAILED" xml:space="preserve">
     <value>Не удалось создать учётную запись. Проверьте данные и повторите попытку.</value>
   </data>
+<data name="TWO_FACTOR_ALREADY_ENABLED" xml:space="preserve">
+    <value>Двухфакторная аутентификация уже включена. Отключите её, прежде чем настраивать заново.</value>
+  </data>
+<data name="CURRENT_PASSWORD_INVALID" xml:space="preserve">
+    <value>Текущий пароль указан неверно.</value>
+  </data>
+<data name="EMAIL_ALREADY_IN_USE" xml:space="preserve">
+    <value>Этот адрес электронной почты уже используется другой учётной записью.</value>
+  </data>
 <data name="MIGRATION_JOB_NOT_FOUND" xml:space="preserve">
     <value>Такое задание миграции не найдено.</value>
   </data>
 <data name="MIGRATION_JOB_NOT_PENDING" xml:space="preserve">
     <value>Это задание миграции уже запущено или завершено и не может быть запущено повторно.</value>
   </data>
-<data name="MIGRATION_JOB_ALREADY_FINISHED" xml:space="preserve">
-    <value>Это задание миграции уже завершено или прервано с ошибкой; новые пакеты данных больше не принимаются.</value>
+<data name="MIGRATION_JOB_NOT_FAILED" xml:space="preserve">
+    <value>Это задание миграции не завершилось с ошибкой, поэтому его нельзя повторить.</value>
+  </data>
+<data name="MIGRATION_JOB_INVALID_TRANSITION" xml:space="preserve">
+    <value>Это задание миграции не может выполнить это действие в текущем состоянии.</value>
   </data>
 <data name="MIGRATION_PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>Плагин миграции недоступен в этой установке.</value>
@@ -443,6 +473,18 @@
   </data>
 <data name="SERVER_NOT_FOUND" xml:space="preserve">
     <value>Такой сервер обслуживания не найден.</value>
+  </data>
+<data name="SERVER_CONNECTION_UNREACHABLE" xml:space="preserve">
+    <value>Не удалось связаться с сервером. Подробности в журнале сервера.</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_ACCESS_HASH" xml:space="preserve">
+    <value>Для этого сервера не задан хеш доступа.</value>
+  </data>
+<data name="SERVER_CONNECTION_NO_API_KEY" xml:space="preserve">
+    <value>Для этого сервера не задан ключ API или хеш доступа.</value>
+  </data>
+<data name="SERVER_CONNECTION_MODULE_UNSUPPORTED" xml:space="preserve">
+    <value>Проверка соединения не поддерживается для модуля этого сервера.</value>
   </data>
 <data name="SERVER_GROUP_NOT_FOUND" xml:space="preserve">
     <value>Такая группа серверов не найдена.</value>
@@ -461,6 +503,18 @@
   </data>
 <data name="PLUGIN_NOT_FOUND" xml:space="preserve">
     <value>Такой плагин не установлен.</value>
+  </data>
+<data name="PLUGIN_ARCHIVE_TOO_LARGE" xml:space="preserve">
+    <value>Архив слишком большой для установки: в нём слишком много файлов или после распаковки он превышает допустимый размер.</value>
+  </data>
+<data name="PLUGIN_HOST_ASSEMBLY_REFUSED" xml:space="preserve">
+    <value>Архив содержит сборку с именем той, что уже есть на сервере, и был отклонён. Удалите её из пакета и загрузите снова.</value>
+  </data>
+<data name="PLUGIN_NOT_TRUSTED" xml:space="preserve">
+    <value>Этого архива нет в списке доверенных пакетов плагинов на сервере.</value>
+  </data>
+<data name="PLUGIN_BUILT_IN" xml:space="preserve">
+    <value>Этот плагин входит в поставку сервера, его нельзя удалить или заменить.</value>
   </data>
 <data name="INTEGRATION_NOT_FOUND" xml:space="preserve">
     <value>Такая интеграция не найдена.</value>
@@ -518,7 +572,7 @@
     <value>Просроченным можно пометить только неоплаченный счёт.</value>
   </data>
   <data name="INVOICE_CANCEL_NOT_ALLOWED" xml:space="preserve">
-    <value>Оплаченный счёт нельзя отменить.</value>
+    <value>Оплаченный, возвращённый или уже отменённый счёт нельзя отменить.</value>
   </data>
   <data name="INVOICE_NOT_PAID" xml:space="preserve">
     <value>Это действие требует, чтобы счёт был оплачен.</value>
@@ -562,11 +616,32 @@
   <data name="CLIENT_ACTIVATE_NOT_ALLOWED" xml:space="preserve">
     <value>Закрытый аккаунт нельзя восстановить таким способом.</value>
   </data>
+  <data name="CLIENT_DEACTIVATE_NOT_ALLOWED" xml:space="preserve">
+    <value>Деактивировать можно только активный аккаунт. Сначала активируйте приостановленный аккаунт; закрытый аккаунт изменить нельзя.</value>
+  </data>
+  <data name="CLIENT_SUSPENDED" xml:space="preserve">
+    <value>Аккаунт приостановлен: он не может оформлять заказы и оплачивать онлайн. Обратитесь в поддержку, чтобы его возобновили.</value>
+  </data>
+  <data name="CLIENT_CLOSED" xml:space="preserve">
+    <value>Аккаунт закрыт: он больше не может оформлять заказы и получать счета.</value>
+  </data>
+  <data name="CLIENT_OWNER_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>Владельца аккаунта нельзя удалить. Сначала передайте владение другому пользователю.</value>
+  </data>
+  <data name="CONTACT_EMAIL_IN_USE" xml:space="preserve">
+    <value>Другой контакт этого клиента уже использует этот адрес электронной почты.</value>
+  </data>
+  <data name="CLIENT_RECORD_CLOSED" xml:space="preserve">
+    <value>Аккаунт закрыт: его контакты и пользователей больше нельзя изменять.</value>
+  </data>
   <data name="DOMAIN_CANCEL_NOT_ALLOWED" xml:space="preserve">
     <value>Статус этого домена не позволяет отмену.</value>
   </data>
   <data name="DOMAIN_RENEW_NOT_ALLOWED" xml:space="preserve">
     <value>Статус этого домена не позволяет продление.</value>
+  </data>
+  <data name="DOMAIN_LINK_NOT_ALLOWED" xml:space="preserve">
+    <value>Статус этого домена не позволяет привязать к нему услугу хостинга.</value>
   </data>
   <data name="DOMAIN_DNS_RECORD_NOT_FOUND" xml:space="preserve">
     <value>На этом домене нет такой DNS-записи.</value>
@@ -687,5 +762,122 @@
   </data>
   <data name="SSH_AGENT_ENDPOINT_IN_USE" xml:space="preserve">
     <value>Этот хост и порт агента уже использует другой сервер.</value>
+  </data>
+  <data name="PAYMENT_INTENT_MISMATCH" xml:space="preserve">
+    <value>Этот платёж картой не соответствует счёту этого заказа.</value>
+  </data>
+  <data name="PAYMENT_INTENT_ALREADY_USED" xml:space="preserve">
+    <value>Этот платёж картой уже зарегистрирован.</value>
+  </data>
+  <data name="REGISTRAR_NOT_CONFIGURED" xml:space="preserve">
+    <value>Регистратор этого домена не настроен.</value>
+  </data>
+  <data name="REGISTRAR_ORDER_UPSTREAM_FAILED" xml:space="preserve">
+    <value>Регистратор отклонил запрос. Повторите попытку позже.</value>
+  </data>
+  <data name="REGISTRAR_OPERATION_UNSUPPORTED" xml:space="preserve">
+    <value>Регистратор не поддерживает это действие. Обратитесь в поддержку регистратора.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_FOUND" xml:space="preserve">
+    <value>У регистратора нет этого домена.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_NOT_ACTIVE" xml:space="preserve">
+    <value>Регистратор ещё не активировал этот домен.</value>
+  </data>
+  <data name="REGISTRAR_WHOIS_PRIVACY_UNAVAILABLE" xml:space="preserve">
+    <value>У этого домена нет подписки на защиту WHOIS у регистратора.</value>
+  </data>
+  <data name="REGISTRAR_DOMAIN_UNAVAILABLE" xml:space="preserve">
+    <value>Регистратор сообщает, что это доменное имя недоступно.</value>
+  </data>
+  <data name="REGISTRAR_INSUFFICIENT_FUNDS" xml:space="preserve">
+    <value>На счёте у регистратора недостаточно средств для этой покупки.</value>
+  </data>
+  <data name="REGISTRAR_CONTACT_VALIDATION_FAILED" xml:space="preserve">
+    <value>Контактные данные владельца домена неполные, поэтому заказ нельзя отправить регистратору.</value>
+  </data>
+  <data name="TRANSACTION_AMOUNT_REQUIRED" xml:space="preserve">
+    <value>У транзакции должна быть входящая или исходящая сумма.</value>
+  </data>
+  <data name="INVOICE_REFUND_EXCEEDS_PAID" xml:space="preserve">
+    <value>Сумма возврата больше, чем было оплачено и ещё не возвращено.</value>
+  </data>
+  <data name="INVOICE_CREDIT_EXCEEDS_DUE" xml:space="preserve">
+    <value>Сумма кредита больше, чем осталось оплатить по счёту.</value>
+  </data>
+  <data name="INVOICE_NOT_GATEWAY_PAID" xml:space="preserve">
+    <value>По этому счёту деньги не принимал платёжный шлюз, поэтому вернуть их через шлюз нельзя.</value>
+  </data>
+  <data name="CARD_REFUND_REFUSED" xml:space="preserve">
+    <value>Платёжный шлюз карт отклонил возврат. Часть, которую он уже вернул, записана в счёте.</value>
+  </data>
+  <data name="INVOICE_REFUND_CONFLICT" xml:space="preserve">
+    <value>Другой возврат по этому счёту ещё ждёт ответа платёжного шлюза. Повторите, когда он завершится.</value>
+  </data>
+  <data name="GATEWAY_REFUND_REFUSED" xml:space="preserve">
+    <value>Платёжный шлюз отклонил возврат или не смог его выполнить. Через него ничего не возвращено.</value>
+  </data>
+  <data name="GATEWAY_PAYMENT_MISMATCH" xml:space="preserve">
+    <value>Платёжный шлюз сообщил сумму или валюту, которая не совпадает со счётом.</value>
+  </data>
+  <data name="INVOICE_NOT_DELETABLE" xml:space="preserve">
+    <value>Удалить можно только черновик или отменённый счёт.</value>
+  </data>
+  <data name="SERVICE_STATUS_CHANGE_NOT_ALLOWED" xml:space="preserve">
+    <value>Эту услугу нельзя перевести в этот статус.</value>
+  </data>
+  <data name="SERVICE_AUTOMATION_INCONSISTENT" xml:space="preserve">
+    <value>Дату отсрочки можно указать только вместе с отсрочкой приостановки, а причину прекращения только вместе с прекращением в конце цикла.</value>
+  </data>
+  <data name="SERVICE_NOT_TERMINATED" xml:space="preserve">
+    <value>Дату прекращения можно исправить только у прекращённой услуги.</value>
+  </data>
+  <data name="SERVICE_HOSTING_DETAILS_MISSING" xml:space="preserve">
+    <value>У услуги ещё нет домена или имени пользователя. Сначала настройте хостинг-аккаунт.</value>
+  </data>
+  <data name="PRODUCT_PACKAGE_MISSING" xml:space="preserve">
+    <value>У продукта не указан хостинг-пакет. Сначала выберите его в настройках продукта.</value>
+  </data>
+  <data name="INVOICE_PAYMENT_EXCEEDS_DUE" xml:space="preserve">
+    <value>Платёж превышает сумму, которую ещё нужно оплатить по счёту.</value>
+  </data>
+  <data name="INVOICE_AMOUNT_STILL_DUE" xml:space="preserve">
+    <value>По счёту ещё есть задолженность, поэтому его нужно оплатить, а не просто отметить оплаченным.</value>
+  </data>
+  <data name="INVOICE_HAS_PAYMENTS" xml:space="preserve">
+    <value>По счёту уже принят платёж. Сначала верните или удалите этот платёж.</value>
+  </data>
+  <data name="INVOICE_TOTAL_BELOW_PAID" xml:space="preserve">
+    <value>После изменения счёт стал бы меньше уже принятых по нему платежей.</value>
+  </data>
+  <data name="SERVER_IN_USE" xml:space="preserve">
+    <value>На этом сервере ещё есть услуги клиентов или SSH-ключи. Сначала перенесите или удалите их.</value>
+  </data>
+  <data name="SERVER_GROUP_IN_USE" xml:space="preserve">
+    <value>Эту группу серверов ещё используют продукты. Сначала назначьте им другую группу.</value>
+  </data>
+  <data name="USER_NOT_FOUND" xml:space="preserve">
+    <value>Такой пользователь не найден.</value>
+  </data>
+  <data name="USER_CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>Нельзя удалить собственную учётную запись.</value>
+  </data>
+  <data name="USER_LAST_ADMIN" xml:space="preserve">
+    <value>Это последний активный администратор. Сначала назначьте администратором другого пользователя.</value>
+  </data>
+  <data name="EXCHANGE_RATE_SOURCE_UNAVAILABLE" xml:space="preserve">
+    <value>Источник курсов валют сейчас не отвечает. Повторите попытку позже.</value>
+  </data>
+  <data name="EXCHANGE_RATE_BASE_NOT_QUOTED" xml:space="preserve">
+    <value>Источник курсов валют не публикует курс базовой валюты.</value>
+  </data>
+  <data name="CLIENT_CARD_PAYMENT_DISABLED" xml:space="preserve">
+    <value>Для этого аккаунта оплата картой отключена. Оплатите другим способом или обратитесь в поддержку.</value>
+  </data>
+  <data name="CLIENT_SSO_DISABLED" xml:space="preserve">
+    <value>Единый вход в панель хостинга для этого аккаунта не включён.</value>
+  </data>
+  <data name="CLIENT_TAX_EXEMPT" xml:space="preserve">
+    <value>Клиент освобождён от налога, поэтому для его счетов нельзя задать налоговую ставку.</value>
   </data>
 </root>

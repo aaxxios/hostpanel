@@ -1,9 +1,11 @@
-using Innovayse.Hostpanel.Application.Clients.Common;
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
 using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Application.Services.Commands.SuspendService;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Innovayse.Hostpanel.Domain.Services.Enums;
@@ -24,26 +26,21 @@ public sealed class DomainExpiredHandler
     /// <summary>Wolverine bus used to suspend the linked service and to send the notification email.</summary>
     private readonly IMessageBus _bus;
 
-    /// <summary>The data context the domain and the owning client are read from.</summary>
+    /// <summary>The data context the domain is read from.</summary>
     private readonly IHostpanelDbContext _context;
-
-    /// <summary>Resolves the owning client's identity user, for the notification email address.</summary>
-    private readonly IIdentityProvider _identity;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DomainExpiredHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Wolverine bus used to suspend the linked service and to send the notification email.</param>
-    /// <param name="context">The data context the domain and the owning client are read from.</param>
-    /// <param name="identity">Resolves the owning client's identity user, for the notification email address.</param>
+    /// <param name="context">The data context the domain is read from.</param>
     /// <param name="logger">Structured logger.</param>
     public DomainExpiredHandler(
-        IMessageBus bus, IHostpanelDbContext context, IIdentityProvider identity, ILogger<DomainExpiredHandler> logger)
+        IMessageBus bus, IHostpanelDbContext context, ILogger<DomainExpiredHandler> logger)
     {
         _bus = bus;
         _context = context;
-        _identity = identity;
         _logger = logger;
     }
 
@@ -108,16 +105,14 @@ public sealed class DomainExpiredHandler
     {
         try
         {
-            var client = await _context.Clients
-                .IncludeChildren()
-                .FirstOrDefaultAsync(c => c.Id == evt.ClientId, ct);
+            var client = await _bus.FindClientBriefAsync(evt.ClientId, withEmail: true, ct);
             if (client is null)
             {
                 return;
             }
 
-            var user = await _identity.FindBySubjectAsync(client.UserId, ct);
-            if (user is null)
+            var email = client.Email;
+            if (email is null)
             {
                 return;
             }
@@ -126,22 +121,15 @@ public sealed class DomainExpiredHandler
                 .IncludeChildren()
                 .FirstOrDefaultAsync(x => x.Id == evt.DomainId, ct);
 
-            var data = new
-            {
-                domain = new
-                {
-                    id = evt.DomainId,
-                    name = domain?.Name,
-                    linkedServiceId = evt.LinkedServiceId,
-                }
-            };
+            var data = new DomainExpiredTemplateModel(
+                new ExpiredDomainTemplateData(evt.DomainId, domain?.Name, evt.LinkedServiceId));
 
-            await _bus.InvokeAsync(new SendEmailCommand(user.Email, "domain-expired", data), ct);
+            await _bus.InvokeAsync(new SendEmailCommand(email, client.Language, "domain-expired", data, new ContactCopy(evt.ClientId, ContactNotification.Domain)), ct);
 
             _logger.LogInformation(
                 "Sent domain-expired notification for domain {DomainId} to {Email}.",
                 evt.DomainId,
-                user.Email);
+                email);
         }
         catch (Exception ex)
         {

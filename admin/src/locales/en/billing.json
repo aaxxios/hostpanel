@@ -2,7 +2,12 @@
   "invoiceCreditTab": {
     "addCreditToInvoice": "Add Credit to Invoice",
     "valueUsdAvailable": "${value} USD Available",
-    "removeCreditFromInvoice": "Remove Credit from Invoice"
+    "removeCreditFromInvoice": "Remove Credit from Invoice",
+    "creditApplied": "Credit applied to the invoice.",
+    "creditRemoved": "Credit removed from the invoice.",
+    "confirmRemoveCreditTitle": "Remove credit?",
+    "confirmRemoveCreditMessage": "Remove {amount} of credit from invoice #{id}?",
+    "removeCredit": "Remove credit"
   },
   "invoiceNotesTab": {
     "thereAreNoNotesOn": "There are no notes on this invoice."
@@ -15,14 +20,14 @@
     "publishTheInvoiceBeforeAdding": "Publish the invoice before adding payments.",
     "invoiceIsCancelledPleaseMark": "Invoice is Cancelled: Please Mark Unpaid first to apply a payment.",
     "addPayment": "Add Payment",
-    "gatewayReference": "Gateway reference"
+    "gatewayReference": "Gateway reference",
+    "paymentAdded": "Payment recorded."
   },
   "invoiceRefundTab": {
     "thereAreNoTransactionsThat": "There are no transactions that are eligible for a refund.",
     "publishTheInvoiceBeforeRequesting": "Publish the invoice before requesting a refund.",
     "cannotRefundACancelledInvoice": "Cannot refund a cancelled invoice.",
     "thisInvoiceHasAlreadyBeen": "This invoice has already been refunded.",
-    "leaveBlankForFullRefund": "Leave blank for full refund",
     "refundType": "Refund Type",
     "externalRefundReference": "External refund reference",
     "warning": "WARNING",
@@ -35,34 +40,32 @@
     "refundThroughGateway": "Refund through Gateway",
     "manualRefundProcessedExternally": "Manual Refund Processed Externally",
     "noTransactionsAppliedToThis": "No Transactions Applied To This Invoice Yet",
-    "selectATransaction": "Select a transaction..."
+    "selectATransaction": "Select a transaction...",
+    "confirmRefundTitle": "Confirm refund",
+    "confirmRefundMessage": "Refund {amount} by \"{method}\"? This cannot be undone.",
+    "refunded": "Refund sent."
   },
   "invoiceSummaryTab": {
     "thisIsADraftInvoice": "This is a Draft Invoice. The client is not able to see or access this invoice until it is published.",
     "viewInvoices": "( View Invoices )",
     "invoiceAmount": "Invoice Amount",
-    "lastCaptureAttempt": "Last Capture Attempt:",
     "paymentMethod": "Payment Method:",
     "publish": "Publish",
-    "attemptCapture": "Attempt Capture",
-    "markPaid": "Mark Paid"
+    "markPaid": "Mark Paid",
+    "published": "Invoice published.",
+    "cancelled": "Invoice cancelled.",
+    "markedPaid": "Invoice marked as paid.",
+    "confirmCancelTitle": "Cancel invoice",
+    "confirmCancelMessage": "Cancel invoice #{id}? The client will no longer be able to pay it.",
+    "confirmMarkPaidTitle": "Mark invoice paid",
+    "confirmMarkPaidMessage": "Mark invoice #{id} as paid? The outstanding {amount} is settled without a recorded payment."
   },
   "addBillableItem": {
     "createANewBillableItem": "Create a new billable item for a client",
     "whatIsThisChargeFor": "What is this charge for?",
-    "recurEvery": "Recur Every",
-    "nextDueDate": "(Next) Due Date",
-    "donTInvoiceForNow": "Don't Invoice for Now",
-    "invoiceOnNextCronRun": "Invoice on Next Cron Run",
-    "addToUserSNext": "Add to User's Next Invoice",
-    "invoiceAsNormalForDue": "Invoice as Normal for Due Date",
-    "recurringEvery": "Recurring Every",
-    "dayS": "Day(s)",
-    "weekS": "Week(s)",
-    "monthS": "Month(s)",
-    "yearS": "Year(s)",
-    "oneTime": "One Time",
-    "recurUnit": "Period"
+    "invoiceOn": "Invoice on",
+    "nextDueDate": "Next due date",
+    "recurringPeriod": "Recurring Period"
   },
   "addQuote": {
     "createQuote": "Create Quote",
@@ -108,7 +111,8 @@
     "activeRecurring": "Active Recurring",
     "completedRecurring": "Completed Recurring",
     "deleteItems": "Delete billable items",
-    "deleteItemsMessage": "Delete {count} selected billable item? This action cannot be undone. | Delete {count} selected billable items? This action cannot be undone."
+    "deleteItemsMessage": "Delete {count} selected billable item? This action cannot be undone. | Delete {count} selected billable items? This action cannot be undone.",
+    "itemsDeleted": "Billable items deleted."
   },
   "disputes": {
     "listDisputes": "List Disputes",
@@ -152,7 +156,6 @@
   "invoicesList": {
     "manageBillingInvoices": "Manage billing invoices",
     "dateRefunded": "Date Refunded",
-    "dateCancelled": "Date Cancelled",
     "totalcountRecordsFoundShowingValue": "{totalCount} Records Found, Showing {value} to {value2}",
     "markPaid": "Mark Paid",
     "markUnpaid": "Mark Unpaid",
@@ -162,7 +165,11 @@
     "deleteInvoice": "Delete invoice",
     "deleteInvoiceMessage": "Delete invoice #{id}? This action cannot be undone.",
     "deleteInvoices": "Delete invoices",
-    "deleteInvoicesMessage": "Delete {count} selected invoice? This action cannot be undone. | Delete {count} selected invoices? This action cannot be undone."
+    "deleteInvoicesMessage": "Delete {count} selected invoice? This action cannot be undone. | Delete {count} selected invoices? This action cannot be undone.",
+    "bulkActionDone": "Done for the selected invoices.",
+    "invoiceDeleted": "Invoice deleted.",
+    "cancelInvoices": "Cancel invoices",
+    "cancelInvoicesMessage": "Mark {count} selected invoice as cancelled? | Mark {count} selected invoices as cancelled?"
   },
   "offlineCC": {
     "offlineCreditCardProcessing": "Offline Credit Card Processing",

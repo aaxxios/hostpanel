@@ -4,8 +4,8 @@ namespace Innovayse.Hostpanel.Shared.Contracts.Interfaces;
 /// Turns an error code into the sentence a person reads, in the current request's language.
 /// </summary>
 /// <remarks>
-/// A contract declared here and implemented elsewhere — the Application layer implements it over
-/// <c>ErrorMessages.resx</c> — so the base controller can localize without referencing the
+/// A contract declared here and implemented elsewhere, the Application layer implements it over
+/// <c>ErrorMessages.resx</c>, so the base controller can localize without referencing the
 /// Application layer's resource types.
 /// </remarks>
 public interface IErrorMessageResolver

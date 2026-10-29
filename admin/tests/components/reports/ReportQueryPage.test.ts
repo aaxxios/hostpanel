@@ -8,6 +8,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import ReportQueryPage from '@/components/reports/ReportQueryPage.vue'
 import type { ReportColumn } from '@/types/reportcolumn'
 import type { ReportQueryView } from '@/types/reportquery'
+import { useReportsStore } from '@/stores/reports'
 import { createTestI18n } from '../../helpers/i18n'
 
 /** Every column of the test report. */
@@ -31,6 +32,7 @@ const makeReport = (overrides: Partial<ReportQueryView> = {}): ReportQueryView =
   ranges: { created: null },
   visibleKeys: new Set(['id', 'clientName']),
   activeColumns: columns,
+  load: vi.fn(() => Promise.resolve()),
   generate: vi.fn(() => Promise.resolve()),
   goToPage: vi.fn(() => Promise.resolve()),
   setFilters: vi.fn(),
@@ -107,6 +109,17 @@ describe('ReportQueryPage', () => {
     const wrapper = mountPage(report, true)
     await wrapper.get('[data-testid="report-export"]').trigger('click')
     expect(report.exportCsv).toHaveBeenCalledTimes(1)
+  })
+
+  it('reloads the current page through the state when Retry is pressed after a refused load', async () => {
+    const report = makeReport()
+    const wrapper = mountPage(report)
+    useReportsStore().error = 'No access.'
+    await wrapper.vm.$nextTick()
+
+    await wrapper.get('[data-testid="report-error-retry"]').trigger('click')
+
+    expect(report.load).toHaveBeenCalledTimes(1)
   })
 
   it('shows the pager only when the rows do not fit one page', () => {

@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import UiRichText from '~/components/ui/UiRichText.vue'
+import { EXTERNAL_LINK_REL } from '~/utils/ui/richText'
 
 /**
  * Renders an HTML body through the component.
@@ -43,7 +44,7 @@ describe('UiRichText', () => {
     const [external, internal] = wrapper.findAll('a')
     expect(external?.attributes('href')).toBe('https://example.com/x')
     expect(external?.attributes('target')).toBe('_blank')
-    expect(external?.attributes('rel')).toBe('noopener noreferrer nofollow')
+    expect(external?.attributes('rel')).toBe(EXTERNAL_LINK_REL)
     expect(internal?.attributes('href')).toBe('/docs')
     expect(internal?.attributes('target')).toBeUndefined()
   })

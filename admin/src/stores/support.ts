@@ -45,8 +45,14 @@ export const useSupportStore = defineStore('support', () => {
   /** True while a load or create request is in flight. */
   const loading = ref(false)
 
-  /** Sentence for the last failed call, null when none. */
+  /** Sentence for the last failed load, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused create, update, delete, reply, flag or bulk action, null when none. */
+  const actionError = ref<string | null>(null)
+
+  /** Sentence for the last failed department lookup, null when none; a form offers a retry. */
+  const departmentsError = ref<string | null>(null)
 
   /** Per-field messages of the last refused create, keyed by camelCase field name. */
   const fieldErrors = ref<Record<string, string>>({})
@@ -120,15 +126,13 @@ export const useSupportStore = defineStore('support', () => {
   }
 
   /**
-   * Loads the departments for dropdown options. A failure leaves the list as it was and is not
-   * shown: the pages work without the dropdown being filled.
+   * Loads the departments for dropdown options. A failure leaves the list as it was and lands in
+   * `departmentsError`, so the form can show it with a retry.
    *
    * @returns True when loaded.
    */
   const fetchDepartments = async (): Promise<boolean> => {
-    /** Throwaway error ref: the departments are optional, so their failure is deliberately silent. */
-    const quiet = ref<string | null>(null)
-    const result = await runAction(quiet, () => api.listDepartments())
+    const result = await runAction(departmentsError, () => api.listDepartments())
     if (result.ok) {
       departments.value = result.value
     }
@@ -139,11 +143,11 @@ export const useSupportStore = defineStore('support', () => {
    * Opens a ticket on behalf of a client.
    *
    * @param payload - Ticket creation data.
-   * @returns The new ticket's id, or null when refused (see `error` and `fieldErrors`).
+   * @returns The new ticket's id, or null when refused (see `actionError` and `fieldErrors`).
    */
   const createTicket = async (payload: CreateTicketPayload): Promise<number | null> => {
     loading.value = true
-    const result = await runAction(error, () => api.createTicket(payload), fieldErrors)
+    const result = await runAction(actionError, () => api.createTicket(payload), fieldErrors)
     loading.value = false
     return result.ok ? result.value : null
   }
@@ -153,48 +157,48 @@ export const useSupportStore = defineStore('support', () => {
    *
    * @param id - The ticket identifier.
    * @param payload - Fields to update.
-   * @returns True when accepted; false when refused (see `error`).
+   * @returns True when accepted; false when refused (see `actionError`).
    */
   const updateTicket = async (id: number | string, payload: UpdateTicketPayload): Promise<boolean> =>
-    (await runAction(error, () => api.updateTicket(id, payload))).ok
+    (await runAction(actionError, () => api.updateTicket(id, payload))).ok
 
   /**
    * Permanently deletes a ticket.
    *
    * @param id - The ticket identifier.
-   * @returns True when deleted; false when refused (see `error`).
+   * @returns True when deleted; false when refused (see `actionError`).
    */
   const deleteTicket = async (id: number | string): Promise<boolean> =>
-    (await runAction(error, () => api.deleteTicket(id))).ok
+    (await runAction(actionError, () => api.deleteTicket(id))).ok
 
   /**
    * Adds a staff reply to a ticket.
    *
    * @param id - The ticket identifier.
    * @param message - The reply message body.
-   * @returns True when sent; false when refused (see `error`).
+   * @returns True when sent; false when refused (see `actionError`).
    */
   const replyToTicket = async (id: number | string, message: string): Promise<boolean> =>
-    (await runAction(error, () => api.replyToTicket(id, { message }))).ok
+    (await runAction(actionError, () => api.replyToTicket(id, { message }))).ok
 
   /**
    * Flips the flagged state of a ticket.
    *
    * @param id - The ticket identifier.
-   * @returns True when toggled; false when refused (see `error`).
+   * @returns True when toggled; false when refused (see `actionError`).
    */
   const toggleFlag = async (id: number | string): Promise<boolean> =>
-    (await runAction(error, () => api.toggleFlag(id))).ok
+    (await runAction(actionError, () => api.toggleFlag(id))).ok
 
   /**
    * Runs one action on several tickets.
    *
    * @param ticketIds - The tickets the action applies to.
    * @param action - The bulk action to run.
-   * @returns True when accepted; false when refused (see `error`).
+   * @returns True when accepted; false when refused (see `actionError`).
    */
   const bulkAction = async (ticketIds: number[], action: TicketBulkAction): Promise<boolean> =>
-    (await runAction(error, () => api.bulkAction({ ticketIds, action }))).ok
+    (await runAction(actionError, () => api.bulkAction({ ticketIds, action }))).ok
 
   return {
     tickets,
@@ -204,6 +208,8 @@ export const useSupportStore = defineStore('support', () => {
     overviewStats,
     loading,
     error,
+    actionError,
+    departmentsError,
     fieldErrors,
     page,
     pageSize,

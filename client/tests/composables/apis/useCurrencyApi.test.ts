@@ -12,6 +12,7 @@ import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { useCurrencyApi } from '~/composables/apis/useCurrencyApi'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -26,7 +27,7 @@ const api = useCurrencyApi()
 
 /** Every endpoint function with the request it must send. */
 const rows: ExpectedRequest[] = [
-  { name: 'loadBillingCurrencies reads the operator currencies', call: () => api.loadBillingCurrencies(), method: 'GET', url: '/api/portal/public/billing-currencies' },
+  { name: 'loadBillingCurrencies reads the operator currencies', call: () => api.loadBillingCurrencies(), method: HttpMethod.Get, url: '/api/portal/public/billing-currencies' },
 ]
 
 describe('useCurrencyApi', () => {

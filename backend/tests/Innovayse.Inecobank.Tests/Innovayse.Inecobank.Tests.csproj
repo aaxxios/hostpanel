@@ -18,6 +18,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The stub server hosts Kestrel, so the test assembly needs the ASP.NET Core shared framework. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One stub HTTP server for every adapter test project: linked, not copied. -->
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\StubHttpServer.cs" Link="Fixtures\StubHttpServer.cs" />
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\StubReply.cs" Link="Fixtures\StubReply.cs" />
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\RecordedCall.cs" Link="Fixtures\RecordedCall.cs" />
+    <Compile Include="..\Innovayse.Hostpanel.Integration.Tests\Fixtures\RedirectToStubHandler.cs" Link="Fixtures\RedirectToStubHandler.cs" />
     <ProjectReference Include="..\..\src\Innovayse.Providers.Inecobank\Innovayse.Providers.Inecobank.csproj" />
   </ItemGroup>
 </Project>

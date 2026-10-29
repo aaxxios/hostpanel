@@ -8,6 +8,7 @@ import type { PlanCard } from '~/types/plancard'
  * @param id Product id.
  * @param priceMonthly Formatted monthly price.
  * @param priceAnnual Formatted annual price expressed per month.
+ * @returns The plan card.
  */
 const plan = (id: number, priceMonthly: string, priceAnnual = '—'): PlanCard => ({
   id,
@@ -20,7 +21,12 @@ const plan = (id: number, priceMonthly: string, priceAnnual = '—'): PlanCard =
   href: `/configure/${id}`,
 })
 
-/** A plan the catalogue prices at nothing. */
+/**
+ * A plan the catalogue prices at nothing.
+ *
+ * @param id Product id.
+ * @returns The free plan card.
+ */
 const freePlan = (id: number): PlanCard => ({ ...plan(id, '$0.00', '$0.00'), isFree: true })
 
 describe('parseAmount', () => {
@@ -106,7 +112,7 @@ describe('popularPlanId', () => {
     const plans = [freePlan(1), plan(2, '$3.00'), plan(3, '$6.00'), plan(4, '$9.00')]
 
     // Without the exclusion the zero would be the cheapest of four and the badge
-    // would land on plan 2 — the cheapest plan anybody actually pays for.
+    // would land on plan 2: the cheapest plan anybody actually pays for.
     expect(popularPlanId(plans)).toBe(3)
   })
 

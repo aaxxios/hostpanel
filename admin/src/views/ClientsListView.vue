@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Clients list view — paginated table with advanced filter bar.
+ * Clients list view: paginated table with advanced filter bar.
  */
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,11 +10,11 @@ import type { ClientFilters } from '@/types/client'
 import { ClientStatus } from '@/types/client'
 import { clientStatusTone } from '@/lib/tones'
 import { formatDate } from '@/lib/format'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiFilterCard from '@/components/ui/UiFilterCard.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -66,7 +66,7 @@ const emailFilter = ref('')
 const phoneFilter = ref('')
 
 /** Status filter; empty means any. */
-const statusFilter = ref('')
+const statusFilter = ref<ClientStatus | ''>('')
 
 /** Status filter options. */
 const statusOptions = computed(() => [
@@ -246,9 +246,13 @@ onMounted(() => store.fetchAll())
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientsList.loadingClients') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="store.error" variant="error" data-testid="clients-list-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="clients-list-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else-if="store.clients.length > 0">
       <UiTable density="comfortable" data-testid="clients-list-table">

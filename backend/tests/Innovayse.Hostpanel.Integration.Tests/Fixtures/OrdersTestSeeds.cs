@@ -1,9 +1,9 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
+using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products;
@@ -14,9 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// Seeding and authentication helpers shared by every Orders use-case test file, extracted from
-/// the endpoint-grouped files this A7 Task 6 batch split apart so the seeding logic exists exactly
-/// once rather than once per use case.
+/// Seeding and authentication helpers shared by every Orders use-case test file, so the seeding
+/// logic exists exactly once rather than once per use case.
 /// </summary>
 public static class OrdersTestSeeds
 {
@@ -35,7 +34,7 @@ public static class OrdersTestSeeds
     }
 
     /// <summary>
-    /// Registers a client user over HTTP and authenticates a client carrying their bearer token —
+    /// Registers a client user over HTTP and authenticates a client carrying their bearer token:
     /// the "wrong role" caller of an admin-only order action.
     /// </summary>
     /// <param name="factory">The factory to mint a client token from.</param>
@@ -67,7 +66,7 @@ public static class OrdersTestSeeds
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
 
         var group = ProductGroup.Create($"orders-{Guid.NewGuid():N}", null);
@@ -75,12 +74,12 @@ public static class OrdersTestSeeds
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD");
-        order.AddItem(product.Id, "Starter Hosting", BillingCycleNames.Monthly, 10m, 10m, domain: null, hostname: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD", now: DateTimeOffset.UtcNow);
+        order.AddItem(product.Id, "Starter Hosting", BillingCycle.Monthly, 10m, 10m, domain: null, hostname: null);
 
         if (status == OrderStatus.Cancelled)
         {
@@ -88,7 +87,7 @@ public static class OrdersTestSeeds
         }
         else if (status == OrderStatus.Active)
         {
-            order.Accept();
+            order.Accept(DateTimeOffset.UtcNow);
         }
 
         db.Orders.Add(order);
@@ -98,38 +97,42 @@ public static class OrdersTestSeeds
     }
 
     /// <summary>
-    /// Seeds a Pending order whose single line item names a product that is then deleted, so
-    /// accepting it reaches the same <c>PRODUCT_NOT_FOUND</c> refusal <c>OrderServiceHandler</c>
-    /// gives any other line that names no product.
+    /// Seeds a client, a hosting product, and a Pending order with a registration line for a domain
+    /// already registered here (so the registrar refuses it) followed by a hosting line.
     /// </summary>
     /// <param name="factory">The factory whose database to seed against.</param>
-    /// <returns>The new order's primary key.</returns>
-    public static async Task<int> SeedOrderWithDeletedProductAsync(IntegrationTestFactory factory)
+    /// <returns>The order, client, hosting product and refused domain.</returns>
+    public static async Task<TakenDomainOrder> SeedTakenDomainAndHostingOrderAsync(IntegrationTestFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
-
-        var group = ProductGroup.Create($"orders-deleted-product-{Guid.NewGuid():N}", null);
+        var group = ProductGroup.Create($"orders-taken-domain-{Guid.NewGuid():N}", null);
         db.ProductGroups.Add(group);
+        var domainName = $"taken-{Guid.NewGuid():N}"[..18] + ".example";
+        var holder = Client.Create($"subject-{Guid.NewGuid():N}", "Grace", "Hopper", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
+        db.Clients.Add(holder);
+        await db.SaveChangesAsync();
+        db.Domains.Add(RegisteredDomain.Register(
+            holder.Id, domainName, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false, priceCurrency: "USD"));
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Vanishing Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD");
-        order.AddItem(product.Id, "Vanishing Hosting", BillingCycleNames.Monthly, 10m, 10m, domain: null, hostname: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank_transfer", ipAddress: null, currency: "USD", now: DateTimeOffset.UtcNow);
+        order.AddItem(
+            product.Id, domainName, BillingCycle.Annual, 10m, 10m, domain: domainName, hostname: null,
+            domainAction: DomainAction.Register, years: 1);
+        order.AddItem(product.Id, "Starter Hosting", BillingCycle.Monthly, 10m, 10m, domain: null, hostname: null);
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 
-        db.Products.Remove(product);
-        await db.SaveChangesAsync();
-
-        return order.Id;
+        return new TakenDomainOrder(order.Id, client.Id, product.Id, domainName);
     }
 
     /// <summary>Seeds an active hosting product priced in USD.</summary>
@@ -145,7 +148,7 @@ public static class OrdersTestSeeds
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         product.SetPrice("USD", BillingCycle.Monthly, 19.99m);
         db.Products.Add(product);
         await db.SaveChangesAsync();
@@ -155,22 +158,23 @@ public static class OrdersTestSeeds
 
     /// <summary>Seeds a client, a Pending order with one line, and its linked unpaid invoice.</summary>
     /// <param name="factory">The factory whose database the pair is seeded in.</param>
+    /// <param name="currency">The ISO 4217 code the order and its invoice are billed in.</param>
     /// <returns>The order id, its payment token and its linked invoice id.</returns>
-    public static async Task<(int OrderId, string PaymentToken, int InvoiceId)> SeedOrderWithInvoiceAsync(
-        IntegrationTestFactory factory)
+    public static async Task<SeededInvoicedOrder> SeedOrderWithInvoiceAsync(
+        IntegrationTestFactory factory, string currency = "USD")
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: "USD");
-        order.AddItem(1, "Starter Hosting", BillingCycleNames.Monthly, 25m, 25m, domain: null, hostname: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: currency, now: DateTimeOffset.UtcNow);
+        order.AddItem(await DomainsTestSeeds.SeedHostingProductAsync(db), "Starter Hosting", BillingCycle.Monthly, 25m, 25m, domain: null, hostname: null);
         db.Orders.Add(order);
 
-        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), currency, DateTimeOffset.UtcNow);
         invoice.AddItem("Starter Hosting", 25m, 1);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
@@ -178,27 +182,27 @@ public static class OrdersTestSeeds
         order.LinkInvoice(invoice.Id);
         await db.SaveChangesAsync();
 
-        return (order.Id, order.PaymentToken, invoice.Id);
+        return new SeededInvoicedOrder(order.Id, order.PaymentToken, invoice.Id);
     }
 
     /// <summary>Seeds a client and a Pending order with one line, but no linked invoice at all.</summary>
     /// <param name="factory">The factory whose database the order is seeded in.</param>
     /// <returns>The order id and its payment token.</returns>
-    public static async Task<(int OrderId, string PaymentToken)> SeedUninvoicedOrderAsync(IntegrationTestFactory factory)
+    public static async Task<SeededOrder> SeedUninvoicedOrderAsync(IntegrationTestFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+        var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         db.Clients.Add(client);
         await db.SaveChangesAsync();
 
-        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: "USD");
-        order.AddItem(1, "Starter Hosting", BillingCycleNames.Monthly, 25m, 25m, domain: null, hostname: null);
+        var order = Order.Create($"ORD-{Guid.NewGuid():N}"[..12], client.Id, "bank-gateway", ipAddress: null, currency: "USD", now: DateTimeOffset.UtcNow);
+        order.AddItem(await DomainsTestSeeds.SeedHostingProductAsync(db), "Starter Hosting", BillingCycle.Monthly, 25m, 25m, domain: null, hostname: null);
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 
-        return (order.Id, order.PaymentToken);
+        return new SeededOrder(order.Id, order.PaymentToken);
     }
 
     /// <summary>Switches the bank-transfer integration on through the real admin endpoint.</summary>

@@ -1,19 +1,39 @@
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Controllers;
+using Innovayse.Hostpanel.Shared.Models;
+using Innovayse.Hostpanel.Shared.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Innovayse.Hostpanel.API.Controllers;
+
 /// <summary>
-/// Liveness probe endpoint used by load balancers and integration tests
-/// to verify the API process is running.
+/// The one liveness probe, used by the container healthcheck, the installer and the integration
+/// tests to verify the API process is serving HTTP.
 /// </summary>
+/// <remarks>
+/// Deliberately not a database probe: it answers "is the process still serving HTTP", which is the
+/// question a restart policy can act on. A probe that also failed on a slow database would restart a
+/// healthy process in a loop while the real fault sat elsewhere.
+/// <para>
+/// Exempt from rate limiting through <see cref="DisableRateLimitingAttribute"/>, the one place an
+/// exemption is declared: a probe runs every few seconds forever from the same address, and one that
+/// is refused is read by the restart policy as a dead process.
+/// </para>
+/// </remarks>
 [AllowAnonymous]
-[Route("api/health")]
+[Route("health")]
 public sealed class HealthController : BaseApiController
 {
-    /// <summary>Returns 200 OK when the API process is alive.</summary>
-    /// <returns>A JSON object containing <c>status</c> and <c>timestamp</c>.</returns>
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    /// <summary>Answers 200 while the API process is alive.</summary>
+    /// <param name="clock">The source of the moment the process answered at.</param>
+    /// <returns>200 with the status and the time the process answered.</returns>
     [HttpGet]
-    public IActionResult Get() => Ok(new { status = "ok", timestamp = DateTimeOffset.UtcNow });
+    [DisableRateLimiting]
+    [ProducesResponseType(typeof(HealthDto), StatusCodes.Status200OK)]
+    public IActionResult Get([FromServices] IClock clock)
+    {
+        return HandleData(new HealthDto(HealthStatus.Ok, clock.UtcNow));
+    }
 }

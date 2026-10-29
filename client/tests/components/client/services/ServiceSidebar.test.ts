@@ -6,19 +6,9 @@ import { mountClient } from '~/tests/helpers/mountClient'
 import { grantPermissions } from '~/tests/helpers/grantPermissions'
 import { Permission } from '~/composables/usePermissions'
 import ServiceSidebar from '~/components/client/services/ServiceSidebar.vue'
-import type { ServiceDetail } from '~/types/servicedetail'
+import { makeClientService as service } from '~/tests/helpers/clientServiceFixture'
 import { ServiceStatus } from '~/types/servicestatus'
 import { ServiceTab } from '~/types/servicetab'
-
-/**
- * Builds a service for the menu.
- *
- * @param overrides - Fields to set.
- * @returns A service.
- */
-const service = (overrides: Partial<ServiceDetail> = {}): ServiceDetail => ({
-  id: 4, status: ServiceStatus.Active, serverhostname: 'srv1.example.net', ...overrides
-} as ServiceDetail)
 
 /**
  * Mounts the menu with defaults.
@@ -56,7 +46,7 @@ describe('ServiceSidebar', () => {
 
   it('offers the quick links only with a known server', () => {
     const known = mountSidebar()
-    const unknown = mountSidebar({ service: service({ serverhostname: '' }) })
+    const unknown = mountSidebar({ service: service({ server: null }) })
 
     expect(known.find('[data-testid="service-link-webmail"]').attributes('href')).toBe('https://srv1.example.net:2096')
     expect(unknown.find('[data-testid="service-link-cpanel"]').exists()).toBe(false)

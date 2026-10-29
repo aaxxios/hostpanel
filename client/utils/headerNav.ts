@@ -39,7 +39,7 @@ export interface HeaderNavInput {
 }
 
 /** Short description line of a Hosting dropdown entry, by the service type its group sells. */
-const HOSTING_MENU_DESC_KEYS: Readonly<Record<string, string>> = {
+const HOSTING_MENU_DESC_KEYS: Readonly<Partial<Record<ProductType, string>>> = {
   [ProductType.SharedHosting]: 'nav.hostingDesc',
   [ProductType.Vps]: 'nav.vpsDesc',
   [ProductType.Dedicated]: 'nav.serversDesc',
@@ -144,10 +144,10 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
    * The service type a group sells.
    *
    * @param group - The catalogue group.
-   * @returns The type, or an empty string when unknown.
+   * @returns The type, or null when unknown.
    */
-  const typeOf = (group: PortalProductGroup): string =>
-    group.id === HOSTING_GROUP_ID ? ProductType.SharedHosting : dominantProductType(productsOf(group)) ?? ''
+  const typeOf = (group: PortalProductGroup): ProductType | null =>
+    group.id === HOSTING_GROUP_ID ? ProductType.SharedHosting : dominantProductType(productsOf(group))
 
   /**
    * The localised page of a catalogue group.
@@ -167,13 +167,14 @@ export const buildHeaderNav = ({ t, localePath, groups, products }: HeaderNavInp
     },
     ...families
       .flatMap((group) => {
-        const descKey = HOSTING_MENU_DESC_KEYS[typeOf(group)]
+        const type = typeOf(group)
+        const descKey = type ? HOSTING_MENU_DESC_KEYS[type] : undefined
         // A group of a type the menu has no sentence for, and the hosting group itself, get no entry.
         return group.id !== HOSTING_GROUP_ID && descKey
           ? [{
             key: `group-${group.id}`,
             label: group.name,
-            icon: productTypeIcon(typeOf(group)),
+            icon: productTypeIcon(type),
             desc: hostingEntryDescription(group, descKey, t),
             to: pageOf(group),
           }]

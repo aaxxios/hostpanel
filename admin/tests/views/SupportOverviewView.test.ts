@@ -3,10 +3,11 @@
  * the refusal sentence, through the real store and transport with `fetch` stubbed.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import SupportOverviewView from '@/views/SupportOverviewView.vue'
 import { mountView } from '../helpers/mount'
-import { problem, stubFetch, callOf } from '../helpers/fetch'
-import { stubPathRoutes } from '../helpers/routes'
+import { json, problem, stubFetch, callOf } from '../helpers/fetch'
+import { stubPathRoutes, stubRoutes } from '../helpers/routes'
 
 /** Overview figures with no tickets in any hour. */
 const stats = {
@@ -48,5 +49,21 @@ describe('SupportOverviewView', () => {
     const wrapper = await mountView(SupportOverviewView)
 
     expect(wrapper.get('[data-testid="support-overview-error"]').text()).toBe('Not allowed.')
+  })
+
+  it('loads the overview again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/tickets/overview': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json(stats)
+      },
+    })
+    const wrapper = await mountView(SupportOverviewView)
+
+    await wrapper.get('[data-testid="support-overview-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="support-overview-error"]').exists()).toBe(false)
   })
 })

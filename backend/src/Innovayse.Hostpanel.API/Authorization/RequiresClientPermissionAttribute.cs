@@ -1,8 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
-using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
-using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +43,7 @@ namespace Innovayse.Hostpanel.API.Authorization;
 /// <item><term><see cref="ClientPermission.ViewPayInvoices"/></term><description>invoices: every <c>api/me/invoices</c> action (list, read, pay, gateway payment start and complete); every <c>api/me/payment-methods</c> action; <c>GET api/me/services/{id}/invoices</c> (together with <see cref="ClientPermission.ViewProductsServices"/>)</description></item>
 /// <item><term><see cref="ClientPermission.ViewAcceptQuotes"/></term><description>none yet: the portal has no quote endpoint; the flag is reserved for when it gets one</description></item>
 /// <item><term><see cref="ClientPermission.ViewOpenSupportTickets"/></term><description>tickets: every <c>api/me/tickets</c> action (list, read, open, reply)</description></item>
-/// <item><term><see cref="ClientPermission.ViewProductsServices"/></term><description><c>GET api/me/services</c>, <c>GET api/me/services/{id}/cancellation-status</c>, <c>GET api/me/services/{id}/ssh</c>, <c>GET api/me/services/{id}/ssh/keys</c></description></item>
+/// <item><term><see cref="ClientPermission.ViewProductsServices"/></term><description><c>GET api/me/services</c>, <c>GET api/me/services/{id}/cancellation-status</c>, <c>GET api/me/services/{id}/hosting-info</c>, <c>GET api/me/services/{id}/ssh</c>, <c>GET api/me/services/{id}/ssh/keys</c></description></item>
 /// <item><term><see cref="ClientPermission.ViewModifyPasswords"/></term><description><c>POST api/me/services/{id}/change-password</c>, <c>POST api/me/services/{id}/ssh/keys</c>, <c>DELETE api/me/services/{id}/ssh/keys/{keyId}</c></description></item>
 /// <item><term><see cref="ClientPermission.AllowSingleSignOn"/></term><description><c>GET api/me/services/{id}/cpanel-sso</c></description></item>
 /// <item><term><see cref="ClientPermission.ViewDomains"/></term><description>domains, read: <c>GET api/me/domains</c>, <c>GET api/me/domains/{id}</c>, <c>/nameservers</c>, <c>/whois</c>, <c>/contact</c></description></item>
@@ -115,9 +113,6 @@ public sealed class RequiresClientPermissionAttribute : Attribute, IAsyncAuthori
             return;
         }
 
-        var code = HostpanelErrorCodes.CLIENT_PERMISSION_DENIED;
-        var (status, title) = StatusMapping.For(code);
-        var detail = services.GetRequiredService<IErrorMessageResolver>().Resolve(code);
-        context.Result = ErrorBody.ToActionResult(new ErrorResponse(code, title, status, detail));
+        context.Result = ErrorBody.ToActionResult(ErrorBody.ForCode(services, HostpanelErrorCodes.CLIENT_PERMISSION_DENIED));
     }
 }

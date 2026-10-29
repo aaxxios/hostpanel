@@ -18,6 +18,7 @@ import { useReportClients } from '@/composables/useReportClients'
 import { reportPath } from '@/lib/reportsQuery'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
+import { DOMAIN_REMINDER_TYPE_LABEL_KEYS } from '@/types/domain'
 import type { ReportDomainRenewal } from '@/types/reportdomainrenewal'
 import { UiAlign } from '@/utils/ui/table'
 import { UiTone } from '@/utils/ui/tone'
@@ -63,6 +64,7 @@ const columns = computed<ReportColumn[]>(() => [
   <ReportPage
     :title="t('reports.domainRenewalEmails.domainRenewalReminderEmails')"
     :description="t('reports.domainRenewalEmails.thisReportCanBeUsed')"
+    :retry="load"
   >
     <template #filters>
       <ReportFilterBar :generate-label="t('shared.apply')" @generate="load">
@@ -89,6 +91,9 @@ const columns = computed<ReportColumn[]>(() => [
       :rows="data.rows"
       :empty-text="t('shared.noDataFoundForThis2')"
     >
+      <template #cell-reminder="{ row }">
+        {{ t(DOMAIN_REMINDER_TYPE_LABEL_KEYS[row.reminder]) }}
+      </template>
       <template #cell-sent>
         <UiBadge :tone="UiTone.Success" small>
           {{ t('shared.yes') }}

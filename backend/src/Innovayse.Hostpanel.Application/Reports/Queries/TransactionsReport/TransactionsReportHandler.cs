@@ -23,8 +23,8 @@ public sealed class TransactionsReportHandler
     /// <summary>Handles the query.</summary>
     /// <param name="query">The filters and page to return.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The matching page of transactions and the unfiltered total. Never refuses.</returns>
-    public async Task<Result<TransactionReportResultDto>> HandleAsync(TransactionsReportQuery query, CancellationToken ct)
+    /// <returns>The matching page of transactions, newest first, and the count of every match. Never refuses.</returns>
+    public async Task<Result<PaginatedList<TransactionReportRowDto>>> HandleAsync(TransactionsReportQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
@@ -35,26 +35,11 @@ public sealed class TransactionsReportHandler
 
         var rows = await transactions
             .OrderByDescending(t => t.Date)
+            .ThenByDescending(t => t.Id)
             .Paginate(query.Page, query.PageSize)
-            .Join(_context.Clients, t => t.ClientId, c => c.Id,
-                (t, c) => new { Transaction = t, ClientName = c.FirstName + " " + c.LastName })
-            .Select(x => new TransactionReportRowDto(
-                x.Transaction.Id,
-                x.Transaction.ClientId,
-                x.ClientName,
-                // The report has always shown "USD" here regardless of the transaction's own
-                // currency; kept exactly, not "fixed" into a semantic change.
-                "USD",
-                x.Transaction.PaymentMethod,
-                x.Transaction.Date.ToString("yyyy-MM-dd HH:mm:ss"),
-                x.Transaction.Description,
-                null,
-                x.Transaction.TransactionId,
-                x.Transaction.AmountIn,
-                x.Transaction.Fees,
-                x.Transaction.AmountOut))
+            .SelectReportRows(_context.Clients.AsNoTracking())
             .ToListAsync(ct);
 
-        return Result<TransactionReportResultDto>.Success(new TransactionReportResultDto(rows, totalCount));
+        return Result<PaginatedList<TransactionReportRowDto>>.Success(new PaginatedList<TransactionReportRowDto>(rows, totalCount, query.Page, query.PageSize));
     }
 }

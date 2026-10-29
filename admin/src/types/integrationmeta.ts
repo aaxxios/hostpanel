@@ -43,11 +43,9 @@ export const INTEGRATION_META: Record<IntegrationSlug, IntegrationMeta> = {
     logo: logoUrl('stripe.svg'),
     get shortDescription() { return translate('integrationMeta.stripe.shortDescription') },
     category: 'payments',
-    get hint() { return translate('integrationMeta.stripe.hint') },
     fields: [
       { key: 'secretKey', get label() { return translate('integrationMeta.stripe.fieldSecretKey') }, type: IntegrationFieldType.Password },
       { key: 'publishableKey', get label() { return translate('integrationMeta.stripe.fieldPublishableKey') }, type: IntegrationFieldType.Text },
-      { key: 'webhookSecret', get label() { return translate('integrationMeta.stripe.fieldWebhookSecret') }, type: IntegrationFieldType.Password },
       { key: 'mode', get label() { return translate('integrationMeta.stripe.fieldMode') }, type: IntegrationFieldType.Select, options: [IntegrationMode.Live, IntegrationMode.Test] },
     ],
   },

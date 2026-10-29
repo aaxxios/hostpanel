@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
 
 namespace Innovayse.Providers.CWP.Models;
+
 /// <summary>Parsed response from the CWP /v1/version endpoint.</summary>
 internal sealed class CwpVersionResponse
 {
-    /// <summary>Gets or initializes the result status — "OK" on success.</summary>
+    /// <summary>Gets or initializes the result status: "OK" on success.</summary>
     [JsonPropertyName("status")]
     public string Status { get; init; } = string.Empty;
 

@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// draft carrying the same line items, and the <c>INVOICE_NOT_FOUND</c> refusal for an id that
 /// names no invoice.
 /// </summary>
-/// <remarks>Split from the deleted <c>InvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DuplicateInvoiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

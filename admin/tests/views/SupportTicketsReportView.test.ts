@@ -1,5 +1,5 @@
 /**
- * Tests of SupportTicketsReportView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of SupportTicketsReportView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -19,4 +19,5 @@ runReportCase({
     }),
   },
   expected: ['Support Ticket Replies for January 2024', 'Ann'],
+  retryable: true,
 })

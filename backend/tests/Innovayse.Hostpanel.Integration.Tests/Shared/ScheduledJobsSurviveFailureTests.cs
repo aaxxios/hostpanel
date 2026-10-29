@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Servers.Commands.SyncServerAccountCountsCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.CheckOverdueInvoicesCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsCron;
@@ -11,9 +9,10 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.CheckDomainExpiries;
 using Innovayse.Hostpanel.Application.Domains.Commands.SyncPendingDomainStatuses;
 using Innovayse.Hostpanel.Application.Domains.Commands.SyncTldCostPrices;
+using Innovayse.Hostpanel.Application.Domains.Commands.SyncTldCostPricesNow;
 using Innovayse.Hostpanel.Application.Provisioning.Commands.AutoTerminateSuspendedCron;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +21,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Wolverine;
 using Wolverine.Tracking;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Shared;
 
@@ -106,7 +104,8 @@ public sealed class ScheduledJobsSurviveFailureTests(IntegrationTestFactory fact
                 s.AddScoped<IHostpanelDbContext>(_ => new AppDbContext(
                     new DbContextOptionsBuilder<AppDbContext>()
                         .UseNpgsql("Host=127.0.0.1;Port=1;Database=unreachable;Username=x;Password=x;Timeout=1")
-                        .Options));
+                        .Options,
+                    new ModelOnlyEncryptionService()));
             });
         });
 
@@ -148,41 +147,5 @@ public sealed class ScheduledJobsSurviveFailureTests(IntegrationTestFactory fact
             .InvokeMessageAndWaitAsync(new CheckDomainExpiriesCommand());
 
         NextRunsOf(session, typeof(CheckDomainExpiriesCommand)).Should().Be(1);
-    }
-}
-
-/// <summary>A logger provider that keeps every log line, for asserting what a host logged.</summary>
-internal sealed class RecordingLoggerProvider : ILoggerProvider
-{
-    /// <summary>Every line logged so far, across all categories.</summary>
-    public ConcurrentQueue<(LogLevel Level, string Message)> Entries { get; } = new();
-
-    /// <inheritdoc/>
-    public ILogger CreateLogger(string categoryName) => new RecordingLogger(Entries);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-    }
-
-    /// <summary>Records into the provider's queue.</summary>
-    /// <param name="entries">The queue to record into.</param>
-    private sealed class RecordingLogger(ConcurrentQueue<(LogLevel Level, string Message)> entries) : ILogger
-    {
-        /// <inheritdoc/>
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull => null;
-
-        /// <inheritdoc/>
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        /// <inheritdoc/>
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
-            entries.Enqueue((logLevel, formatter(state, exception)));
     }
 }

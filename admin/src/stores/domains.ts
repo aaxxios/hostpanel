@@ -17,7 +17,7 @@ import type {
   ForwardingRulePayload,
   UpdateDomainPayload,
 } from '@/types/domain'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes domain registrations. */
@@ -106,7 +106,7 @@ export const useDomainsStore = defineStore('domains', () => {
     clientId: number | string,
     pageNumber: number,
     size: number,
-  ): Promise<PagedResult<DomainRegistration> | null> => {
+  ): Promise<PaginatedList<DomainRegistration> | null> => {
     loading.value = true
     const result = await runAction(error, () =>
       api.listDomains({ clientId, page: pageNumber, pageSize: size }),

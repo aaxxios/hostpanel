@@ -12,7 +12,7 @@ import type { ReportSuspensionRow } from '@/types/reportsuspension'
 
 const { t } = useI18n()
 
-const { data } = useReport<ReportSuspensionRow[]>(() => '/reports/product-suspensions')
+const { data, load } = useReport<ReportSuspensionRow[]>(() => '/reports/product-suspensions')
 
 /** Table columns. */
 const columns = computed<ReportColumn[]>(() => [
@@ -26,7 +26,7 @@ const columns = computed<ReportColumn[]>(() => [
 </script>
 
 <template>
-  <ReportPage :title="t('reports.productSuspensions.productSuspensions')" :description="t('reports.productSuspensions.thisReportAllowsYouTo')">
+  <ReportPage :retry="load" :title="t('reports.productSuspensions.productSuspensions')" :description="t('reports.productSuspensions.thisReportAllowsYouTo')">
     <ReportTable
       v-if="data"
       :columns="columns"

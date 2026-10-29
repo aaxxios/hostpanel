@@ -1,14 +1,14 @@
 using Innovayse.Hostpanel.Application.Orders.Common;
 
-
 namespace Innovayse.Hostpanel.Application.Domains.Commands.RenewMyDomain;
+
 /// <summary>Command for a client to order a renewal of one of their own domain registrations.</summary>
 /// <remarks>
 /// <para>
 /// Carries a domain id but no client id. Which account the domain must belong to is resolved
 /// inside the handler from the credential, so the scoping cannot be separated from the message
 /// the way an id in the body can. The admin route that may act on any client's domain dispatches
-/// <c>RenewDomainCommand</c> directly, and that command calls the registrar at once -- which is
+/// <c>RenewDomainCommand</c> directly, and that command calls the registrar at once, which is
 /// precisely why a client-facing route must not reach it.
 /// </para>
 /// <para>

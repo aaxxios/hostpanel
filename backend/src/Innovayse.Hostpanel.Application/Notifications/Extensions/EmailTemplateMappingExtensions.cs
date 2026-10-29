@@ -17,6 +17,6 @@ public static class EmailTemplateMappingExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return source.Select(t => new EmailTemplateDto(t.Id, t.Slug, t.Subject, t.Body, t.Description, t.IsActive));
+        return source.Select(t => new EmailTemplateDto(t.Id, t.Slug, t.Language, t.Subject, t.Body, t.Description, t.IsActive));
     }
 }

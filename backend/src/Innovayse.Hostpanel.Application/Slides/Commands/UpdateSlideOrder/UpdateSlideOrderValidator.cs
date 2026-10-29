@@ -1,4 +1,5 @@
 using FluentValidation;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -15,10 +16,8 @@ public sealed class UpdateSlideOrderValidator : LocalizedValidator<UpdateSlideOr
     public UpdateSlideOrderValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleForEach(x => x.Items).ChildRules(item =>
-        {
-            item.RuleFor(i => i.Id).GreaterThan(0).WithMessage(L["SlideIdInvalid"]);
-            item.RuleFor(i => i.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["SlideSortOrderInvalid"]);
-        });
+        RuleFor(x => x.Items).NotNull().WithMessage(L["ContentOrderItemsRequired"]);
+        RuleFor(x => x.Items).MustNotExceedSortOrderLimit(L["ContentOrderItemsTooMany", SortOrderLimits.MaxItems]);
+        RuleForEach(x => x.Items).SetValidator(new SortOrderItemValidator(localizer));
     }
 }

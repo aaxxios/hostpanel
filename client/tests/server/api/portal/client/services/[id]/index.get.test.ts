@@ -1,6 +1,6 @@
 /**
  * Tests for `GET /api/portal/client/services/:id`: it finds one service in the client's list and
- * maps it to the portal's service detail, answering 404 with a code when it is not theirs.
+ * answers it as the backend sent it, answering 404 with a code when it is not theirs.
  *
  * @module tests/server/api/portal/client/services/[id]/index.get.test
  */
@@ -26,33 +26,16 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/services/:id', () => {
-  it('maps the matching service, including its server details', async () => {
-    backend.respondWith(() => ({
-      body: [
-        { id: 3, productId: 1, productName: 'Other' },
-        { id: 7, productId: 2, productName: 'Hosting M', serverId: 5, serverName: 'srv', serverIp: '1.2.3.4', serverHostname: 'srv.test', price: '5.00', paymentMethod: 'card', status: 'Active', createdAt: '2026-01-05T09:00:00Z' },
-      ],
-    }))
+  it('answers the matching service unchanged', async () => {
+    const match = { id: 7, productId: 2, productName: 'Hosting M', billingCycle: 'Annual', status: 'Active', nextRenewalAt: null, domain: null, username: null, price: 5, firstPaymentAmount: 5, paymentMethod: 'card', server: { name: 'srv', hostname: 'srv.test', ipAddress: '1.2.3.4' }, createdAt: '2026-01-05T09:00:00Z' }
+    backend.respondWith(() => ({ body: [{ id: 3, productId: 1, productName: 'Other' }, match] }))
 
     const result = await route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt'), headers: { 'x-language': 'hy' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/me/services')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
-    expect(result).toMatchObject({
-      id: 7,
-      pid: 2,
-      regdate: '2026-01-05T09:00:00Z',
-      name: 'Hosting M',
-      serverid: 5,
-      servername: 'srv',
-      serverip: '1.2.3.4',
-      serverhostname: 'srv.test',
-      recurringamount: '5.00',
-      paymentmethod: 'card',
-      paymentmethodname: 'card',
-      username: '',
-    })
+    expect(result).toEqual(match)
   })
 
   it('refuses with 404 and the not-found code when the service is not in the list', async () => {

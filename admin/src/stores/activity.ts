@@ -1,3 +1,7 @@
+/**
+ * Admin notification feed store: recent events for the header bell.
+ */
+
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useDashboardApi } from '@/composables/apis/useDashboardApi'

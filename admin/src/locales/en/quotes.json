@@ -1,4 +1,5 @@
 {
   "duplicatedSuccess": "Quote duplicated successfully. New quote #{id} created.",
-  "convertedSuccess": "Quote converted to invoice #{id} successfully."
+  "convertedSuccess": "Quote converted to invoice #{id} successfully.",
+  "savedSuccess": "Quote #{id} saved."
 }

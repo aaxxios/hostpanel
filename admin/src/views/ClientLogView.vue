@@ -2,17 +2,17 @@
 /**
  * Displays a paginated, filterable activity log for the current client.
  *
- * Read-only audit trail — shows admin actions with date, description, user, and IP.
+ * Read-only audit trail: shows admin actions with date, description, user, and IP.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useClientLogStore } from '@/stores/clientLog'
 import { formatDateTimeCompact } from '@/lib/format'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDatePicker from '@/components/ui/UiDatePicker.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -198,9 +198,13 @@ onMounted(load)
       </UiStack>
     </UiCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-log-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="client-log-error"
+      @retry="load"
+    />
 
     <UiStack v-if="store.loading && store.logs.length === 0" data-testid="client-log-loading">
       <UiSkeleton :lines="3" />

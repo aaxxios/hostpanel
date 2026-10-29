@@ -2,9 +2,11 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.ModifyDomainContact;
 
@@ -16,16 +18,24 @@ public sealed class ModifyDomainContactHandler
     /// <summary>The data context the domain aggregate is read through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>The registrar provider the contact update is sent to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
+
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<ModifyDomainContactHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The data context the domain aggregate is read through.</param>
-    /// <param name="registrar">The registrar provider the contact update is sent to.</param>
-    public ModifyDomainContactHandler(IHostpanelDbContext context, IRegistrarProvider registrar)
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public ModifyDomainContactHandler(
+        IHostpanelDbContext context,
+        RegistrarProviderResolver registrars,
+        ILogger<ModifyDomainContactHandler> logger)
     {
         _context = context;
-        _registrar = registrar;
+        _registrars = registrars;
+        _logger = logger;
     }
 
     /// <summary>
@@ -51,20 +61,20 @@ public sealed class ModifyDomainContactHandler
         {
             // Contacts live only at the registrar; there is nothing to change for a domain that
             // was never placed at one, and reporting success would claim a change nobody made.
-            return Result.Failure(
-                $"'{domain.Name}' has no registrar reference, so its contacts cannot be changed.",
-                HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
+            return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NO_REGISTRAR_REF);
         }
 
         var contact = new DomainContact(
             cmd.FirstName, cmd.LastName, cmd.Organization, cmd.Email, cmd.Phone,
             cmd.Address1, cmd.Address2, cmd.City, cmd.State, cmd.PostalCode, cmd.Country);
-        var result = await _registrar.ModifyContactDetailsAsync(domain.Name, contact, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.ModifyContactDetailsAsync(new DomainContactChange(domain.Name, contact), ct);
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar failed to modify contact details for '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.DOMAIN_CONTACT_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar failed to modify contact details for '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DOMAIN_CONTACT_UPSTREAM_FAILED));
         }
 
         return Result.Success();

@@ -1,39 +1,41 @@
+using Innovayse.Hostpanel.Application.Audit.Common;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Audit;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Models;
-using Innovayse.Hostpanel.Shared.MultiTenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.AddInvoicePayment;
 
 /// <summary>
-/// Records a manual payment transaction against an invoice
-/// and creates a corresponding client-level transaction ledger entry.
+/// Records a manual payment, full or partial, against an invoice together with its client ledger
+/// row. The invoice turns Paid once the recorded payments cover its total.
 /// </summary>
 public sealed class AddInvoicePaymentHandler
 {
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Who is acting, for the audit trail's admin identity and IP.</summary>
-    private readonly ICurrentUserService _ctx;
+    /// <summary>Records the activity log line for this action, saved with the change it describes.</summary>
+    private readonly IActivityLogger _activity;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="ctx">Who is acting, for the audit trail's admin identity and IP.</param>
-    public AddInvoicePaymentHandler(IHostpanelDbContext context, ICurrentUserService ctx)
+    /// <param name="activity">Records the activity log line for this action, saved with the change it describes.</param>
+    public AddInvoicePaymentHandler(IHostpanelDbContext context, IActivityLogger activity)
     {
         _context = context;
-        _ctx = ctx;
+        _activity = activity;
     }
 
     /// <summary>Handles <see cref="AddInvoicePaymentCommand"/>.</summary>
     /// <param name="cmd">The add payment command.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>INVOICE_NOT_FOUND</c> when the id names no invoice.</returns>
+    /// <returns>
+    /// Success, or <c>INVOICE_NOT_FOUND</c> when the id names no invoice; an invoice that is not open
+    /// for payment refuses with <c>INVOICE_NOT_PAYABLE</c> from the domain.
+    /// </returns>
     public async Task<Result> HandleAsync(AddInvoicePaymentCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -47,16 +49,11 @@ public sealed class AddInvoicePaymentHandler
             return Result.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
-        invoice.AddPayment(cmd.Date, cmd.Gateway, cmd.TransactionId, cmd.Amount, cmd.Fees, cmd.Notes);
+        _context.Transactions.Add(
+            invoice.AddPayment(cmd.Date, cmd.Gateway, cmd.TransactionId, cmd.Amount, cmd.Fees, cmd.Notes));
 
-        _context.Transactions.Add(Transaction.CreateInvoicePayment(
-            invoice, cmd.Date, cmd.Gateway, cmd.TransactionId, cmd.Amount, cmd.Fees));
-
-        // Was IActivityLogRepository.Add.
-        _context.ActivityLogs.Add(ActivityLog.Create(
-            invoice.ClientId,
-            $"Added Invoice Payment - Invoice ID: {invoice.Id}",
-            _ctx.UserId, _ctx.UserName, _ctx.Email, _ctx.IpAddress));
+        await _activity.RecordAsync(
+            new ActivityLogEntry(invoice.ClientId, $"Added Invoice Payment - Invoice ID: {invoice.Id}"), ct);
 
         await _context.SaveChangesAsync(ct);
 

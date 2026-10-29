@@ -17,10 +17,10 @@ import { ActionOutcome } from '~/types/actionoutcome'
 import type { CancellationStatus } from '~/types/cancellationstatus'
 import type { CancellationType } from '~/types/cancellationtype'
 import type { HostingInfo } from '~/types/hostinginfo'
-import type { ServiceDetail } from '~/types/servicedetail'
+import type { ClientService } from '~/types/clientservice'
 import type { ServiceInvoice } from '~/types/serviceinvoice'
 import type { ServiceInvoices } from '~/types/serviceinvoices'
-import { apiErrorMessage } from '~/lib/errorHandler'
+import { apiErrorCode, apiErrorMessage, PortalErrorCode } from '~/lib/errorHandler'
 import { controlPanelUrl } from '~/utils/controlPanel'
 
 /**
@@ -32,11 +32,13 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
   const api = useClientApi()
 
   /** The service on screen; null until {@link loadService} or after a failed read. */
-  const service = ref<ServiceDetail | null>(null)
+  const service = ref<ClientService | null>(null)
   /** True while the service is being read. */
   const serviceLoading = ref(false)
   /** The sentence for the last failed service read; empty when there is none to show. */
   const serviceError = ref('')
+  /** Whether the last service read was refused because the client has no such service. */
+  const serviceNotFound = ref(false)
 
   /** Nameservers and certificate of the service; empty until {@link loadHostingInfo}. */
   const hostingInfo = ref<HostingInfo>({ nameservers: [], ssl: null })
@@ -91,6 +93,7 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
     service.value = null
     serviceLoading.value = false
     serviceError.value = ''
+    serviceNotFound.value = false
     hostingInfo.value = { nameservers: [], ssl: null }
     cancelStatus.value = { pending: false }
     passwordChanging.value = false
@@ -116,14 +119,16 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
    * @param serviceId - Service id.
    * @returns The service; null when it could not be read ({@link serviceError} holds the sentence).
    */
-  const loadService = async (serviceId: string): Promise<ServiceDetail | null> => {
+  const loadService = async (serviceId: string): Promise<ClientService | null> => {
     serviceLoading.value = true
     serviceError.value = ''
+    serviceNotFound.value = false
     service.value = null
     try {
       service.value = await api.fetchService(serviceId)
     } catch (e: unknown) {
       serviceError.value = apiErrorMessage(e)
+      serviceNotFound.value = apiErrorCode(e) === PortalErrorCode.ServiceNotFound
     } finally {
       serviceLoading.value = false
     }
@@ -272,10 +277,10 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
    * choice is made, so every button that opens the panel behaves the same.
    *
    * @param serviceId - Service id.
-   * @param hostname - The service's server host name; empty when the server is not known.
+   * @param hostname - The service's server host name; null or absent when the server is not known.
    * @returns Nothing; a failed single sign-in leaves its sentence in {@link ssoError}.
    */
-  const openControlPanel = async (serviceId: string, hostname?: string): Promise<void> => {
+  const openControlPanel = async (serviceId: string, hostname?: string | null): Promise<void> => {
     const url = await fetchCpanelUrl(serviceId)
     if (url) {
       window.open(url, '_blank', 'noopener')
@@ -317,6 +322,7 @@ export const useServiceManagementStore = defineStore('serviceManagement', () => 
     service,
     serviceLoading,
     serviceError,
+    serviceNotFound,
     hostingInfo,
     cancelStatus,
     loadService,

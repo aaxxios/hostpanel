@@ -1,20 +1,17 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>POST /api/auth/accept-invite</c>: the signed-in caller accepts an invitation token.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class AcceptInvitationTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -29,6 +26,8 @@ public sealed class AcceptInvitationTests(IntegrationTestFactory factory) : ICla
         var response = await accepter.PostAsJsonAsync("/api/auth/accept-invite", new { token });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<InvitationAcceptedDto>();
+        body!.Success.Should().BeTrue();
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var reloaded = await db.Clients.Include(c => c.Users).FirstAsync(c => c.Id == clientId);

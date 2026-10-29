@@ -2,7 +2,8 @@
  * Pinia store for managing installed plugins.
  *
  * Handles list, install (multipart ZIP), remove, and restart operations. The only caller of
- * `usePluginsApi`; a refusal is kept as the API's own sentence in `error`, never thrown.
+ * `usePluginsApi`; a refused load is kept as the API's own sentence in `error`, a refused install or
+ * remove in `actionError`, never thrown.
  */
 
 import { defineStore } from 'pinia'
@@ -21,8 +22,11 @@ export const usePluginsStore = defineStore('plugins', () => {
   /** True while any request is in flight. */
   const loading = ref(false)
 
-  /** Sentence for the last failed request, null when none. */
+  /** Sentence for the last failed load, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused install or remove, null when none. */
+  const actionError = ref<string | null>(null)
 
   /**
    * Whether a server restart is required for pending plugin changes to take effect.
@@ -48,37 +52,39 @@ export const usePluginsStore = defineStore('plugins', () => {
    * Uploads and installs a plugin from a ZIP file, then refreshes the list.
    *
    * @param file - The ZIP file selected by the admin.
-   * @returns Resolves when the install request is over; a refusal is left in `error`.
+   * @returns True when installed; false when refused (see `actionError`).
    */
-  const install = async (file: File): Promise<void> => {
+  const install = async (file: File): Promise<boolean> => {
     loading.value = true
-    const result = await runAction(error, () => api.installPlugin(file))
+    const result = await runAction(actionError, () => api.installPlugin(file))
     loading.value = false
     if (result.ok) {
       requiresRestart.value = result.value.requiresRestart
       await fetchAll()
     }
+    return result.ok
   }
 
   /**
    * Removes an installed plugin by its identifier.
    *
    * @param id - Plugin identifier as declared in plugin.json.
-   * @returns Resolves when the remove request is over; a refusal is left in `error`.
+   * @returns True when removed; false when refused (see `actionError`).
    */
-  const remove = async (id: string): Promise<void> => {
+  const remove = async (id: string): Promise<boolean> => {
     loading.value = true
-    const result = await runAction(error, () => api.removePlugin(id))
+    const result = await runAction(actionError, () => api.removePlugin(id))
     loading.value = false
     if (result.ok) {
       requiresRestart.value = result.value.requiresRestart
       plugins.value = plugins.value.filter(p => p.id !== id)
     }
+    return result.ok
   }
 
   /**
    * Triggers a graceful server restart so installed/removed plugins take effect.
-   * After calling this, poll /api/health until the server responds.
+   * After calling this, poll GET /health until the server responds.
    *
    * @returns Resolves when the restart request is over.
    */
@@ -91,5 +97,5 @@ export const usePluginsStore = defineStore('plugins', () => {
     loading.value = false
   }
 
-  return { plugins, loading, error, requiresRestart, fetchAll, install, remove, restart }
+  return { plugins, loading, error, actionError, requiresRestart, fetchAll, install, remove, restart }
 })

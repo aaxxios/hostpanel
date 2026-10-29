@@ -41,7 +41,7 @@ const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'po
  *
  * An uploaded favicon expands to the whole browser/iOS/Android set the API generated beside
  * it; a pasted URL stays a single link, because only that one file is known to exist; and
- * with nothing set at all this is where the built-in mark comes from — `nuxt.config` no
+ * with nothing set at all this is where the built-in mark comes from: `nuxt.config` no
  * longer carries its own icon links, because two places emitting them meant an uploaded
  * favicon rendered alongside the built-in one rather than replacing it.
  *
@@ -51,9 +51,8 @@ const faviconUrl = computed(() => getPortalSetting(PortalSettingKey.Favicon, 'po
 const faviconLinks = computed((): HeadIconLink[] => brandingIcons(faviconUrl.value).map(toHeadIconLink))
 
 /**
- * The operator's site name and tagline. `og:site_name` and `author` used to be static
- * strings in nuxt.config's head; they are set here because the settings are only known
- * at request time. A page's own `useSeo()` still wins for `description`, because it
+ * The operator's site name and tagline. `og:site_name` and `author` are set here rather
+ * than in nuxt.config's head because the settings are only known at request time. A page's own `useSeo()` still wins for `description`, because it
  * runs after this and unhead lets the later tag replace the earlier one.
  */
 /** Operator-set site name and tagline, as reactive refs. */

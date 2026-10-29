@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Products.Enums;
+
 /// <summary>Lifecycle status of a product listing.</summary>
 public enum ProductStatus
 {

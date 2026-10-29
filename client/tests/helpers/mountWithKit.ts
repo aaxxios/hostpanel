@@ -1,7 +1,7 @@
 /**
  * Mount helper for component tests: the real component with a real Pinia, nothing mocked.
  *
- * `Ui*` components are not stubbed -- a component test mounts the same kit the screen renders,
+ * `Ui*` components are not stubbed: a component test mounts the same kit the screen renders,
  * so a broken kit prop fails here. Every file in `components/ui/` is registered globally under
  * the name Nuxt would give it (`Ui` prefix, not doubled), which is what lets one kit component
  * render another. Only the Nuxt/i18n/icon runtime that does not exist in a unit test is stood in

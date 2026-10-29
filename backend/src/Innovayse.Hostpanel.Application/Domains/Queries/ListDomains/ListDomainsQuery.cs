@@ -4,4 +4,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.ListDomains;
 /// <param name="Page">1-based page number.</param>
 /// <param name="PageSize">Number of items per page.</param>
 /// <param name="ClientId">Optional client ID to filter domains by owner; null returns all.</param>
-public record ListDomainsQuery(int Page, int PageSize, int? ClientId = null);
+public sealed record ListDomainsQuery(int Page, int PageSize, int? ClientId = null);

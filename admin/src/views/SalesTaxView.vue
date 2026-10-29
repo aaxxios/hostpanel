@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Sales tax report: the invoices of a period with the tax liability they carry, shown in the chosen
- * currency.
+ * Sales tax report: the invoices paid in a period with the tax they carried. The totals come one
+ * per invoice currency, never added across currencies; the invoice rows are paged and each amount
+ * is shown in its invoice's currency.
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -10,11 +11,12 @@ import ReportFilterBar from '@/components/reports/ReportFilterBar.vue'
 import ReportPage from '@/components/reports/ReportPage.vue'
 import ReportTable from '@/components/reports/ReportTable.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
-import UiSelect from '@/components/ui/UiSelect.vue'
+import UiPagination from '@/components/ui/UiPagination.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useReport } from '@/composables/useReport'
-import { formatReportAmount, REPORT_CURRENCY_OPTIONS, ReportCurrency } from '@/lib/money'
+import { REPORT_PAGE_SIZE } from '@/lib/limits'
+import { formatCurrencyCode } from '@/lib/money'
 import { reportPath } from '@/lib/reportsQuery'
 import { currentYearRange } from '@/lib/reportsPeriod'
 import { ReportCellFormat } from '@/types/reportcolumn'
@@ -24,55 +26,58 @@ import { UiAlign } from '@/utils/ui/table'
 
 const { t } = useI18n()
 
-/** The period to report; the current year at first. */
+/** The payment days to report; the current year at first. */
 const dateRange = ref<[string, string] | null>(currentYearRange())
 
-/** Currency the figures are shown in. */
-const currency = ref<ReportCurrency>(ReportCurrency.Usd)
+/** Page of invoice rows shown, starting at 1. */
+const page = ref(1)
 
 const { data, load } = useReport<ReportSalesTax>(() =>
-  reportPath('/reports/sales-tax', { from: dateRange.value?.[0], to: dateRange.value?.[1] }),
+  reportPath('/reports/sales-tax', {
+    from: dateRange.value?.[0],
+    to: dateRange.value?.[1],
+    page: page.value,
+    pageSize: REPORT_PAGE_SIZE,
+  }),
 )
 
-/**
- * Formats a figure in the chosen currency, with its code.
- *
- * @param amount - Figure in USD.
- * @returns The restated, formatted figure.
- */
-const formatMoney = (amount: number): string => formatReportAmount(amount, currency.value, true)
+/** Runs the report for the chosen period from its first page. */
+const generate = async (): Promise<void> => {
+  page.value = 1
+  await load()
+}
 
-/** Table columns. */
+/**
+ * Shows another page of invoice rows.
+ *
+ * @param next - The page to show.
+ */
+const goToPage = async (next: number): Promise<void> => {
+  page.value = next
+  await load()
+}
+
+/** Table columns; every amount is written in its invoice's currency. */
 const columns = computed<ReportColumn[]>(() => [
   { key: 'id', label: t('shared.invoiceId') },
   { key: 'clientName', label: t('shared.clientName') },
-  { key: 'invoiceDate', label: t('shared.invoiceDate') },
-  { key: 'datePaid', label: t('shared.datePaid') },
-  { key: 'subTotal', label: t('shared.subTotal2'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'tax', label: t('reports.salesTax.tax'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'credit', label: t('reports.salesTax.credit'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'total', label: t('shared.total'), align: UiAlign.Right, format: ReportCellFormat.Money },
+  { key: 'invoiceDate', label: t('shared.invoiceDate'), format: ReportCellFormat.Date },
+  { key: 'datePaid', label: t('shared.datePaid'), format: ReportCellFormat.Date },
+  { key: 'currency', label: t('shared.currency') },
+  { key: 'subTotal', label: t('shared.subTotal2'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'tax', label: t('reports.salesTax.tax'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'credit', label: t('reports.salesTax.credit'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'total', label: t('shared.total'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
 ])
-
-/** Footer figures: the sums of the columns, with the tax shown as the level 1 liability. */
-const totals = computed<Record<string, number>>(() => ({
-  subTotal: (data.value?.rows ?? []).reduce((sum, row) => sum + row.subTotal, 0),
-  tax: data.value?.taxLevel1Liability ?? 0,
-  credit: (data.value?.rows ?? []).reduce((sum, row) => sum + row.credit, 0),
-  total: data.value?.totalInvoiced ?? 0,
-}))
 </script>
 
 <template>
-  <ReportPage :title="t('reports.salesTax.salesTaxLiability')" :description="t('reports.salesTax.thisReportShowsSalesTax')">
+  <ReportPage :retry="load" :title="t('reports.salesTax.salesTaxLiability')" :description="t('reports.salesTax.thisReportShowsSalesTax')">
     <template #filters>
-      <ReportFilterBar :generate-label="t('shared.generateReport')" @generate="load">
+      <ReportFilterBar :generate-label="t('shared.generateReport')" @generate="generate">
         <template #fields>
           <ReportField :label="t('shared.dateRange')" width="grow">
             <UiDateRangePicker v-model="dateRange" :placeholder="t('shared.selectDateRange')" />
-          </ReportField>
-          <ReportField :label="t('reports.salesTax.chooseCurrency')">
-            <UiSelect v-model="currency" :options="REPORT_CURRENCY_OPTIONS" :placeholder="t('shared.currency')" data-testid="report-currency" />
           </ReportField>
         </template>
       </ReportFilterBar>
@@ -80,26 +85,29 @@ const totals = computed<Record<string, number>>(() => ({
 
     <template v-if="data">
       <UiStack gap="xs" data-testid="report-sales-tax-summary">
-        <UiText tone="secondary" size="md">
-          {{ data.totalInvoices }} {{ t('reports.salesTax.invoicesFound') }}
-        </UiText>
-        <UiText tone="secondary" size="md">
-          {{ t('reports.salesTax.totalInvoiced') }} {{ formatMoney(data.totalInvoiced) }}
-        </UiText>
-        <UiText tone="secondary" size="md">
-          {{ t('reports.salesTax.taxLevel1Liability') }} {{ formatMoney(data.taxLevel1Liability) }}
-        </UiText>
-        <UiText tone="secondary" size="md">
-          {{ t('reports.salesTax.taxLevel2Liability') }} {{ formatMoney(data.taxLevel2Liability) }}
+        <UiText v-for="total in data.totals" :key="total.currency" tone="secondary" size="md">
+          {{
+            t('reports.salesTax.currencySummary', {
+              currency: total.currency,
+              count: total.totalInvoices,
+              invoiced: formatCurrencyCode(total.totalInvoiced, total.currency),
+              tax: formatCurrencyCode(total.taxLiability, total.currency),
+            })
+          }}
         </UiText>
       </UiStack>
       <ReportTable
         :columns="columns"
-        :rows="data.rows"
+        :rows="data.rows.items"
         row-key="id"
-        :totals="totals"
-        :format-money="formatMoney"
         :empty-text="t('reports.salesTax.noInvoicesFoundForThis')"
+      />
+      <UiPagination
+        :page="page"
+        :total="data.rows.totalCount"
+        :page-size="REPORT_PAGE_SIZE"
+        testid="report-sales-tax-pagination"
+        @update:page="goToPage"
       />
       <UiText tone="muted" size="sm">
         {{ t('reports.salesTax.thisReportExcludesInvoicesThat') }}

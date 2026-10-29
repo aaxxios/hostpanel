@@ -6,11 +6,11 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiFilterCard from '@/components/ui/UiFilterCard.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -168,9 +168,13 @@ onMounted(() => load(1))
       </template>
     </UiFilterCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="billing-gateway-log-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="billing-gateway-log-error"
+      @retry="load(page)"
+    />
 
     <UiText tone="muted" size="md" data-testid="billing-gateway-log-count">
       {{ t('shared.totalcountRecordsFound', { totalCount: store.totalCount }) }}

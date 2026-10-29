@@ -1,7 +1,7 @@
 namespace Innovayse.Hostpanel.Shared.Models;
 
 /// <summary>
-///     Standard error response structure matching api.md specification
+///     The one error body every refusal answers with, as <c>application/problem+json</c>.
 /// </summary>
 /// <param name="Type">Error type code (e.g., VALIDATION_ERROR, NOT_FOUND)</param>
 /// <param name="Title">Human-readable error title</param>

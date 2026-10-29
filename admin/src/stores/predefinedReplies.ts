@@ -27,8 +27,11 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
   /** True while a load or create request is in flight. */
   const loading = ref(false)
 
-  /** Sentence for the last failed call, null when none. */
+  /** Sentence for the last failed load, null when none. */
   const error = ref<string | null>(null)
+
+  /** Sentence for the last refused create, rename, delete or search, null when none. */
+  const actionError = ref<string | null>(null)
 
   /** Per-field messages of the last refused save, keyed by camelCase field name. */
   const fieldErrors = ref<Record<string, string>>({})
@@ -52,11 +55,11 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    * Creates a category, then reloads the list.
    *
    * @param name - The category name.
-   * @returns The new category's id, or null when refused (see `error` and `fieldErrors`).
+   * @returns The new category's id, or null when refused (see `actionError` and `fieldErrors`).
    */
   const createCategory = async (name: string): Promise<number | null> => {
     loading.value = true
-    const result = await runAction(error, () => api.createCategory(name), fieldErrors)
+    const result = await runAction(actionError, () => api.createCategory(name), fieldErrors)
     loading.value = false
     if (!result.ok) {
       return null
@@ -70,10 +73,10 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    *
    * @param id - The category identifier.
    * @param name - The new name.
-   * @returns True when renamed; false when refused (see `error` and `fieldErrors`).
+   * @returns True when renamed; false when refused (see `actionError` and `fieldErrors`).
    */
   const updateCategory = async (id: number, name: string): Promise<boolean> => {
-    const result = await runAction(error, () => api.updateCategory(id, name), fieldErrors)
+    const result = await runAction(actionError, () => api.updateCategory(id, name), fieldErrors)
     if (result.ok) {
       await fetchCategories()
     }
@@ -84,10 +87,10 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    * Deletes a category, then reloads the list.
    *
    * @param id - The category identifier.
-   * @returns True when deleted; false when refused (see `error`).
+   * @returns True when deleted; false when refused (see `actionError`).
    */
   const deleteCategory = async (id: number): Promise<boolean> => {
-    const result = await runAction(error, () => api.deleteCategory(id))
+    const result = await runAction(actionError, () => api.deleteCategory(id))
     if (result.ok) {
       await fetchCategories()
     }
@@ -115,10 +118,10 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    * list the other tabs show.
    *
    * @param query - The search term.
-   * @returns The matching replies, or null when the search was refused (see `error`).
+   * @returns The matching replies, or null when the search was refused (see `actionError`).
    */
   const searchReplies = async (query: string): Promise<PredefinedReply[] | null> => {
-    const result = await runAction(error, () => api.searchReplies(query))
+    const result = await runAction(actionError, () => api.searchReplies(query))
     return result.ok ? result.value : null
   }
 
@@ -126,11 +129,11 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    * Creates a reply.
    *
    * @param payload - Reply data.
-   * @returns The new reply's id, or null when refused (see `error` and `fieldErrors`).
+   * @returns The new reply's id, or null when refused (see `actionError` and `fieldErrors`).
    */
   const createReply = async (payload: PredefinedReplyPayload): Promise<number | null> => {
     loading.value = true
-    const result = await runAction(error, () => api.createReply(payload), fieldErrors)
+    const result = await runAction(actionError, () => api.createReply(payload), fieldErrors)
     loading.value = false
     return result.ok ? result.value : null
   }
@@ -140,25 +143,26 @@ export const usePredefinedRepliesStore = defineStore('predefinedReplies', () => 
    *
    * @param id - The reply identifier.
    * @param payload - Updated data.
-   * @returns True when saved; false when refused (see `error` and `fieldErrors`).
+   * @returns True when saved; false when refused (see `actionError` and `fieldErrors`).
    */
   const updateReply = async (id: number, payload: PredefinedReplyPayload): Promise<boolean> =>
-    (await runAction(error, () => api.updateReply(id, payload), fieldErrors)).ok
+    (await runAction(actionError, () => api.updateReply(id, payload), fieldErrors)).ok
 
   /**
    * Deletes a reply.
    *
    * @param id - The reply identifier.
-   * @returns True when deleted; false when refused (see `error`).
+   * @returns True when deleted; false when refused (see `actionError`).
    */
   const deleteReply = async (id: number): Promise<boolean> =>
-    (await runAction(error, () => api.deleteReply(id))).ok
+    (await runAction(actionError, () => api.deleteReply(id))).ok
 
   return {
     categories,
     replies,
     loading,
     error,
+    actionError,
     fieldErrors,
     fetchCategories,
     createCategory,

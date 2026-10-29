@@ -1,14 +1,13 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// An <see cref="ICardPaymentGateway"/> whose behaviour a test controls through
-/// <see cref="IsConfigured"/> and <see cref="SavedPaymentMethods"/> — <see cref="CreatePaymentIntentAsync"/>,
-/// <see cref="VerifyPaymentIntentAsync"/> and <see cref="RefundAsync"/> stay unreached and throw,
-/// since no test exercising this fake calls them. A fake port standing in for card payment gateway itself,
-/// which a test must not call for real.
+/// An <see cref="ICardPaymentGateway"/> whose behaviour a test controls through its properties and
+/// which records what it was asked to do. A fake port standing in for the card payment gateway
+/// itself, which a test must not call for real.
 /// </summary>
 public sealed class FakeCardPaymentGateway : ICardPaymentGateway
 {
@@ -16,11 +15,80 @@ public sealed class FakeCardPaymentGateway : ICardPaymentGateway
     public bool IsConfigured { get; set; }
 
     /// <summary>
-    /// The payment methods <see cref="ListPaymentMethodsAsync"/> answers with, keyed by nothing —
+    /// The payment methods <see cref="ListPaymentMethodsAsync"/> answers with, keyed by nothing:
     /// every configured customer id sees the same list, since the tests that use this fake
     /// exercise exactly one seeded client's saved cards at a time.
     /// </summary>
     public IReadOnlyList<CardPaymentMethodDto> SavedPaymentMethods { get; set; } = [];
+
+    /// <summary>
+    /// The failure <see cref="ListPaymentMethodsAsync"/> answers with instead of the list, as a
+    /// gateway that refuses or cannot be reached would; null to list.
+    /// </summary>
+    public CardGatewayFailure? ListFailure { get; set; }
+
+    /// <summary>
+    /// The failure <see cref="SetDefaultPaymentMethodAsync"/> and <see cref="DetachPaymentMethodAsync"/>
+    /// answer with instead of applying the change; null to apply it.
+    /// </summary>
+    public CardGatewayFailure? MethodChangeFailure { get; set; }
+
+    /// <summary>The failure <see cref="FindChargeAsync"/> answers with instead of looking; null to look.</summary>
+    public CardGatewayFailure? LookupFailure { get; set; }
+
+    /// <summary>The client secret <see cref="CreatePaymentIntentAsync"/> answers with.</summary>
+    public string IntentClientSecret { get; set; } = "pi_test_secret_1";
+
+    /// <summary>
+    /// The failure <see cref="CreatePaymentIntentAsync"/> answers with instead of an intent, as a
+    /// gateway that refuses or cannot be reached would; null to open the intent.
+    /// </summary>
+    public CardGatewayFailure? IntentFailure { get; set; }
+
+    /// <summary>What <see cref="VerifyPaymentIntentAsync"/> answers with; a test sets the amount, currency and ids it expects.</summary>
+    public CardPaymentIntentStatus Verification { get; set; } = new(true, "txn-confirmed-1", 0, "usd", null, null);
+
+    /// <summary>
+    /// The refund id the first issued refund answers with; each later one adds its issue number,
+    /// since a real gateway never issues the same refund id twice.
+    /// </summary>
+    public string RefundId { get; set; } = "re_test_1";
+
+    /// <summary>Whether <see cref="RefundAsync"/> refuses every refund, as a gateway that declines it would.</summary>
+    public bool RefusesRefunds { get; set; }
+
+    /// <summary>
+    /// The 1-based <see cref="RefundAsync"/> call that throws instead of answering, as a gateway that
+    /// times out or faults part way through a refund would; null when no call throws.
+    /// </summary>
+    public int? ThrowsOnRefundCall { get; set; }
+
+    /// <summary>Every instruction <see cref="RefundAsync"/> was called with, in order.</summary>
+    public List<CardRefundInstruction> RefundInstructions { get; } = [];
+
+    /// <summary>
+    /// Every refund the gateway issued, by idempotency key. A key it has seen answers with its first
+    /// refund instead of issuing another, as a real gateway replays it.
+    /// </summary>
+    public Dictionary<string, CardRefundResult> RefundsByKey { get; } = [];
+
+    /// <summary>
+    /// Runs after a refund is issued and before the gateway answers; null for none. A test throws
+    /// from it to lose the answer of a refund that did happen, or writes to the database meanwhile.
+    /// </summary>
+    public Func<CardRefundInstruction, Task>? AfterRefundIssued { get; set; }
+
+    /// <summary>
+    /// What <see cref="ChargeSavedPaymentMethodAsync"/> answers with. The default transaction id is
+    /// unique per fake, as a real gateway's is: the ledger refuses a transaction it already holds.
+    /// </summary>
+    public CardChargeResult Charge { get; set; } = new(true, $"txn-saved-card-{Guid.NewGuid():N}");
+
+    /// <summary>The instruction the last <see cref="CreatePaymentIntentAsync"/> call carried, or <see langword="null"/>.</summary>
+    public CardPaymentIntentInstruction? LastIntentInstruction { get; private set; }
+
+    /// <summary>The instruction the last <see cref="ChargeSavedPaymentMethodAsync"/> call carried, or <see langword="null"/> when no charge was attempted.</summary>
+    public CardChargeInstruction? LastChargeInstruction { get; private set; }
 
     /// <summary>The payment method id <see cref="SetDefaultPaymentMethodAsync"/> was last called with, or <see langword="null"/>.</summary>
     public string? LastSetDefaultPaymentMethodId { get; private set; }
@@ -29,34 +97,125 @@ public sealed class FakeCardPaymentGateway : ICardPaymentGateway
     public string? LastDetachedPaymentMethodId { get; private set; }
 
     /// <inheritdoc/>
-    public Task<string> CreatePaymentIntentAsync(
-        decimal amount, string currency, Dictionary<string, string> metadata, CancellationToken ct) =>
-        throw new NotSupportedException("No test exercising this fake creates a PaymentIntent.");
-
-    /// <inheritdoc/>
-    public Task<(bool Success, string? TransactionId)> VerifyPaymentIntentAsync(
-        string paymentIntentId, CancellationToken ct) =>
-        throw new NotSupportedException("No test exercising this fake verifies a PaymentIntent.");
-
-    /// <inheritdoc/>
-    public Task<string> RefundAsync(string transactionId, CancellationToken ct) =>
-        throw new NotSupportedException("No test exercising this fake issues a refund.");
-
-    /// <inheritdoc/>
-    public Task<IReadOnlyList<CardPaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct) =>
-        Task.FromResult(SavedPaymentMethods);
-
-    /// <inheritdoc/>
-    public Task SetDefaultPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct)
+    public Task<CardPaymentIntentResult> CreatePaymentIntentAsync(CardPaymentIntentInstruction instruction, CancellationToken ct)
     {
-        LastSetDefaultPaymentMethodId = paymentMethodId;
-        return Task.CompletedTask;
+        LastIntentInstruction = instruction;
+        return Task.FromResult(IntentFailure is { } failure
+            ? new CardPaymentIntentResult(null, failure)
+            : new CardPaymentIntentResult(IntentClientSecret));
     }
 
     /// <inheritdoc/>
-    public Task DetachPaymentMethodAsync(string paymentMethodId, CancellationToken ct)
+    public Task<CardPaymentIntentStatus> VerifyPaymentIntentAsync(CardPaymentVerifyInstruction instruction, CancellationToken ct) =>
+        Task.FromResult(Verification);
+
+    /// <summary>
+    /// The outcome of every charge the gateway took, by idempotency key. A key it has seen answers
+    /// with its first outcome, a decline included, as a real gateway replays it.
+    /// </summary>
+    public Dictionary<string, CardChargeResult> ChargesByKey { get; } = [];
+
+    /// <inheritdoc/>
+    public Task<CardChargeResult> ChargeSavedPaymentMethodAsync(CardChargeInstruction instruction, CancellationToken ct)
     {
-        LastDetachedPaymentMethodId = paymentMethodId;
-        return Task.CompletedTask;
+        lock (ChargesByKey)
+        {
+            LastChargeInstruction = instruction;
+            if (!ChargesByKey.TryGetValue(instruction.IdempotencyKey, out var outcome))
+            {
+                outcome = Charge;
+                ChargesByKey[instruction.IdempotencyKey] = outcome;
+                ChargeInstructionsByKey[instruction.IdempotencyKey] = instruction;
+            }
+
+            return Task.FromResult(outcome);
+        }
+    }
+
+    /// <summary>The instruction of the first charge under each idempotency key, which says what it took.</summary>
+    public Dictionary<string, CardChargeInstruction> ChargeInstructionsByKey { get; } = [];
+
+    /// <summary>How many times <see cref="FindChargeAsync"/> was called.</summary>
+    public int ChargeLookups { get; private set; }
+
+    /// <inheritdoc/>
+    /// <remarks>Answers with the settled charge taken under the key, never charging; a decline or an unseen key is nothing found.</remarks>
+    public Task<CardChargeLookupResult> FindChargeAsync(CardChargeLookupInstruction instruction, CancellationToken ct)
+    {
+        lock (ChargesByKey)
+        {
+            ChargeLookups++;
+            if (LookupFailure is { } failure)
+            {
+                return Task.FromResult(CardChargeLookupResult.Failed(failure));
+            }
+
+            if (ChargesByKey.TryGetValue(instruction.IdempotencyKey, out var outcome) && outcome.Success)
+            {
+                var charged = ChargeInstructionsByKey[instruction.IdempotencyKey];
+                return Task.FromResult(new CardChargeLookupResult(true, outcome.TransactionId, charged.Amount, charged.Currency));
+            }
+
+            return Task.FromResult(CardChargeLookupResult.None);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CardRefundResult> RefundAsync(CardRefundInstruction instruction, CancellationToken ct)
+    {
+        RefundInstructions.Add(instruction);
+        if (RefundInstructions.Count == ThrowsOnRefundCall)
+        {
+            throw new HttpRequestException("The card gateway did not answer the refund.");
+        }
+
+        if (RefusesRefunds)
+        {
+            return new CardRefundResult(false, null);
+        }
+
+        if (!RefundsByKey.TryGetValue(instruction.IdempotencyKey, out var refund))
+        {
+            var issued = RefundsByKey.Count + 1;
+            refund = new CardRefundResult(true, issued == 1 ? RefundId : $"{RefundId}-{issued}");
+            RefundsByKey[instruction.IdempotencyKey] = refund;
+        }
+
+        if (AfterRefundIssued is not null)
+        {
+            await AfterRefundIssued(instruction);
+        }
+
+        return refund;
+    }
+
+    /// <inheritdoc/>
+    public Task<CardPaymentMethodsResult> ListPaymentMethodsAsync(CardCustomerInstruction instruction, CancellationToken ct) =>
+        Task.FromResult(ListFailure is { } failure
+            ? CardPaymentMethodsResult.Failed(failure)
+            : new CardPaymentMethodsResult(SavedPaymentMethods));
+
+    /// <inheritdoc/>
+    public Task<CardGatewayOperationResult> SetDefaultPaymentMethodAsync(CardDefaultMethodInstruction instruction, CancellationToken ct)
+    {
+        if (MethodChangeFailure is { } failure)
+        {
+            return Task.FromResult(new CardGatewayOperationResult(failure));
+        }
+
+        LastSetDefaultPaymentMethodId = instruction.PaymentMethodId;
+        return Task.FromResult(CardGatewayOperationResult.Succeeded);
+    }
+
+    /// <inheritdoc/>
+    public Task<CardGatewayOperationResult> DetachPaymentMethodAsync(CardDetachInstruction instruction, CancellationToken ct)
+    {
+        if (MethodChangeFailure is { } failure)
+        {
+            return Task.FromResult(new CardGatewayOperationResult(failure));
+        }
+
+        LastDetachedPaymentMethodId = instruction.PaymentMethodId;
+        return Task.FromResult(CardGatewayOperationResult.Succeeded);
     }
 }

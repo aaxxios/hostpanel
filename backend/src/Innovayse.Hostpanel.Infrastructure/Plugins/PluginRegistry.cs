@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.SDK.Plugins;
 
 namespace Innovayse.Hostpanel.Infrastructure.Plugins;
+
 /// <summary>
 /// Tracks all plugins that were successfully loaded during application startup.
 /// </summary>

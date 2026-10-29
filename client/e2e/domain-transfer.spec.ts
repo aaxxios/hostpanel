@@ -8,6 +8,7 @@
 import { expect, test } from './support/test'
 import { DOMAIN_ORDER, GATEWAY_METHODS, TRANSFER } from './support/fixtures.mjs'
 import { resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
 test.beforeEach(async ({ context, request, baseURL }) => {
   await resetStub(request)
@@ -47,7 +48,7 @@ test('the transfer is ordered and leads to its invoice', async ({ page, request 
 })
 
 test('a refused transfer keeps the form and shows the backend sentence', async ({ page, request }) => {
-  await scriptStub(request, { method: 'POST', path: '/api/me/domains/transfer-order', status: 400, code: 'TRANSFER_REFUSED', detail: 'E2E: this domain cannot be transferred.' })
+  await scriptStub(request, { method: HttpMethod.Post, path: '/api/me/domains/transfer-order', status: 400, code: 'TRANSFER_REFUSED', detail: 'E2E: this domain cannot be transferred.' })
 
   await page.goto('/client/domains/transfer')
   await waitForHydration(page)

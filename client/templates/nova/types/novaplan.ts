@@ -11,7 +11,7 @@ import type { PlanCard } from '~/types/plancard'
  *
  * Built from the {@link PlanCard} shape `stores/catalog.ts` `planCards` returns, with the two
  * decisions the cards need layered on: which plan carries the "most popular"
- * badge and what the yearly saving is. Both are derived, never fetched — see
+ * badge and what the yearly saving is. Both are derived, never fetched: see
  * `pricing.ts`, which is where they are computed and tested.
  */
 export interface NovaPlan extends PlanCard {

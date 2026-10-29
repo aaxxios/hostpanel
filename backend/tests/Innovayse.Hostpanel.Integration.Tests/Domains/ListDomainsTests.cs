@@ -1,13 +1,12 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using System.Text.Json;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the <c>ListDomains</c> use case — <c>GET /api/domains</c>, the admin/
-/// reseller paginated listing of every registered domain.
+/// Integration tests for the <c>ListDomains</c> use case: <c>GET /api/domains</c>, the admin
+/// paginated listing of every registered domain.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListDomainsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -24,20 +23,20 @@ public sealed class ListDomainsTests(IntegrationTestFactory factory) : IClassFix
     }
 
     /// <summary>
-    /// A signed-in Client, who holds neither the Reseller nor the Admin role this
+    /// A signed-in Client, who does not hold the Admin role this
     /// admin-only listing requires, is refused with 403.
     /// </summary>
     [Fact]
     public async Task AdminOnly_ClientForbiddenAsync()
     {
-        var (client, _) = await DomainsTestSeeds.RegisterClientAsync(factory, "list-domains-forbidden");
+        var (client, _, _) = await DomainsTestSeeds.RegisterClientAsync(factory, "list-domains-forbidden");
 
         var response = await client.GetAsync("/api/domains");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
-    /// <summary>An admin lists domains and sees the one just registered for a client.</summary>
+    /// <summary>An admin lists domains and sees the one just registered for a client, named after that client.</summary>
     [Fact]
     public async Task ListDomains_AdminSeesARegisteredDomainAsync()
     {
@@ -48,7 +47,21 @@ public sealed class ListDomainsTests(IntegrationTestFactory factory) : IClassFix
         var response = await admin.GetAsync("/api/domains?page=1&pageSize=100");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var json = await response.Content.ReadAsStringAsync();
-        json.Should().Contain($"\"id\":{domainId}");
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Single(d => d.GetProperty("id").GetInt32() == domainId)
+            .GetProperty("clientName").GetString().Should().Be("Domain Tester");
+    }
+
+    /// <summary>A page number below one is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task ListDomains_PageBelowOne_Returns400ValidationErrorAsync()
+    {
+        var admin = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/domains?page=0&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

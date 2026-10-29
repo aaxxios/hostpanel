@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.ReconcileGatewayPaymentsCron;
 
-/// <summary>Validates <see cref="ReconcileGatewayPaymentsCronCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="ReconcileGatewayPaymentsCronCommand"/>: no rules; the command carries no input.</summary>
 public sealed class ReconcileGatewayPaymentsCronValidator : LocalizedValidator<ReconcileGatewayPaymentsCronCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

@@ -1,37 +1,31 @@
-using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 
 namespace Innovayse.Hostpanel.Domain.Billing;
 
 /// <summary>
 /// The one place renewal periods are computed. A billing cycle is turned into months here and
-/// nowhere else, so adding a cycle (sub-project 2 of issue #67) changes this file only.
+/// nowhere else, so adding a cycle changes this file only.
 /// </summary>
 public static class RenewalPeriod
 {
     /// <summary>
     /// The end of the period that starts at <paramref name="start"/> for a service on
-    /// <paramref name="billingCycle"/>.
+    /// <paramref name="cycle"/>.
     /// </summary>
     /// <remarks>
     /// The end is <paramref name="start"/> plus one cycle. The only correction is for a start that
     /// was clamped to a short month's last day: when <paramref name="start"/> is the last day of its
     /// month and earlier than <paramref name="anchorDay"/>, the end is moved towards the anchor, so a
     /// service bought on the 31st renews on Feb 28 and then on Mar 31 instead of creeping to the 28th
-    /// forever. Any other start -- including a date an admin edited off the anchor -- gets exactly
+    /// forever. Any other start, including a date an admin edited off the anchor, gets exactly
     /// one cycle, never extra days.
     /// </remarks>
     /// <param name="start">The period start (the service's current <c>NextRenewalAt</c>).</param>
-    /// <param name="billingCycle">The stored cycle string, any spelling the platform has written.</param>
+    /// <param name="cycle">The service's billing cycle.</param>
     /// <param name="anchorDay">The day of month the service was bought on (1-31).</param>
-    /// <returns>The period end, or <see langword="null"/> when the cycle is not renewable.</returns>
-    public static DateTimeOffset? EndOf(DateTimeOffset start, string? billingCycle, int anchorDay)
+    /// <returns>The period end.</returns>
+    public static DateTimeOffset EndOf(DateTimeOffset start, BillingCycle cycle, int anchorDay)
     {
-        if (!BillingCycleParser.TryParse(billingCycle, out var cycle))
-        {
-            return null;
-        }
-
         var end = start.AddMonths(MonthsIn(cycle));
         var clampedToMonthEnd = start.Day < anchorDay && start.Day == DateTime.DaysInMonth(start.Year, start.Month);
         if (!clampedToMonthEnd)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Brand colours card — the primary and accent colour the storefront derives its whole palette from.
+ * Brand colours card: the primary and accent colour the storefront derives its whole palette from.
  *
- * A colour well beside a hex field, both bound to the same draft, a preview strip built from the
+ * A hex colour field with a swatch preview (`UiColorField`), bound to the draft, a preview strip built from the
  * same ramp the storefront uses (`lib/brandPalette.ts`, a copy of the client's), and a contrast
  * line under each colour saying whether white text survives on it and what the storefront will do
  * if not. The API refuses anything that is not `#rrggbb`; the field shows that refusal in the page
@@ -13,11 +13,12 @@ import { computed, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiColorField from '@/components/ui/UiColorField.vue'
 import UiColorSwatch from '@/components/ui/UiColorSwatch.vue'
-import UiInput from '@/components/ui/UiInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import {
@@ -29,7 +30,7 @@ import {
   rgbToHex,
 } from '@/lib/brandPalette'
 import { SettingEnv, SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 
 const { t } = useI18n()
 
@@ -37,13 +38,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a colour. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -98,8 +94,8 @@ const FIELDS: ColourField[] = [
 ]
 
 /**
- * The colour a row previews: the draft when it parses, the built-in default otherwise — a
- * half-typed hex must not blank the preview.
+ * The colour a row previews: the draft when it parses, the built-in default otherwise, so a
+ * half-typed hex does not blank the preview.
  *
  * @param field - The row.
  * @returns A `#rrggbb` colour.
@@ -173,7 +169,7 @@ const contrastKey = (field: ColourField): string => {
  */
 const reset = (field: ColourField): void => {
   field.draft.value.value = ''
-  field.draft.submit((id, value) => emit('save', id, value))
+  void field.draft.submit(props.save)
 }
 </script>
 
@@ -190,33 +186,22 @@ const reset = (field: ColourField): void => {
         </UiText>
 
         <UiStack direction="row" align="center" wrap>
-          <!-- Native colour well: the browser's own picker, no library. -->
-          <UiInput
-            type="color"
-            :model-value="effective(field)"
-            :placeholder="DEFAULTS[field.key]"
-            :aria-label="t(field.labelKey)"
-            :data-testid="`brand-colors-well-${field.testid}`"
-            class="h-10 w-12 cursor-pointer"
-            @update:model-value="field.draft.value.value = $event"
-          />
-          <UiInput
+          <UiColorField
             :model-value="field.draft.value.value"
-            type="text"
-            spellcheck="false"
             :placeholder="DEFAULTS[field.key]"
-            :invalid="!isValid(field)"
+            :fallback="DEFAULTS[field.key]"
+            :aria-label="t(field.labelKey)"
             :data-testid="`brand-colors-hex-${field.testid}`"
-            class="w-32 font-mono"
             @update:model-value="field.draft.value.value = $event"
-            @keyup.enter="field.draft.submit((id, value) => emit('save', id, value))"
+            @keyup.enter="field.draft.submit(save)"
           />
           <SettingSaveButton
             :dirty="field.draft.dirty.value && isValid(field)"
-            :saving="saving"
+            :saving="field.draft.saving.value"
             :data-testid="`brand-colors-save-${field.testid}`"
-            @click="field.draft.submit((id, value) => emit('save', id, value))"
+            @click="field.draft.submit(save)"
           />
+          <SettingOutcome :outcome="field.draft.outcome.value" />
           <UiButton
             v-if="field.draft.setting.value?.value"
             type="button"

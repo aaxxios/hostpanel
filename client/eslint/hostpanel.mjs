@@ -24,7 +24,7 @@
 /** Components and tags that take typed text and therefore must show a placeholder. */
 const FIELD_TAGS = new Set(['input', 'textarea', 'select', 'UiInput', 'UiTextarea', 'UiSelect', 'ui-input', 'ui-textarea', 'ui-select'])
 
-/** `<input type="…">` values that have no text area, so a placeholder is meaningless on them. */
+/** `<input type>` values that have no text area, so a placeholder is meaningless on them. */
 const NON_TEXT_INPUT_TYPES = new Set(['hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'range', 'color'])
 
 /**

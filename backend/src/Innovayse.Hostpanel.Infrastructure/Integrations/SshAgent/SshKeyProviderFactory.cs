@@ -1,7 +1,6 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Domain.Ssh;
 
 namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 
@@ -10,14 +9,20 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// by the agent-backed provider; every other module answers unsupported until it gets an
 /// implementation of its own.
 /// </summary>
-public sealed class SshKeyProviderFactory : ISshKeyProviderFactory
+internal sealed class SshKeyProviderFactory : ISshKeyProviderFactory
 {
+    /// <summary>
+    /// The agent profile for the v7 hosting panel module: the name of <c>profiles/cwp.conf</c> in the
+    /// agent bundle, which the installer takes as <c>--provider</c>.
+    /// </summary>
+    private const string HostingPanelV7Profile = "cwp";
+
     /// <summary>The agent transport.</summary>
-    private readonly ISshAgentTransport _transport;
+    private readonly SshAgentTransport _transport;
 
     /// <summary>Initialises the factory.</summary>
     /// <param name="transport">The agent transport.</param>
-    public SshKeyProviderFactory(ISshAgentTransport transport)
+    public SshKeyProviderFactory(SshAgentTransport transport)
     {
         _transport = transport;
     }
@@ -28,31 +33,26 @@ public sealed class SshKeyProviderFactory : ISshKeyProviderFactory
     /// <inheritdoc/>
     public string? AgentProfileFor(ServerModule module) => module switch
     {
-        ServerModule.Cwp7 => "cwp",
+        ServerModule.Cwp7 => HostingPanelV7Profile,
         _ => null,
     };
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">Thrown when the settings belong to another server or are incomplete.</exception>
-    public ISshKeyProvider? CreateFor(Server server, ServerSshSettings settings)
+    /// <exception cref="InvalidOperationException">Thrown when the settings are missing or incomplete.</exception>
+    public ISshKeyProvider? CreateFor(ServerSshTargetDto target)
     {
-        if (!Supports(server.Module))
+        if (!Supports(target.Module))
         {
             return null;
         }
 
-        if (settings.ServerId != server.Id)
+        if (target.Agent is not { IsComplete: true } settings)
         {
-            throw new InvalidOperationException($"SSH settings of server {settings.ServerId} were offered for server {server.Id}.");
-        }
-
-        if (!settings.IsComplete)
-        {
-            throw new InvalidOperationException($"SSH settings of server {server.Id} are incomplete.");
+            throw new InvalidOperationException($"SSH settings of server {target.ServerId} are missing or incomplete.");
         }
 
         var endpoint = new SshAgentEndpoint(
-            server.Id,
+            target.ServerId,
             settings.AgentHost,
             settings.AgentPort,
             settings.AgentUsername,
@@ -61,6 +61,6 @@ public sealed class SshKeyProviderFactory : ISshKeyProviderFactory
             TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds),
             TimeSpan.FromSeconds(settings.OperationTimeoutSeconds));
 
-        return new AgentSshKeyProvider(endpoint, _transport);
+        return new AgentSshKeyProvider(endpoint, _transport.SendAsync);
     }
 }

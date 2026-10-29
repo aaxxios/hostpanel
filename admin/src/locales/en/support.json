@@ -16,7 +16,8 @@
     "noAnnouncementsFound": "No announcements found",
     "createYourFirstAnnouncementTo": "Create your first announcement to get started.",
     "deleteAnnouncement": "Delete Announcement",
-    "areYouSureYouWant": "Are you sure you want to delete this announcement? This action cannot be undone."
+    "areYouSureYouWant": "Are you sure you want to delete this announcement? This action cannot be undone.",
+    "announcementDeleted": "Announcement deleted."
   },
   "downloads": {
     "downloads": "Downloads",
@@ -48,7 +49,10 @@
     "deleteTitle": "Delete {item}",
     "deleteMessage": "Are you sure you want to delete '{name}'? This action cannot be undone.",
     "selectType": "Select type",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "categorySaved": "Category saved.",
+    "downloadSaved": "Download saved.",
+    "deleted": "Deleted."
   },
   "knowledgebase": {
     "knowledgebase": "Knowledgebase",
@@ -68,7 +72,10 @@
     "saveArticle": "Save Article",
     "deleteCategory": "Delete Category",
     "areYouSureYouWant": "Are you sure you want to delete this category? All articles in this category may be affected.",
-    "addArticle": "Add Article"
+    "addArticle": "Add Article",
+    "categorySaved": "Category saved.",
+    "categoryDeleted": "Category deleted.",
+    "articleSaved": "Article saved."
   },
   "networkIssueForm": {
     "updateTheNetworkIssueDetails": "Update the network issue details below",
@@ -164,7 +171,10 @@
     "conversation": "Conversation",
     "staff": "Staff",
     "deleteTicket": "Delete Ticket",
-    "deleteTicketMessage": "Are you sure you want to delete ticket #TKT-{id}? This action cannot be undone."
+    "deleteTicketMessage": "Are you sure you want to delete ticket #TKT-{id}? This action cannot be undone.",
+    "ticketClosed": "Ticket closed.",
+    "ticketReopened": "Ticket reopened.",
+    "replySent": "Reply sent."
   },
   "supportTickets": {
     "supportTickets": "Support Tickets",
@@ -174,8 +184,9 @@
     "flag": "Flag",
     "unflag": "Unflag",
     "requestor": "Requestor",
-    "clientClientid": "Client #{clientId}",
     "noTicketsFound": "No tickets found",
-    "tryAdjustingYourFiltersOr": "Try adjusting your filters or search query."
+    "tryAdjustingYourFiltersOr": "Try adjusting your filters or search query.",
+    "confirmBulkDeleteTitle": "Delete the selected tickets?",
+    "confirmBulkDeleteMessage": "{count} tickets will be deleted permanently. This cannot be undone."
   }
 }

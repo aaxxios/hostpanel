@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -13,9 +11,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// closed to a caller with no credential.
 /// </summary>
 /// <remarks>
-/// Split out of the deleted <c>TicketsAdminEndpointTests</c>. Admin-only rather than every
-/// <c>ResellerOrAdmin</c> caller -- <see cref="Innovayse.Hostpanel.API.Controllers.TicketsController.CreateAsync"/>
-/// carries its own <c>[Authorize(Policy = Policies.Admin)]</c>.
+/// Admin-only, like every action of <see cref="Innovayse.Hostpanel.API.Controllers.TicketsController"/>.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class AdminCreateTicketTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -26,10 +22,11 @@ public sealed class AdminCreateTicketTests(IntegrationTestFactory factory) : ICl
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
         var departmentId = await SupportTestSeeds.CreateDepartmentAsync(client);
+        var clientId = (await ClientsTestSeeds.SeedClientAsync(factory)).ClientId;
 
         var response = await client.PostAsJsonAsync("/api/tickets", new
         {
-            clientId = 1,
+            clientId,
             subject = "Admin-created ticket",
             message = "Filed by staff on behalf of the client.",
             departmentId,
@@ -74,5 +71,45 @@ public sealed class AdminCreateTicketTests(IntegrationTestFactory factory) : ICl
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A ticket for a client that does not exist is refused 404 with <c>CLIENT_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task UnknownClientIsRefusedNotFoundAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+        var departmentId = await SupportTestSeeds.CreateDepartmentAsync(client);
+
+        var response = await client.PostAsJsonAsync("/api/tickets", new
+        {
+            clientId = SupportTestSeeds.NoSuchId,
+            subject = "Admin-created ticket",
+            message = "Filed by staff on behalf of the client.",
+            departmentId,
+            priority = nameof(TicketPriority.Medium),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_NOT_FOUND);
+    }
+
+    /// <summary>A ticket in a department that does not exist is refused 404 with <c>DEPARTMENT_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task UnknownDepartmentIsRefusedNotFoundAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+        var clientId = (await ClientsTestSeeds.SeedClientAsync(factory)).ClientId;
+
+        var response = await client.PostAsJsonAsync("/api/tickets", new
+        {
+            clientId,
+            subject = "Admin-created ticket",
+            message = "Filed by staff on behalf of the client.",
+            departmentId = SupportTestSeeds.NoSuchId,
+            priority = nameof(TicketPriority.Medium),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.DEPARTMENT_NOT_FOUND);
     }
 }

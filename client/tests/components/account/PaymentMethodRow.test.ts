@@ -9,8 +9,8 @@ import type { PaymentMethod } from '~/types/payment'
 
 /** A saved card that is not the default. */
 const method: PaymentMethod = {
-  id: '9', type: PaymentMethodType.Card, description: 'Visa •••• 4242', gateway_name: 'card',
-  card_last_four: '4242', card_expiry: '12/30', card_type: 'visa', is_default: false
+  id: '9', type: PaymentMethodType.Card, description: 'Visa •••• 4242', gatewayName: 'card',
+  cardLastFour: '4242', cardExpiry: '12/30', cardType: 'visa', isDefault: false
 }
 
 describe('PaymentMethodRow', () => {
@@ -27,16 +27,16 @@ describe('PaymentMethodRow', () => {
     expect(wrapper.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.card')
   })
 
-  it('translates a bank account and an unknown type', () => {
+  it('translates a bank account and any other type', () => {
     const bank = mountAccount(PaymentMethodRow, { props: { method: { ...method, type: PaymentMethodType.BankAccount } } })
-    const other = mountAccount(PaymentMethodRow, { props: { method: { ...method, type: 'sepa_debit' } } })
+    const other = mountAccount(PaymentMethodRow, { props: { method: { ...method, type: PaymentMethodType.Other } } })
 
     expect(bank.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.bankAccount')
     expect(other.find('[data-testid="account-payment-type"]').text()).toBe('client.payment.type.other')
   })
 
   it('marks the default method and hides "set default" on it', () => {
-    const wrapper = mountAccount(PaymentMethodRow, { props: { method: { ...method, is_default: true } } })
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method: { ...method, isDefault: true } } })
 
     expect(wrapper.find('[data-testid="account-payment-default-badge"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="account-payment-default-9"]').exists()).toBe(false)
@@ -63,5 +63,25 @@ describe('PaymentMethodRow', () => {
     await wrapper.find('[data-testid="account-payment-remove-9"]').trigger('click')
 
     expect(wrapper.emitted('remove')).toEqual([['9']])
+  })
+
+  it('disables both buttons while the method is being made the default', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method, settingDefault: true } })
+
+    expect(wrapper.find('[data-testid="account-payment-default-9"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="account-payment-remove-9"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('disables both buttons while the method is being removed', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method, removing: true } })
+
+    expect(wrapper.find('[data-testid="account-payment-default-9"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="account-payment-remove-9"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('marks "remove" as a destructive action', () => {
+    const wrapper = mountAccount(PaymentMethodRow, { props: { method } })
+
+    expect(wrapper.find('[data-testid="account-payment-remove-9"]').classes()).toContain('ui-btn-danger')
   })
 })

@@ -1,17 +1,20 @@
 using System.Net;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap;
 using Innovayse.Hostpanel.Infrastructure.Integrations.Namecheap.Settings;
+using Innovayse.Hostpanel.Infrastructure.Time;
 using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.Namecheap;
+
 /// <summary>
-/// Unit tests for <see cref="NamecheapRegistrarProvider"/>'s previously-stubbed operations —
-/// contact updates, email forwarding, and the DNS-management toggle — verifying both the
+/// Unit tests for <see cref="NamecheapRegistrarProvider"/>'s contact updates, email forwarding
+/// and DNS-management toggle, verifying both the
 /// XML response parsing and the exact query parameters sent to the Namecheap API.
 /// </summary>
 public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
@@ -51,41 +54,54 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     private NamecheapRegistrarProvider BuildProvider(string responseXml)
     {
         namecheap.Enqueue(HttpStatusCode.OK, responseXml, "text/xml");
-        return new NamecheapRegistrarProvider(new NamecheapClient(new HttpClient(), Options.Create(Settings)));
+        return new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(Settings)),
+            NullLogger<NamecheapRegistrarProvider>.Instance,
+            new SystemClock(TimeProvider.System));
     }
 
-    /// <summary>Gets the full URL of the most recent request the stub received.</summary>
-    /// <returns>The absolute URL, or an empty string when nothing was requested.</returns>
-    private string LastRequestUrl()
+    /// <summary>Gets the most recent request the stub received.</summary>
+    /// <returns>The recorded request.</returns>
+    private RecordedCall LastCall()
     {
-        var last = namecheap.Requests.LastOrDefault();
-        return last is null ? string.Empty : new Uri(namecheap.BaseAddress, last.PathAndQuery.TrimStart('/')).ToString();
+        return namecheap.Requests.Last();
     }
 
     /// <summary>
-    /// Extracts a single query parameter's decoded value from a request URL.
-    /// Avoids depending on System.Web/AspNetCore query-parsing helpers just for tests.
+    /// Extracts a single decoded value from a request's form body. Namecheap commands travel as a
+    /// POST form, so every parameter, the credentials included, is read from the body.
     /// </summary>
-    /// <param name="url">The request URL.</param>
-    /// <param name="name">Name of the query parameter.</param>
-    /// <returns>The decoded value of the parameter.</returns>
-    private static string QueryParam(string url, string name)
+    /// <param name="call">The recorded request.</param>
+    /// <param name="name">Name of the form field.</param>
+    /// <returns>The decoded value of the field, or an empty string when it is absent.</returns>
+    private static string FormParam(RecordedCall call, string name)
     {
-        var query = new Uri(url).Query.TrimStart('?');
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var pair in call.Body.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = pair.Split('=', 2);
-            if (parts.Length == 2 && Uri.UnescapeDataString(parts[0]) == name)
+            if (parts.Length == 2 && Uri.UnescapeDataString(parts[0].Replace('+', ' ')) == name)
             {
-                return Uri.UnescapeDataString(parts[1]);
+                return Uri.UnescapeDataString(parts[1].Replace('+', ' '));
             }
         }
 
         return string.Empty;
     }
 
-    /// <summary>Verifies: Modify Contact Details Async - Sends Set Contacts Command - For All Four Roles.</summary>
-    /// <summary>Modify contact details async, sends set contacts command, for all four roles.</summary>
+    /// <summary>Extracts a decoded form field from the most recent request.</summary>
+    /// <param name="name">Name of the form field.</param>
+    /// <returns>The decoded value of the field.</returns>
+    private string FormParam(string name)
+    {
+        return FormParam(LastCall(), name);
+    }
+
+    /// <summary>A contact with every detail a purchase needs.</summary>
+    private static readonly DomainContact CompleteContact = new(
+        "Jane", "Doe", "Acme Inc", "jane@example.com", "+1.5551234567",
+        "123 Main St", null, "Springfield", "IL", "62701", "US");
+
+    /// <summary>Modifying contact details sends the set-contacts command for all four contact roles.</summary>
     [Fact]
     public async Task ModifyContactDetailsAsync_SendsSetContactsCommand_ForAllFourRolesAsync()
     {
@@ -96,18 +112,17 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
             "Jane", "Doe", "Acme Inc", "jane@example.com", "+1.5551234567",
             "123 Main St", null, "Springfield", "IL", "62701", "US");
 
-        var result = await provider.ModifyContactDetailsAsync("example.com", contact, CancellationToken.None);
+        var result = await provider.ModifyContactDetailsAsync(new DomainContactChange("example.com", contact), CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        var url = LastRequestUrl();
-        QueryParam(url, "Command").Should().Be("namecheap.domains.setContacts");
-        QueryParam(url, "RegistrantFirstName").Should().Be("Jane");
-        QueryParam(url, "TechEmailAddress").Should().Be("jane@example.com");
-        QueryParam(url, "AdminCountry").Should().Be("US");
-        QueryParam(url, "AuxBillingLastName").Should().Be("Doe");
+        FormParam("Command").Should().Be("namecheap.domains.setContacts");
+        FormParam("RegistrantFirstName").Should().Be("Jane");
+        FormParam("TechEmailAddress").Should().Be("jane@example.com");
+        FormParam("AdminCountry").Should().Be("US");
+        FormParam("AuxBillingLastName").Should().Be("Doe");
     }
 
-    /// <summary>Verifies: Get Contact Details Async - Maps The Registrant Block Of The Get Contacts Response.</summary>
+    /// <summary>Reading contact details maps the registrant block of the get-contacts response.</summary>
     [Fact]
     public async Task GetContactDetailsAsync_MapsTheRegistrantBlockAsync()
     {
@@ -116,13 +131,13 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
 
         var contact = await provider.GetContactDetailsAsync("example.com", CancellationToken.None);
 
-        QueryParam(LastRequestUrl(), "Command").Should().Be("namecheap.domains.getContacts");
+        FormParam("Command").Should().Be("namecheap.domains.getContacts");
         contact.Should().Be(new DomainContact(
             "Jane", "Doe", null, "jane@example.com", "+1.5551234567",
             "123 Main St", null, "Springfield", "IL", "62701", "US"));
     }
 
-    /// <summary>Verifies: Get Contact Details Async - Answers Null When The Response Has No Registrant.</summary>
+    /// <summary>Reading contact details answers null when the response has no registrant.</summary>
     [Fact]
     public async Task GetContactDetailsAsync_WithoutRegistrantBlock_ReturnsNullAsync()
     {
@@ -134,22 +149,21 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         contact.Should().BeNull();
     }
 
-    /// <summary>Set Email Forwarding Async, when Disabling, clears All Forwards.</summary>
-    /// <summary>Verifies: Set Email Forwarding Async - When Disabling - Clears All Forwards.</summary>
+    /// <summary>Disabling email forwarding clears all forwards.</summary>
     [Fact]
     public async Task SetEmailForwardingAsync_WhenDisabling_ClearsAllForwardsAsync()
     {
         const string response = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""";
         var provider = BuildProvider(response);
 
-        var result = await provider.SetEmailForwardingAsync("example.com", enabled: false, CancellationToken.None);
+        var result = await provider.SetEmailForwardingAsync(new DomainFeatureToggle("example.com", false), CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        QueryParam(LastRequestUrl(), "Command").Should().Be("namecheap.domains.dns.setEmailForwarding");
-        QueryParam(LastRequestUrl(), "MailBox1").Should().BeEmpty();
+        FormParam("Command").Should().Be("namecheap.domains.dns.setEmailForwarding");
+        FormParam("MailBox1").Should().BeEmpty();
     }
 
-    /// <summary>Verifies: Add Email Forwarding Rule Async - Merges With Existing Forwards.</summary>
+    /// <summary>Adding an email forwarding rule merges it with the existing forwards.</summary>
     [Fact]
     public async Task AddEmailForwardingRuleAsync_MergesWithExistingForwardsAsync()
     {
@@ -169,39 +183,38 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         var provider = BuildProvider(getResponse);
 
         var result = await provider.AddEmailForwardingRuleAsync(
-            "example.com", "support", "support@destination.com", CancellationToken.None);
+            new EmailForwardingRuleChange("example.com", "support", "support@destination.com"), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         namecheap.Requests.Should().HaveCount(2);
 
-        var setUrl = new Uri(namecheap.BaseAddress, namecheap.Requests[1].PathAndQuery.TrimStart('/')).ToString();
-        QueryParam(setUrl, "Command").Should().Be("namecheap.domains.dns.setEmailForwarding");
+        var setCall = namecheap.Requests[1];
+        FormParam(setCall, "Command").Should().Be("namecheap.domains.dns.setEmailForwarding");
 
-        var mailboxes = new[] { QueryParam(setUrl, "MailBox1"), QueryParam(setUrl, "MailBox2") };
+        var mailboxes = new[] { FormParam(setCall, "MailBox1"), FormParam(setCall, "MailBox2") };
         mailboxes.Should().Contain("sales").And.Contain("support");
     }
 
-    /// <summary>Verifies: Set Dns Management Async - When Enabling - Calls Set Default.</summary>
+    /// <summary>Enabling DNS management calls set-default.</summary>
     [Fact]
     public async Task SetDnsManagementAsync_WhenEnabling_CallsSetDefaultAsync()
     {
         const string response = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""";
         var provider = BuildProvider(response);
 
-        var result = await provider.SetDnsManagementAsync("example.com", enabled: true, CancellationToken.None);
+        var result = await provider.SetDnsManagementAsync(new DomainFeatureToggle("example.com", true), CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        /// <summary>Set Dns Management Async, when Disabling, makes No Api Call.</summary>
-        QueryParam(LastRequestUrl(), "Command").Should().Be("namecheap.domains.dns.setDefault");
+        FormParam("Command").Should().Be("namecheap.domains.dns.setDefault");
     }
 
-    /// <summary>Verifies: Set Dns Management Async - When Disabling - Makes No Api Call.</summary>
+    /// <summary>Disabling DNS management makes no API call.</summary>
     [Fact]
     public async Task SetDnsManagementAsync_WhenDisabling_MakesNoApiCallAsync()
     {
         var provider = BuildProvider("""<ApiResponse Status="OK"/>""");
 
-        var result = await provider.SetDnsManagementAsync("example.com", enabled: false, CancellationToken.None);
+        var result = await provider.SetDnsManagementAsync(new DomainFeatureToggle("example.com", false), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         namecheap.Requests.Should().BeEmpty();
@@ -213,12 +226,15 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     {
         var unconfigured = Settings;
         unconfigured.ApiKey = string.Empty;
-        var provider = new NamecheapRegistrarProvider(new NamecheapClient(new HttpClient(), Options.Create(unconfigured)));
+        var provider = new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(unconfigured)),
+            NullLogger<NamecheapRegistrarProvider>.Instance,
+            new SystemClock(TimeProvider.System));
 
         var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not configured");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
         namecheap.Requests.Should().BeEmpty();
     }
 
@@ -233,7 +249,7 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
 
         result.Success.Should().BeTrue();
         result.ExpiresAt!.Value.Date.Should().Be(new DateTime(2029, 3, 15));
-        QueryParam(LastRequestUrl(), "Command").Should().Be("namecheap.domains.renew");
+        FormParam("Command").Should().Be("namecheap.domains.renew");
     }
 
     /// <summary>
@@ -264,7 +280,7 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("did not confirm");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
     }
 
     /// <summary>The answer Namecheap gives a command it refuses.</summary>
@@ -276,7 +292,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     {
         var unconfigured = Settings;
         unconfigured.ApiKey = string.Empty;
-        return new NamecheapRegistrarProvider(new NamecheapClient(new HttpClient(), Options.Create(unconfigured)));
+        return new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(unconfigured)),
+            NullLogger<NamecheapRegistrarProvider>.Instance,
+            new SystemClock(TimeProvider.System));
     }
 
     /// <summary>A registration on an unconfigured integration is refused, so a paid order is refunded.</summary>
@@ -284,24 +303,24 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     public async Task RegisterAsync_WhenNotConfigured_FailsAsync()
     {
         var result = await BuildUnconfiguredProvider().RegisterAsync(
-            new DomainRegistrationOrder("example.com", 1, false, false, null, null), CancellationToken.None);
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not configured");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
         namecheap.Requests.Should().BeEmpty();
     }
 
-    /// <summary>An ERROR answer is a clean refusal carrying Namecheap's message, not an exception.</summary>
+    /// <summary>An ERROR answer is a clean refusal with the registrar's refusal code, not an exception.</summary>
     [Fact]
     public async Task RegisterAsync_WhenNamecheapAnswersError_FailsCleanlyAsync()
     {
         var provider = BuildProvider(ErrorResponse);
 
         var result = await provider.RegisterAsync(
-            new DomainRegistrationOrder("example.com", 1, false, false, null, null), CancellationToken.None);
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Domain is not available");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
     }
 
     /// <summary>An OK envelope without <c>Registered="true"</c> registered nothing.</summary>
@@ -311,10 +330,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         var provider = BuildProvider("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainCreateResult Domain="example.com" Registered="false" /></CommandResponse></ApiResponse>""");
 
         var result = await provider.RegisterAsync(
-            new DomainRegistrationOrder("example.com", 1, false, false, null, null), CancellationToken.None);
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("did not confirm");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
     }
 
     /// <summary>
@@ -327,7 +346,7 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         var provider = BuildProvider("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainCreateResult Domain="example.com" Registered="true" /></CommandResponse></ApiResponse>""");
 
         var result = await provider.RegisterAsync(
-            new DomainRegistrationOrder("example.com", 2, false, false, null, null), CancellationToken.None);
+            new DomainRegistrationOrder("example.com", 2, false, false, null, null, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.RegistrarRef.Should().Be("example.com");
@@ -338,10 +357,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     public async Task TransferAsync_WhenNotConfigured_FailsAsync()
     {
         var result = await BuildUnconfiguredProvider().TransferAsync(
-            new DomainTransferOrder("example.com", "EPP-1", false), CancellationToken.None);
+            new DomainTransferOrder("example.com", "EPP-1", false, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not configured");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
     }
 
     /// <summary>A transfer Namecheap refuses with ERROR is a clean refusal.</summary>
@@ -349,10 +368,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     public async Task TransferAsync_WhenNamecheapAnswersError_FailsCleanlyAsync()
     {
         var result = await BuildProvider(ErrorResponse).TransferAsync(
-            new DomainTransferOrder("example.com", "EPP-1", false), CancellationToken.None);
+            new DomainTransferOrder("example.com", "EPP-1", false, CompleteContact), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Domain is not available");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
     }
 
     /// <summary>
@@ -366,7 +385,7 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
             new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Domain is not available");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
     }
 
     /// <summary>A change to a registrar-held domain on an unconfigured integration is refused.</summary>
@@ -374,10 +393,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
     public async Task SetNameserversAsync_WhenNotConfigured_FailsAsync()
     {
         var result = await BuildUnconfiguredProvider().SetNameserversAsync(
-            "example.com", "example.com", ["ns1.example.test"], CancellationToken.None);
+            new NameserverChange(new DomainRef("example.com", "example.com"), ["ns1.example.test"]), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not configured");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
     }
 
     /// <summary>
@@ -390,10 +409,10 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         var record = DnsRecord.CreateDetached(DnsRecordType.A, "www", "192.0.2.1", 1800, null);
 
         var result = await BuildUnconfiguredProvider().AddDnsRecordAsync(
-            "example.com", "example.com", record, CancellationToken.None);
+            new DnsRecordChange(new DomainRef("example.com", "example.com"), record), CancellationToken.None);
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("not configured");
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
         namecheap.Requests.Should().BeEmpty();
     }
 
@@ -405,8 +424,290 @@ public sealed class NamecheapRegistrarProviderTests : IAsyncLifetime
         unconfigured.ApiKey = string.Empty;
         var client = new NamecheapClient(new HttpClient(), Options.Create(unconfigured));
 
-        var act = () => client.ExecuteAsync("namecheap.domains.getList", [], CancellationToken.None);
+        var act = () => client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getList", new Dictionary<string, string>()), CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// The registrar has no cancel-transfer operation, so the refusal says so by code rather than
+    /// with the registrar's own sentence.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task CancelTransferAsync_IsRefusedAsUnsupportedAsync()
+    {
+        var provider = BuildUnconfiguredProvider();
+
+        var result = await provider.CancelTransferAsync(new DomainRef("example.com", "REF-1"), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_OPERATION_UNSUPPORTED);
+    }
+
+    /// <summary>
+    /// The API key and the account name travel in the POST form body and never in the URL; only
+    /// the command name is in the query string.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_SendsCredentialsInTheBodyNotTheUrlAsync()
+    {
+        var provider = BuildProvider("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""");
+
+        await provider.SetDnsManagementAsync(new DomainFeatureToggle("example.com", true), CancellationToken.None);
+
+        var call = LastCall();
+        call.Method.Should().Be("POST");
+        call.PathAndQuery.Should().NotContain("testkey").And.NotContain("testuser");
+        call.PathAndQuery.Should().EndWith("?Command=namecheap.domains.dns.setDefault");
+        FormParam(call, "ApiKey").Should().Be("testkey");
+        FormParam(call, "UserName").Should().Be("testuser");
+        FormParam(call, "ApiUser").Should().Be("testuser");
+        FormParam(call, "ClientIp").Should().Be("127.0.0.1");
+    }
+
+    /// <summary>The caller's command is only read: the credentials are added to the request, not to its parameters.</summary>
+    [Fact]
+    public async Task ExecuteAsync_DoesNotChangeTheCallersParametersAsync()
+    {
+        namecheap.Enqueue(HttpStatusCode.OK, """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse /></ApiResponse>""", "text/xml");
+        var client = new NamecheapClient(new HttpClient(), Options.Create(Settings));
+        var parameters = new Dictionary<string, string> { ["SLD"] = "example", ["ApiKey"] = "from-the-caller" };
+
+        await client.ExecuteAsync(new NamecheapCommand("namecheap.domains.getInfo", parameters), CancellationToken.None);
+
+        parameters.Should().BeEquivalentTo(new Dictionary<string, string> { ["SLD"] = "example", ["ApiKey"] = "from-the-caller" });
+        FormParam("ApiKey").Should().Be("testkey");
+    }
+
+    /// <summary>An answer that is not XML is an unknown outcome for the client: an HTTP failure, not a parse error.</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenAnswerIsNotXml_ThrowsHttpRequestExceptionAsync()
+    {
+        namecheap.Enqueue(HttpStatusCode.OK, "<html>bad gateway", "text/html");
+        var client = new NamecheapClient(new HttpClient(), Options.Create(Settings));
+
+        var act = () => client.ExecuteAsync(
+            new NamecheapCommand("namecheap.domains.getInfo", new Dictionary<string, string>()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    /// <summary>A registration sends the client's contact for every role.</summary>
+    [Fact]
+    public async Task RegisterAsync_SendsTheOrderContactForEveryRoleAsync()
+    {
+        var provider = BuildProvider("""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainCreateResult Domain="example.com" Registered="true" /></CommandResponse></ApiResponse>""");
+
+        await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        FormParam("Command").Should().Be("namecheap.domains.create");
+        FormParam("RegistrantEmailAddress").Should().Be("jane@example.com");
+        FormParam("TechPhone").Should().Be("+1.5551234567");
+        FormParam("AdminAddress1").Should().Be("123 Main St");
+        FormParam("AuxBillingCountry").Should().Be("US");
+    }
+
+    /// <summary>A contact missing a required detail is refused before anything is sent.</summary>
+    [Fact]
+    public async Task RegisterAsync_WithIncompleteContact_FailsWithoutCallingNamecheapAsync()
+    {
+        var provider = BuildProvider("""<?xml version="1.0"?><ApiResponse Status="OK"/>""");
+        var incomplete = CompleteContact with { Email = string.Empty };
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, incomplete), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_CONTACT_VALIDATION_FAILED);
+        namecheap.Requests.Should().BeEmpty();
+    }
+
+    /// <summary>An expiry with no offset is read as UTC, and an unreadable one falls back to now plus the term.</summary>
+    /// <param name="expireDate">The <c>ExpireDate</c> Namecheap answers with.</param>
+    /// <param name="expectedYear">The year the reported expiry falls in.</param>
+    [Theory]
+    [InlineData("2031-03-15T00:00:00", 2031)]
+    [InlineData("not a date", 0)]
+    public async Task RegisterAsync_ReadsTheExpiryInvariantlyAsync(string expireDate, int expectedYear)
+    {
+        var provider = BuildProvider($"""<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainCreateResult Domain="example.com" Registered="true" ExpireDate="{expireDate}" /></CommandResponse></ApiResponse>""");
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 2, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        if (expectedYear != 0)
+        {
+            result.ExpiresAt!.Value.Offset.Should().Be(TimeSpan.Zero);
+            result.ExpiresAt.Value.Year.Should().Be(expectedYear);
+        }
+        else
+        {
+            result.ExpiresAt!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow.AddYears(2), TimeSpan.FromMinutes(5));
+        }
+    }
+
+    /// <summary>The answer Namecheap gives when the name is not available to register (error 2030280).</summary>
+    private const string UnavailableResponse = """<?xml version="1.0"?><ApiResponse Status="ERROR"><Errors><Error Number="2030280">Domain not available</Error></Errors></ApiResponse>""";
+
+    /// <summary>The answer Namecheap gives when the account balance is too low (error 2019166).</summary>
+    private const string InsufficientFundsResponse = """<?xml version="1.0"?><ApiResponse Status="ERROR"><Errors><Error Number="2019166">Insufficient funds</Error></Errors></ApiResponse>""";
+
+    /// <summary>A domain list that holds the domain, with the expiry in the format Namecheap lists it.</summary>
+    private const string HeldListResponse = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainGetListResult><Domain ID="777" Name="example.com" Expires="04/12/2031" /></DomainGetListResult></CommandResponse></ApiResponse>""";
+
+    /// <summary>A domain list that holds nothing by that name.</summary>
+    private const string EmptyListResponse = """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainGetListResult /></CommandResponse></ApiResponse>""";
+
+    /// <summary>
+    /// A retry answered "domain unavailable" for a name the account already holds is the earlier
+    /// attempt having gone through, so it is success and nothing is refunded.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_WhenUnavailableButHeldByTheAccount_SucceedsAsync()
+    {
+        var provider = BuildProvider(UnavailableResponse);
+        namecheap.Enqueue(HttpStatusCode.OK, HeldListResponse, "text/xml");
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.RegistrarRef.Should().Be("777");
+        result.ExpiresAt!.Value.Date.Should().Be(new DateTime(2031, 4, 12));
+        namecheap.Requests.Select(r => FormParam(r, "Command")).Should()
+            .Equal("namecheap.domains.create", "namecheap.domains.getList");
+    }
+
+    /// <summary>"Domain unavailable" for a name the account does not hold is a refusal with its own code.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenUnavailableAndNotHeld_FailsWithTheUnavailableCodeAsync()
+    {
+        var provider = BuildProvider(UnavailableResponse);
+        namecheap.Enqueue(HttpStatusCode.OK, EmptyListResponse, "text/xml");
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_DOMAIN_UNAVAILABLE);
+    }
+
+    /// <summary>Too little registrar balance is its own code, and the account is not consulted for it.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenFundsAreShort_FailsWithTheFundsCodeAsync()
+    {
+        var provider = BuildProvider(InsufficientFundsResponse);
+
+        var result = await provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_INSUFFICIENT_FUNDS);
+        namecheap.Requests.Should().HaveCount(1);
+    }
+
+    /// <summary>
+    /// When the account cannot be read to settle a refusal, the outcome is unknown and the
+    /// exception escapes instead of a refusal that could refund a domain we own.
+    /// </summary>
+    [Fact]
+    public async Task RegisterAsync_WhenTheAccountCannotBeReadAfterARefusal_ThrowsAsync()
+    {
+        var provider = BuildProvider(UnavailableResponse);
+        namecheap.Enqueue(HttpStatusCode.BadGateway, "bad gateway", "text/plain");
+
+        var act = () => provider.RegisterAsync(
+            new DomainRegistrationOrder("example.com", 1, false, false, null, null, CompleteContact), CancellationToken.None);
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    /// <summary>A transfer that is refused as unavailable but is already in progress counts as placed.</summary>
+    [Fact]
+    public async Task TransferAsync_WhenUnavailableButInProgress_SucceedsAsync()
+    {
+        var provider = BuildProvider(UnavailableResponse);
+        namecheap.Enqueue(HttpStatusCode.OK, EmptyListResponse, "text/xml");
+        namecheap.Enqueue(HttpStatusCode.OK, """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainTransferGetListResult><Transfer ID="9" DomainName="example.com" /></DomainTransferGetListResult></CommandResponse></ApiResponse>""", "text/xml");
+
+        var result = await provider.TransferAsync(
+            new DomainTransferOrder("example.com", "EPP-1", false, CompleteContact), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        namecheap.Requests.Select(r => FormParam(r, "Command")).Should().Equal(
+            "namecheap.domains.transfer.create", "namecheap.domains.getList", "namecheap.domains.transfer.getList");
+        FormParam(namecheap.Requests[2], "ListType").Should().Be("INPROGRESS");
+    }
+
+    /// <summary>
+    /// A refused renewal stays a refusal even when the account holds the domain, because holding
+    /// it says nothing about whether it was renewed; no lookup is made.
+    /// </summary>
+    [Fact]
+    public async Task RenewAsync_WhenUnavailable_FailsWithoutLookingAtTheAccountAsync()
+    {
+        var provider = BuildProvider(UnavailableResponse);
+
+        var result = await provider.RenewAsync(new DomainRenewalOrder("example.com", "example.com", 1), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_DOMAIN_UNAVAILABLE);
+        namecheap.Requests.Should().HaveCount(1);
+    }
+
+    /// <summary>A lock change Namecheap fails with a server error is a failed result, not an exception, and no upstream text is returned.</summary>
+    [Fact]
+    public async Task SetRegistrarLockAsync_WhenNamecheapFails_ReturnsAFailedResultAsync()
+    {
+        namecheap.Enqueue(HttpStatusCode.InternalServerError, "secret upstream detail", "text/plain");
+        var provider = new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(Settings)),
+            NullLogger<NamecheapRegistrarProvider>.Instance,
+            new SystemClock(TimeProvider.System));
+
+        var result = await provider.SetRegistrarLockAsync(
+            new RegistrarFlagChange(new DomainRef("example.com", "example.com"), true), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
+    }
+
+    /// <summary>A change answered with something that is not XML is a failed result.</summary>
+    [Fact]
+    public async Task SetNameserversAsync_WhenAnswerIsNotXml_ReturnsAFailedResultAsync()
+    {
+        namecheap.Enqueue(HttpStatusCode.OK, "<html>maintenance", "text/html");
+        var provider = new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(Settings)),
+            NullLogger<NamecheapRegistrarProvider>.Instance,
+            new SystemClock(TimeProvider.System));
+
+        var result = await provider.SetNameserversAsync(
+            new NameserverChange(new DomainRef("example.com", "example.com"), ["ns1.example.test"]), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
+    }
+
+    /// <summary>A refusal inside a DNS change is a failed result with a code, and the log names the operation that failed.</summary>
+    [Fact]
+    public async Task AddDnsRecordAsync_WhenNamecheapRefuses_ReturnsTheCodeAndLogsTheOperationAsync()
+    {
+        namecheap.Enqueue(HttpStatusCode.OK, """<?xml version="1.0"?><ApiResponse Status="OK"><CommandResponse><DomainDNSGetHostsResult /></CommandResponse></ApiResponse>""", "text/xml");
+        namecheap.Enqueue(HttpStatusCode.OK, """<?xml version="1.0"?><ApiResponse Status="ERROR"><Errors><Error Number="1011102">API key is invalid</Error></Errors></ApiResponse>""", "text/xml");
+        var logger = new CapturingLogger<NamecheapRegistrarProvider>();
+        var provider = new NamecheapRegistrarProvider(
+            new NamecheapClient(new HttpClient(), Options.Create(Settings)), logger, new SystemClock(TimeProvider.System));
+        var record = DnsRecord.CreateDetached(DnsRecordType.A, "www", "192.0.2.1", 1800, null);
+
+        var result = await provider.AddDnsRecordAsync(
+            new DnsRecordChange(new DomainRef("example.com", "example.com"), record), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_ORDER_UPSTREAM_FAILED);
+        logger.Messages.Should().Contain(m => m.Contains("adding a DNS record"));
     }
 }

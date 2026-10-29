@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Domain.Clients.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Clients;
+
 /// <summary>
 /// Aggregate root for a client account.
 /// Linked to an ASP.NET Core Identity user via <see cref="UserId"/>.
@@ -13,6 +15,12 @@ public sealed class Client : BaseEntity, IAggregateRoot
 {
     /// <summary>Length of an ISO 4217 alpha code, the only shape <see cref="Currency"/> is stored in.</summary>
     private const int CurrencyCodeLength = 3;
+
+    /// <summary>Longest first or last name the stored column holds.</summary>
+    private const int NameMaxLength = 100;
+
+    /// <summary>Longest company name the stored column holds.</summary>
+    private const int CompanyNameMaxLength = 200;
 
     /// <summary>Internal mutable contacts list.</summary>
     private readonly List<Contact> _contacts = [];
@@ -96,19 +104,16 @@ public sealed class Client : BaseEntity, IAggregateRoot
 
     // ── Billing settings ────────────────────────────────────────────────────
 
-    /// <summary>Gets whether late fees are applied to this client.</summary>
-    public bool LateFees { get; private set; } = true;
-
-    /// <summary>Gets whether overdue notices are sent to this client.</summary>
+    /// <summary>Gets whether payment reminder emails for unpaid invoices are sent to this client.</summary>
     public bool OverdueNotices { get; private set; } = true;
 
-    /// <summary>Gets whether this client is tax exempt.</summary>
+    /// <summary>Gets whether this client is tax exempt: no tax rate can be set on their invoices.</summary>
     public bool TaxExempt { get; private set; }
 
     /// <summary>Gets whether invoices are generated separately per service.</summary>
     public bool SeparateInvoices { get; private set; }
 
-    /// <summary>Gets whether automatic credit card processing is disabled.</summary>
+    /// <summary>Gets whether credit card processing is disabled: no card payment or saved card charge is taken from this client.</summary>
     public bool DisableCcProcessing { get; private set; }
 
     /// <summary>Gets whether this client has opted in to marketing emails.</summary>
@@ -147,7 +152,7 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// <summary>Gets the non-owner users linked to this client account.</summary>
     public IReadOnlyList<ClientUser> Users => _users.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Client() { }
 
     /// <summary>
@@ -157,35 +162,48 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// <param name="firstName">The client's first name.</param>
     /// <param name="lastName">The client's last name.</param>
     /// <param name="email">The client's email address (used for the domain event).</param>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <param name="companyName">Optional company name.</param>
-    /// <param name="registrationIp">IP address from self-registration; null for admin-created clients.</param>
-    /// <param name="registrationUserAgent">Raw user-agent from self-registration; null for admin-created clients.</param>
-    /// <param name="deviceType">Parsed device type (Desktop, Mobile, Tablet); null for admin-created clients.</param>
-    /// <param name="operatingSystem">Parsed OS name from user-agent; null for admin-created clients.</param>
-    /// <param name="browser">Parsed browser name and version; null for admin-created clients.</param>
+    /// <param name="registration">What was captured at self-registration; <see langword="null"/> for admin-created clients.</param>
     /// <returns>A new, unpersisted <see cref="Client"/> instance.</returns>
-    public static Client Create(string userId, string firstName, string lastName, string email, string? companyName = null, string? registrationIp = null, string? registrationUserAgent = null, string? deviceType = null, string? operatingSystem = null, string? browser = null)
+    /// <exception cref="ArgumentException">Thrown when the first name is blank or a name or the company name is longer than its column.</exception>
+    public static Client Create(string userId, string firstName, string lastName, string email, DateTimeOffset now, string? companyName = null, RegistrationInfo? registration = null)
     {
         var client = new Client
         {
             UserId = userId,
-            FirstName = firstName,
-            LastName = lastName,
-            CompanyName = companyName,
             Status = ClientStatus.Active,
-            CreatedAt = DateTimeOffset.UtcNow,
-            RegistrationIp = registrationIp,
-            RegistrationUserAgent = registrationUserAgent,
-            DeviceType = deviceType,
-            OperatingSystem = operatingSystem,
-            Browser = browser,
+            RegistrationIp = registration?.IpAddress,
+            RegistrationUserAgent = registration?.UserAgent,
+            DeviceType = registration?.DeviceType,
+            OperatingSystem = registration?.OperatingSystem,
+            Browser = registration?.Browser,
         };
+        client.SetName(firstName, lastName, companyName);
 
-        // ClientId is 0 here — EF Core assigns the real Id after SaveChanges.
+        // ClientId is 0 here: EF Core assigns the real Id after SaveChanges.
         // The Unit of Work dispatches domain events post-save, so handlers receive the correct Id.
-        client.AddDomainEvent(() => new ClientCreatedEvent(client.Id, userId, email));
+        client.AddDomainEvent(() => new ClientCreatedEvent(client.Id, userId, email, now));
 
         return client;
+    }
+
+    /// <summary>
+    /// The first name a client gets when whoever creates the record has no name for them: the part of
+    /// the email address before the <c>@</c>, cut to the column's length. The same fallback the
+    /// account store applies to an account created without a name, so the two agree.
+    /// </summary>
+    /// <param name="email">The client's email address.</param>
+    /// <returns>The name, or <see langword="null"/> when the address has no local part to use.</returns>
+    public static string? FirstNameFromEmail(string? email)
+    {
+        var localPart = email?.Split('@')[0].Trim();
+        if (string.IsNullOrEmpty(localPart))
+        {
+            return null;
+        }
+
+        return localPart.Length > NameMaxLength ? localPart[..NameMaxLength] : localPart;
     }
 
     /// <summary>Moves the signup date to the moment the customer really joined, for accounts seeded from history.</summary>
@@ -199,11 +217,10 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// <param name="lastName">New last name.</param>
     /// <param name="companyName">New company name (null to clear).</param>
     /// <param name="phone">New phone number (null to clear).</param>
+    /// <exception cref="ArgumentException">Thrown when the first name is blank or a name or the company name is longer than its column.</exception>
     public void Update(string firstName, string lastName, string? companyName, string? phone)
     {
-        FirstName = firstName;
-        LastName = lastName;
-        CompanyName = companyName;
+        SetName(firstName, lastName, companyName);
         Phone = phone;
     }
 
@@ -212,10 +229,10 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="street">Street line.</param>
     /// <param name="address2">Second address line.</param>
-    /// <param name="city">City.</param>
+    /// <param name="city">City, or null to clear it.</param>
     /// <param name="state">State or region.</param>
     /// <param name="postCode">Postcode or ZIP.</param>
-    /// <param name="country">ISO 3166-1 alpha-2 country code.</param>
+    /// <param name="country">ISO 3166-1 alpha-2 country code; stored upper case.</param>
     public void UpdateAddress(string? street, string? address2, string? city, string? state, string? postCode, string? country)
     {
         Street = street;
@@ -223,7 +240,7 @@ public sealed class Client : BaseEntity, IAggregateRoot
         City = city;
         State = state;
         PostCode = postCode;
-        Country = country;
+        Country = CountryCode.Normalize(country);
     }
 
     /// <summary>
@@ -246,7 +263,7 @@ public sealed class Client : BaseEntity, IAggregateRoot
 
     /// <summary>Sets the currency the client is billed in.</summary>
     /// <remarks>
-    /// Whether this is allowed is not the client's to know — it depends on whether any invoice
+    /// Whether this is allowed is not the client's to know: it depends on whether any invoice
     /// exists, which lives elsewhere. The handler checks and refuses; this method only records,
     /// in the same shape <c>Invoice</c> stores it: three letters, upper case.
     /// </remarks>
@@ -267,7 +284,7 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="customerId">The card gateway customer ID.</param>
     /// <remarks>
-    /// Set once, the first time the client adds a card — a client is never expected to move
+    /// Set once, the first time the client adds a card: a client is never expected to move
     /// to a different card gateway customer afterward, so this does not need to support clearing it.
     /// </remarks>
     public void SetCardGatewayCustomerId(string customerId)
@@ -297,19 +314,17 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// <summary>
     /// Updates the client's billing settings.
     /// </summary>
-    /// <param name="lateFees">Apply late fees.</param>
-    /// <param name="overdueNotices">Send overdue notices.</param>
+    /// <param name="overdueNotices">Send payment reminder emails for unpaid invoices.</param>
     /// <param name="taxExempt">Tax exempt flag.</param>
     /// <param name="separateInvoices">Separate invoices per service.</param>
-    /// <param name="disableCcProcessing">Disable automatic CC processing.</param>
+    /// <param name="disableCcProcessing">Refuse card payments and saved card charges.</param>
     /// <param name="marketingOptIn">Marketing emails opt-in.</param>
     /// <param name="statusUpdate">Send status update emails.</param>
-    /// <param name="allowSso">Allow single sign-on.</param>
+    /// <param name="allowSso">Allow single sign-on into the hosting panels of this client's services.</param>
     public void UpdateSettings(
-        bool lateFees, bool overdueNotices, bool taxExempt, bool separateInvoices,
+        bool overdueNotices, bool taxExempt, bool separateInvoices,
         bool disableCcProcessing, bool marketingOptIn, bool statusUpdate, bool allowSso)
     {
-        LateFees = lateFees;
         OverdueNotices = overdueNotices;
         TaxExempt = taxExempt;
         SeparateInvoices = separateInvoices;
@@ -322,87 +337,64 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// <summary>
     /// Adds a new additional contact to this client.
     /// </summary>
-    /// <param name="firstName">The contact's first name.</param>
-    /// <param name="lastName">The contact's last name.</param>
-    /// <param name="companyName">Optional company name.</param>
-    /// <param name="email">The contact's email address.</param>
-    /// <param name="phone">Optional phone number.</param>
-    /// <param name="type">The contact type.</param>
-    /// <param name="street">Optional street address.</param>
-    /// <param name="address2">Optional second address line.</param>
-    /// <param name="city">Optional city.</param>
-    /// <param name="state">Optional state or region.</param>
-    /// <param name="postCode">Optional postal code.</param>
-    /// <param name="country">Optional ISO 3166-1 alpha-2 country code.</param>
-    /// <param name="notifyGeneral">General email notifications.</param>
-    /// <param name="notifyInvoice">Invoice email notifications.</param>
-    /// <param name="notifySupport">Support email notifications.</param>
-    /// <param name="notifyProduct">Product email notifications.</param>
-    /// <param name="notifyDomain">Domain email notifications.</param>
-    /// <param name="notifyAffiliate">Affiliate email notifications.</param>
-    public void AddContact(
-        string firstName, string lastName, string? companyName,
-        string email, string? phone, ContactType type,
-        string? street, string? address2, string? city, string? state, string? postCode, string? country,
-        bool notifyGeneral, bool notifyInvoice, bool notifySupport,
-        bool notifyProduct, bool notifyDomain, bool notifyAffiliate)
+    /// <param name="details">What was entered about the contact.</param>
+    /// <returns>The new contact, whose <see cref="BaseEntity.Id"/> is assigned when the client is saved.</returns>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed or another contact already uses the email address.</exception>
+    /// <exception cref="ArgumentException">Thrown when a name or the email address is blank, or a value is longer than its column.</exception>
+    public Contact AddContact(ContactDetails details)
     {
-        _contacts.Add(new Contact(
-            Id, firstName, lastName, companyName, email, phone, type,
-            street, address2, city, state, postCode, country,
-            notifyGeneral, notifyInvoice, notifySupport,
-            notifyProduct, notifyDomain, notifyAffiliate));
+        ArgumentNullException.ThrowIfNull(details);
+        EnsureNotClosed();
+        return AppendContact(details);
+    }
+
+    /// <summary>
+    /// Records a contact the account already had in the system it is being migrated from.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="AddContact"/> this does not refuse a closed account. Closing stops the
+    /// people on an account from being changed by anyone using it; importing history is not that:
+    /// a client that was closed in the source still has the contacts it had, and the import must
+    /// be able to bring them across. Only the migration importers call it.
+    /// </remarks>
+    /// <param name="details">What the source holds about the contact.</param>
+    /// <returns>The new contact, whose <see cref="BaseEntity.Id"/> is assigned when the client is saved.</returns>
+    /// <exception cref="DomainRuleException">Thrown when another contact already uses the email address.</exception>
+    /// <exception cref="ArgumentException">Thrown when a name or the email address is blank, or a value is longer than its column.</exception>
+    public Contact ImportContact(ContactDetails details)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+        return AppendContact(details);
     }
 
     /// <summary>
     /// Removes a contact by ID. Throws if not found.
     /// </summary>
     /// <param name="contactId">The contact's primary key.</param>
-    /// <exception cref="DomainRuleException">Thrown when the contact is not found.</exception>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed or the contact is not found.</exception>
     public void RemoveContact(int contactId)
     {
-        var contact = _contacts.FirstOrDefault(c => c.Id == contactId)
-            ?? throw new DomainRuleException(ClientsErrors.ClientContactNotFound, $"Contact {contactId} not found.");
-        _contacts.Remove(contact);
+        EnsureNotClosed();
+        _contacts.Remove(FindContact(contactId));
     }
 
     /// <summary>
     /// Updates an existing contact's fields. Throws if the contact is not found.
     /// </summary>
     /// <param name="contactId">The contact's primary key.</param>
-    /// <param name="firstName">New first name.</param>
-    /// <param name="lastName">New last name.</param>
-    /// <param name="companyName">New company name (null to clear).</param>
-    /// <param name="email">New email address.</param>
-    /// <param name="phone">New phone number (null to clear).</param>
-    /// <param name="type">New contact type.</param>
-    /// <param name="street">New street address (null to clear).</param>
-    /// <param name="address2">New second address line (null to clear).</param>
-    /// <param name="city">New city (null to clear).</param>
-    /// <param name="state">New state or region (null to clear).</param>
-    /// <param name="postCode">New postal code (null to clear).</param>
-    /// <param name="country">New ISO 3166-1 alpha-2 country code (null to clear).</param>
-    /// <param name="notifyGeneral">General email notifications.</param>
-    /// <param name="notifyInvoice">Invoice email notifications.</param>
-    /// <param name="notifySupport">Support email notifications.</param>
-    /// <param name="notifyProduct">Product email notifications.</param>
-    /// <param name="notifyDomain">Domain email notifications.</param>
-    /// <param name="notifyAffiliate">Affiliate email notifications.</param>
-    /// <exception cref="DomainRuleException">Thrown when the contact is not found.</exception>
-    public void UpdateContact(
-        int contactId, string firstName, string lastName, string? companyName,
-        string email, string? phone, ContactType type,
-        string? street, string? address2, string? city, string? state, string? postCode, string? country,
-        bool notifyGeneral, bool notifyInvoice, bool notifySupport,
-        bool notifyProduct, bool notifyDomain, bool notifyAffiliate)
+    /// <param name="details">The new values for every editable field.</param>
+    /// <exception cref="DomainRuleException">
+    /// Thrown when the account is closed, the contact is not found, or another contact already uses the email address.
+    /// </exception>
+    /// <exception cref="ArgumentException">Thrown when a name or the email address is blank, or a value is longer than its column.</exception>
+    public void UpdateContact(int contactId, ContactDetails details)
     {
-        var contact = _contacts.FirstOrDefault(c => c.Id == contactId)
-            ?? throw new DomainRuleException(ClientsErrors.ClientContactNotFound, $"Contact {contactId} not found.");
-        contact.Update(
-            firstName, lastName, companyName, email, phone, type,
-            street, address2, city, state, postCode, country,
-            notifyGeneral, notifyInvoice, notifySupport,
-            notifyProduct, notifyDomain, notifyAffiliate);
+        ArgumentNullException.ThrowIfNull(details);
+        EnsureNotClosed();
+
+        var contact = FindContact(contactId);
+        EnsureContactEmailFree(details.Email, exceptContactId: contactId);
+        contact.Update(details);
     }
 
     // ── User management ─────────────────────────────────────────────────────
@@ -412,9 +404,11 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="userId">Identity user ID to link.</param>
     /// <param name="permissions">Granted permissions.</param>
-    /// <exception cref="DomainRuleException">Thrown when the user is the account owner or already linked.</exception>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed, or the user is the account owner or already linked.</exception>
     public void AddUser(string userId, ClientPermission permissions)
     {
+        EnsureNotClosed();
+
         if (userId == UserId)
         {
             throw new DomainRuleException(
@@ -434,13 +428,21 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// Removes a non-owner user from this client.
     /// </summary>
     /// <param name="userId">Identity user ID to remove.</param>
-    /// <exception cref="DomainRuleException">Thrown when the user is not found.</exception>
+    /// <exception cref="DomainRuleException">
+    /// Thrown when the account is closed, the user is the account owner (the owner changes only by
+    /// <see cref="TransferOwnership"/>), or the user is not linked.
+    /// </exception>
     public void RemoveUser(string userId)
     {
-        var user = _users.FirstOrDefault(u => u.UserId == userId)
-            ?? throw new DomainRuleException(
-                ClientsErrors.ClientUserNotLinked, $"User {userId} is not linked to this client.");
-        _users.Remove(user);
+        EnsureNotClosed();
+
+        if (userId == UserId)
+        {
+            throw new DomainRuleException(
+                ClientsErrors.ClientOwnerCannotBeRemoved, "The account owner cannot be removed; transfer ownership first.");
+        }
+
+        _users.Remove(FindUser(userId));
     }
 
     /// <summary>
@@ -448,38 +450,41 @@ public sealed class Client : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="userId">Identity user ID whose permissions to update.</param>
     /// <param name="permissions">New permissions value.</param>
-    /// <exception cref="DomainRuleException">Thrown when the user is not found.</exception>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed or the user is not linked.</exception>
     public void UpdateUserPermissions(string userId, ClientPermission permissions)
     {
-        var user = _users.FirstOrDefault(u => u.UserId == userId)
-            ?? throw new DomainRuleException(
-                ClientsErrors.ClientUserNotLinked, $"User {userId} is not linked to this client.");
-        user.UpdatePermissions(permissions);
+        EnsureNotClosed();
+        FindUser(userId).UpdatePermissions(permissions);
     }
 
     /// <summary>
     /// Transfers account ownership to a different user.
-    /// If the new owner was a non-owner user, they are removed from the additional users list.
-    /// The previous owner is NOT automatically added as a non-owner user.
+    /// If the new owner was a non-owner user, they leave the additional users list. The previous
+    /// owner stays on the account as an additional user with every permission, so a transfer never
+    /// locks the person who held the account out of it; removing them afterwards is a separate,
+    /// deliberate step.
     /// </summary>
     /// <param name="newOwnerUserId">Identity user ID of the new owner.</param>
-    /// <exception cref="DomainRuleException">Thrown when the new owner is already the owner.</exception>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed or the new owner is already the owner.</exception>
     public void TransferOwnership(string newOwnerUserId)
     {
+        EnsureNotClosed();
+
         if (newOwnerUserId == UserId)
         {
             throw new DomainRuleException(
                 ClientsErrors.ClientTransferSameOwner, "This user is already the account owner.");
         }
 
-        // Remove new owner from additional users if they were linked
         var existing = _users.FirstOrDefault(u => u.UserId == newOwnerUserId);
         if (existing is not null)
         {
             _users.Remove(existing);
         }
 
+        var previousOwnerUserId = UserId;
         UserId = newOwnerUserId;
+        _users.Add(ClientUser.Create(Id, previousOwnerUserId, ClientPermission.All));
     }
 
     /// <summary>
@@ -520,9 +525,13 @@ public sealed class Client : BaseEntity, IAggregateRoot
         CreditBalance -= amount;
     }
 
-    /// <summary>Suspends the account. Throws if already suspended or closed.</summary>
-    /// <exception cref="DomainRuleException">Thrown when the account is not in an active state.</exception>
-    public void Suspend()
+    /// <summary>
+    /// Suspends the account and raises <see cref="ClientSuspendedEvent"/>. Allowed from Active and
+    /// Inactive; a suspended or closed account refuses.
+    /// </summary>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
+    /// <exception cref="DomainRuleException">Thrown when the account is already suspended or closed.</exception>
+    public void Suspend(DateTimeOffset now)
     {
         if (Status is ClientStatus.Suspended or ClientStatus.Closed)
         {
@@ -531,11 +540,16 @@ public sealed class Client : BaseEntity, IAggregateRoot
         }
 
         Status = ClientStatus.Suspended;
+        AddDomainEvent(() => new ClientSuspendedEvent(Id, now));
     }
 
-    /// <summary>Permanently closes the account.</summary>
+    /// <summary>
+    /// Permanently closes the account and raises <see cref="ClientClosedEvent"/>. Allowed from every
+    /// status but Closed; there is no way back.
+    /// </summary>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <exception cref="DomainRuleException">Thrown when the account is already closed.</exception>
-    public void Close()
+    public void Close(DateTimeOffset now)
     {
         if (Status == ClientStatus.Closed)
         {
@@ -543,20 +557,139 @@ public sealed class Client : BaseEntity, IAggregateRoot
         }
 
         Status = ClientStatus.Closed;
+        AddDomainEvent(() => new ClientClosedEvent(Id, UserId, now));
     }
 
     /// <summary>
-    /// Reactivates a suspended or inactive account.
-    /// No-ops if the account is already active.
+    /// Reactivates a suspended or inactive account and raises <see cref="ClientActivatedEvent"/>.
+    /// No-ops (and raises nothing) if the account is already active.
     /// </summary>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <exception cref="DomainRuleException">Thrown when the account is closed.</exception>
-    public void Activate()
+    public void Activate(DateTimeOffset now)
     {
         if (Status == ClientStatus.Closed)
         {
             throw new DomainRuleException(ClientsErrors.ClientActivateNotAllowed, "Cannot activate a closed account.");
         }
 
+        if (Status == ClientStatus.Active)
+        {
+            return;
+        }
+
         Status = ClientStatus.Active;
+        AddDomainEvent(() => new ClientActivatedEvent(Id, now));
     }
+
+    /// <summary>
+    /// Marks an active account inactive and raises <see cref="ClientDeactivatedEvent"/>: it stays on
+    /// file and can be activated again, but is no longer treated as a current customer. No-ops (and
+    /// raises nothing) if the account is already inactive. A suspended account is not deactivated
+    /// directly: it is activated first, so lifting a suspension is always an explicit step.
+    /// </summary>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
+    /// <exception cref="DomainRuleException">Thrown when the account is suspended or closed.</exception>
+    public void Deactivate(DateTimeOffset now)
+    {
+        if (Status is ClientStatus.Suspended or ClientStatus.Closed)
+        {
+            throw new DomainRuleException(
+                ClientsErrors.ClientDeactivateNotAllowed, $"Cannot deactivate a client with status {Status}.");
+        }
+
+        if (Status == ClientStatus.Inactive)
+        {
+            return;
+        }
+
+        Status = ClientStatus.Inactive;
+        AddDomainEvent(() => new ClientDeactivatedEvent(Id, now));
+    }
+
+    /// <summary>
+    /// Writes the account holder's name and company, the one place their shape is checked so
+    /// creating and updating a client cannot disagree. The last name may be empty: a person with a
+    /// single name is a real customer.
+    /// </summary>
+    /// <param name="firstName">The first name; not blank.</param>
+    /// <param name="lastName">The last name; may be empty.</param>
+    /// <param name="companyName">The optional company name.</param>
+    /// <exception cref="ArgumentException">Thrown when the first name is blank or a value is longer than its column.</exception>
+    private void SetName(string firstName, string lastName, string? companyName)
+    {
+        if (string.IsNullOrWhiteSpace(firstName) || firstName.Length > NameMaxLength)
+        {
+            throw new ArgumentException($"A client's first name is required and at most {NameMaxLength} characters.", nameof(firstName));
+        }
+
+        if (lastName is null || lastName.Length > NameMaxLength)
+        {
+            throw new ArgumentException($"A client's last name is at most {NameMaxLength} characters.", nameof(lastName));
+        }
+
+        if (companyName is { Length: > CompanyNameMaxLength })
+        {
+            throw new ArgumentException($"A client's company name is at most {CompanyNameMaxLength} characters.", nameof(companyName));
+        }
+
+        FirstName = firstName;
+        LastName = lastName;
+        CompanyName = companyName;
+    }
+
+    /// <summary>Adds a contact once the caller has decided whether this account may take one.</summary>
+    /// <param name="details">What was entered about the contact.</param>
+    /// <returns>The new contact.</returns>
+    /// <exception cref="DomainRuleException">Thrown when another contact already uses the email address.</exception>
+    private Contact AppendContact(ContactDetails details)
+    {
+        EnsureContactEmailFree(details.Email, exceptContactId: null);
+
+        var contact = new Contact(Id, details);
+        _contacts.Add(contact);
+        return contact;
+    }
+
+    /// <summary>Refuses a change to the people and contacts of an account that is closed for good.</summary>
+    /// <exception cref="DomainRuleException">Thrown when the account is closed.</exception>
+    private void EnsureNotClosed()
+    {
+        if (Status == ClientStatus.Closed)
+        {
+            throw new DomainRuleException(ClientsErrors.ClientRecordClosed, "The account is closed, so its contacts and users cannot be changed.");
+        }
+    }
+
+    /// <summary>Refuses an email address another contact of this client already uses.</summary>
+    /// <param name="email">The address about to be stored, compared without regard to case or surrounding space.</param>
+    /// <param name="exceptContactId">The contact being updated, whose own address is not a clash, or <see langword="null"/> when adding.</param>
+    /// <exception cref="DomainRuleException">Thrown when another contact uses the address.</exception>
+    private void EnsureContactEmailFree(string email, int? exceptContactId)
+    {
+        var wanted = email?.Trim();
+        var taken = _contacts.Any(c =>
+            c.Id != exceptContactId && string.Equals(c.Email, wanted, StringComparison.OrdinalIgnoreCase));
+        if (taken)
+        {
+            throw new DomainRuleException(ClientsErrors.ClientContactEmailInUse, "Another contact of this client already uses this email address.");
+        }
+    }
+
+    /// <summary>Finds one of this client's contacts.</summary>
+    /// <param name="contactId">The contact's primary key.</param>
+    /// <returns>The contact.</returns>
+    /// <exception cref="DomainRuleException">Thrown when the client has no such contact.</exception>
+    private Contact FindContact(int contactId) =>
+        _contacts.FirstOrDefault(c => c.Id == contactId)
+            ?? throw new DomainRuleException(ClientsErrors.ClientContactNotFound, $"Contact {contactId} not found.");
+
+    /// <summary>Finds one of this client's additional users.</summary>
+    /// <param name="userId">The Identity user ID.</param>
+    /// <returns>The link.</returns>
+    /// <exception cref="DomainRuleException">Thrown when the user is not linked to this client.</exception>
+    private ClientUser FindUser(string userId) =>
+        _users.FirstOrDefault(u => u.UserId == userId)
+            ?? throw new DomainRuleException(
+                ClientsErrors.ClientUserNotLinked, $"User {userId} is not linked to this client.");
 }

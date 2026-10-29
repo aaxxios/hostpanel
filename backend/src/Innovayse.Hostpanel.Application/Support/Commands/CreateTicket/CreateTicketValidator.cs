@@ -1,9 +1,8 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
-using Innovayse.Hostpanel.Domain.Support;
-using Innovayse.Hostpanel.Domain.Support.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Support.Commands.CreateTicket;
 
 /// <summary>Validator for <see cref="CreateTicketCommand"/>.</summary>
@@ -36,8 +35,7 @@ public sealed class CreateTicketValidator : LocalizedValidator<CreateTicketComma
             .WithMessage(L["TicketMessageRequired"]);
 
         RuleFor(x => x.Priority)
-            .NotEmpty()
-            .Must(p => Enum.TryParse<TicketPriority>(p, ignoreCase: true, out _))
+            .IsInEnum()
             .WithMessage(L["TicketPriorityInvalid"]);
     }
 }

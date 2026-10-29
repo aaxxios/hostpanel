@@ -1,25 +1,28 @@
 <script setup lang="ts">
 /**
- * Client-scoped quotes list -- shows quotes for a specific client
- * with pagination, delete actions, and navigation to quote detail.
+ * Client-scoped quotes list: shows quotes for a specific client with pagination, delete actions,
+ * and navigation to quote detail. A delete is confirmed first and reports its outcome (success, or
+ * the API's sentence) above the list; a refused load shows the sentence with a Retry.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useQuotesStore } from '@/stores/quotes'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { QUOTE_STAGE_OPTIONS } from '@/lib/constants'
 import { formatDate } from '@/lib/format'
 import { statusLabel, quoteStageTone } from '@/lib/tones'
 import { formatPlainAmount } from '@/lib/money'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -31,6 +34,7 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
 import { UiTextSize, UiTextTone } from '@/utils/ui/text'
+import { UiTone } from '@/utils/ui/tone'
 import { LEDGER_PAGE_SIZE } from '@/lib/limits'
 import { quoteAddPath, quotePath } from '@/lib/routes'
 
@@ -60,6 +64,18 @@ const deleteTargetId = ref<number | null>(null)
 /** Whether the delete confirm modal is visible. */
 const showDeleteModal = ref(false)
 
+/** True while the delete is in flight. */
+const deleting = ref(false)
+
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /**
  * Fetches client quotes with current pagination.
  *
@@ -67,6 +83,7 @@ const showDeleteModal = ref(false)
  */
 const fetchQuotes = async (): Promise<void> => {
   await store.fetchClientQuotes(clientId.value, page.value, pageSize.value)
+  loadError.value = store.error
 }
 
 /**
@@ -92,7 +109,7 @@ const confirmDelete = (id: number): void => {
 }
 
 /**
- * Deletes the targeted quote and refreshes the list.
+ * Deletes the targeted quote, shows the outcome and refreshes the list on success.
  *
  * @returns Promise that resolves when deletion completes.
  */
@@ -100,10 +117,26 @@ const executeDelete = async (): Promise<void> => {
   if (!deleteTargetId.value) {
     return
   }
-  await store.deleteQuote(deleteTargetId.value)
+  feedback.clear()
+  deleting.value = true
+  const ok = await store.deleteQuote(deleteTargetId.value)
+  deleting.value = false
   showDeleteModal.value = false
   deleteTargetId.value = null
-  await fetchQuotes()
+  if (ok) {
+    feedback.show(t('clients.clientQuotes.quoteDeleted'), false)
+    await fetchQuotes()
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    showDeleteModal.value = false
+    deleteTargetId.value = null
+  }
 }
 
 /**
@@ -125,6 +158,7 @@ const editQuote = (id: number): void => {
   router.push(quotePath(id))
 }
 
+/** Loads the first page. */
 onMounted(() => fetchQuotes())
 </script>
 
@@ -142,9 +176,15 @@ onMounted(() => fetchQuotes())
       </UiButton>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-quotes-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="client-quotes-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="client-quotes-error"
+      @retry="fetchQuotes()"
+    />
 
     <UiStack v-if="store.loading && store.clientQuotes.length === 0" data-testid="client-quotes-loading">
       <UiSkeleton :lines="3" />
@@ -235,10 +275,10 @@ onMounted(() => fetchQuotes())
       :message="t('clients.clientQuotes.confirmDeleteQuote', { id: deleteTargetId })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="deleting"
       tone="danger"
       @confirm="executeDelete"
-      @close="showDeleteModal = false"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

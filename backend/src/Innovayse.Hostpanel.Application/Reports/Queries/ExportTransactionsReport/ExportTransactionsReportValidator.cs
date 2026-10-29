@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.ExportTransactionsRepo
 /// <summary>
 /// Validator for <see cref="ExportTransactionsReportQuery"/>. Every field is the same kind of
 /// plain filter the paged Transactions report accepts unvalidated, and there is no page size to
-/// bound here; no rule is declared — decided, not forgotten.
+/// bound here; no rule is declared: decided, not forgotten.
 /// </summary>
 public sealed class ExportTransactionsReportValidator : LocalizedValidator<ExportTransactionsReportQuery>
 {

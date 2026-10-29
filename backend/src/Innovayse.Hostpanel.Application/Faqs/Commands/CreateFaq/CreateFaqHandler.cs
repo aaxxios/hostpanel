@@ -34,7 +34,7 @@ public sealed class CreateFaqHandler
         ArgumentNullException.ThrowIfNull(cmd);
 
         var entity = Faq.Create(cmd.Category, cmd.SortOrder, cmd.IsActive);
-        entity.ApplyTranslations(cmd.Translations);
+        entity.ReplaceTranslations(cmd.Translations.ToContent());
 
         _context.Faqs.Add(entity);
         await _context.SaveChangesAsync(ct);

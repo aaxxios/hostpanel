@@ -5,4 +5,4 @@ namespace Innovayse.Hostpanel.Application.Admin.Queries.GetPublicSettings;
 /// Takes no parameters: the set of exposed keys is fixed by the handler, not chosen
 /// by the caller, so an unauthenticated request cannot ask for anything else.
 /// </summary>
-public record GetPublicSettingsQuery;
+public sealed record GetPublicSettingsQuery;

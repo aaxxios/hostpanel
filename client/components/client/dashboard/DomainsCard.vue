@@ -54,7 +54,7 @@ const store = useClientStore()
 /**
  * The one date worth showing for a domain in the summary list, with its own label.
  *
- * Expiry first, then next-due, then registration — the row has space for one, and that is the
+ * Expiry first, then next-due, then registration: the row has space for one, and that is the
  * order in which a customer needs it. `formatDate` treats both zero-date sentinels as absent,
  * so a field that carries one falls through to the next candidate here.
  *

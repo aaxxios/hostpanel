@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('useGatewayLogApi', () => {
   it('list pages the endpoint and omits empty filters', async () => {
-    const mock = stubFetch(json({ items: [], totalCount: 0, page: 1, pageSize: 20 }))
+    const mock = stubFetch(json({ items: [], pageNumber: 1, pageSize: 20, totalCount: 0, totalPages: 0 }))
 
     await useGatewayLogApi().list({ from: '', to: '', gateway: '', debugData: '', result: '' }, 1, 20)
 
@@ -22,7 +22,7 @@ describe('useGatewayLogApi', () => {
   })
 
   it('list sends the filters, widening the day range to whole days', async () => {
-    const mock = stubFetch(json({ items: [], totalCount: 0, page: 2, pageSize: 10 }))
+    const mock = stubFetch(json({ items: [], pageNumber: 2, pageSize: 10, totalCount: 0, totalPages: 0 }))
 
     await useGatewayLogApi().list(
       { from: '2026-10-01', to: '2026-10-02', gateway: 'bank', debugData: 'ref', result: GatewayLogResult.Pending },

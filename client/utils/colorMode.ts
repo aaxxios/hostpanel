@@ -43,8 +43,8 @@ export const parseColorMode = (input: string | null | undefined): ColorMode | nu
 /**
  * Narrows an untrusted operator setting to something this module understands.
  *
- * Anything unrecognised — an unset row, an older backend, a typo that got past the
- * API — degrades to {@link DEFAULT_COLOR_MODE_SETTING} rather than to no theme at all.
+ * Anything unrecognised (an unset row, an older backend, a typo that got past the
+ * API) degrades to {@link DEFAULT_COLOR_MODE_SETTING} rather than to no theme at all.
  *
  * @param input Raw `portal.theme.default` value.
  * @returns A usable setting.
@@ -56,8 +56,8 @@ export const parseColorModeSetting = (input: string | null | undefined): ColorMo
 /**
  * Decides the mode the server can render.
  *
- * Returns `null` only when nothing but the device knows — no cookie and an operator
- * default of `system` — in which case the server emits no class and a head script
+ * Returns `null` only when nothing but the device knows, no cookie and an operator
+ * default of `system`, in which case the server emits no class and a head script
  * (see {@link SYSTEM_MODE_BOOTSTRAP}) picks one before first paint.
  *
  * @param cookie The visitor's saved choice, if any.
@@ -76,7 +76,7 @@ export const resolveColorMode = (
 }
 
 /**
- * Reads `portal.theme.user_toggle`. Only the literal `false` hides the switch — an
+ * Reads `portal.theme.user_toggle`. Only the literal `false` hides the switch: an
  * unset row, an older backend or anything else keeps today's behaviour, which is a
  * visible toggle.
  *
@@ -91,8 +91,8 @@ export const isUserToggleEnabled = (input: string | null | undefined): boolean =
  * Inline head script for the `system` case: applies the device preference to `<html>`
  * before the first paint, so a light-mode visitor never sees a dark frame.
  *
- * Both template stylesheets declare their dark palette on bare `:root` — a page with no
- * class is dark — so without this a `system` visitor on a light device would flash dark
+ * Both template stylesheets declare their dark palette on bare `:root`, a page with no
+ * class is dark, so without this a `system` visitor on a light device would flash dark
  * until hydration. It runs only when the server could not decide (see
  * {@link resolveColorMode}); with a cookie or a fixed operator default the class is in
  * the server-rendered HTML and no script is emitted.

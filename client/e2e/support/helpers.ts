@@ -9,6 +9,7 @@
  */
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test'
 import { CLIENT_CREDENTIALS, STUB_URL } from './fixtures.mjs'
+import type { HttpMethod } from '../../types/httpmethod'
 
 /** One request the stub backend has served, as `GET /__e2e/requests` reports it. */
 export interface StubRequest {
@@ -27,7 +28,7 @@ export interface StubRequest {
 /** An answer to script for one stub route (see `POST /__e2e/script` in `stub-backend.mjs`). */
 export interface ScriptedAnswer {
   /** HTTP method of the route. */
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method: HttpMethod
   /** Path of the route on the stub, e.g. `/api/clients/me`. */
   path: string
   /** Status the stub answers. */
@@ -60,7 +61,7 @@ export const required = <T>(value: T | undefined, what: string): T => {
  * finished hydrating it, and the initial requests have settled.
  *
  * Server-rendered pages show their form before hydration finishes, and a value typed in that
- * window is wiped when the component takes over -- which fails a spec as a "field is empty"
+ * window is wiped when the component takes over, which fails a spec as a "field is empty"
  * assertion far from the cause. The signal is Nuxt's own: the root element holds the Vue app
  * (`__vue_app__`) and `useNuxtApp().isHydrating` has turned false. The `data-v-app` attribute is
  * not used: Vue sets it on a client-side mount only, so a hydrated page never carries it.
@@ -85,7 +86,7 @@ export const waitForHydration = async (page: Page): Promise<void> => {
  * The session lives on the server: the BFF keeps the tokens and gives the browser only an opaque
  * `portal_session` cookie and the readable `authed` flag. So the context signs in through the BFF's
  * own sign-in route with the stub customer's credentials (the same call the form makes), and the
- * cookies it answers land in the context -- which keeps every spec but the sign-in one from
+ * cookies it answers land in the context, which keeps every spec but the sign-in one from
  * repeating the form.
  *
  * @param context The browser context to sign in.

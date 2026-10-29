@@ -1,21 +1,24 @@
 using Innovayse.Hostpanel.Domain.Billing;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Billing;
+
 /// <summary>
-/// Pins the behaviour of <see cref="InvoiceItem.ClientServiceId"/> — the link that lets a
+/// Pins the behaviour of <see cref="InvoiceItem.ClientServiceId"/>, the link that lets a
 /// customer ask what they were charged for one service.
 /// </summary>
 /// <remarks>
 /// The link is nullable and there is no backfill, so the null carries meaning: a line the
-/// platform never recorded a service for. These tests exist to stop that meaning being eroded —
+/// platform never recorded a service for. These tests exist to stop that meaning being eroded
 /// by a default that quietly invents a link, by an edit path that silently drops one, or by a
 /// duplicate that loses one.
 /// </remarks>
 public sealed class InvoiceItemTests
 {
+    /// <summary>The fixed moment these tests treat as the present: issue, payment and overdue times.</summary>
+    private static readonly DateTimeOffset Now = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+
     /// <summary>A due date far enough out that nothing under test goes overdue.</summary>
-    private static DateTimeOffset DueDate => DateTimeOffset.UtcNow.AddDays(14);
+    private static DateTimeOffset DueDate => Now.AddDays(14);
 
     /// <summary>
     /// A line raised without a service in hand carries no link. The eleven call sites that
@@ -24,7 +27,7 @@ public sealed class InvoiceItemTests
     [Fact]
     public void AddItem_WithoutAServiceId_LeavesTheLinkUnset()
     {
-        var invoice = Invoice.Create(clientId: 1, DueDate, "USD");
+        var invoice = Invoice.Create(clientId: 1, DueDate, "USD", Now);
 
         invoice.AddItem("Manual adjustment", 100m, 1);
 
@@ -35,7 +38,7 @@ public sealed class InvoiceItemTests
     [Fact]
     public void AddItem_WithAServiceId_RecordsIt()
     {
-        var invoice = Invoice.Create(clientId: 1, DueDate, "USD");
+        var invoice = Invoice.Create(clientId: 1, DueDate, "USD", Now);
 
         invoice.AddItem("Renewal: Starter Hosting", 5000m, 1, clientServiceId: 42);
 
@@ -50,7 +53,7 @@ public sealed class InvoiceItemTests
     [Fact]
     public void UpdateItem_KeepsTheServiceLink()
     {
-        var invoice = Invoice.Create(clientId: 1, DueDate, "USD");
+        var invoice = Invoice.Create(clientId: 1, DueDate, "USD", Now);
         invoice.AddItem("Renewal: Starter Hosting", 5000m, 1, clientServiceId: 42);
         var item = Assert.Single(invoice.Items);
 
@@ -62,16 +65,16 @@ public sealed class InvoiceItemTests
 
     /// <summary>
     /// A duplicate is the same charges billed again, so each line is still for the service it was
-    /// for — and a line that was for none is still for none.
+    /// for, and a line that was for none is still for none.
     /// </summary>
     [Fact]
     public void Duplicate_CarriesEachLinkAcrossUnchanged()
     {
-        var invoice = Invoice.Create(clientId: 1, DueDate, "USD");
+        var invoice = Invoice.Create(clientId: 1, DueDate, "USD", Now);
         invoice.AddItem("Renewal: Starter Hosting", 5000m, 1, clientServiceId: 42);
         invoice.AddItem("Manual adjustment", 100m, 1);
 
-        var copy = invoice.Duplicate();
+        var copy = invoice.Duplicate(Now);
 
         Assert.Equal(new int?[] { 42, null }, copy.Items.Select(i => i.ClientServiceId));
     }
@@ -80,7 +83,7 @@ public sealed class InvoiceItemTests
     [Fact]
     public void AnInvoiceMayCarryLinkedAndUnlinkedLinesTogether()
     {
-        var invoice = Invoice.Create(clientId: 1, DueDate, "USD");
+        var invoice = Invoice.Create(clientId: 1, DueDate, "USD", Now);
 
         invoice.AddItem("Renewal: Starter Hosting", 5000m, 1, clientServiceId: 42);
         invoice.AddItem("Renewal: Backup Add-on", 500m, 1, clientServiceId: 43);

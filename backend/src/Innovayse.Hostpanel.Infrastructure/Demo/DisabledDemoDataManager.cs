@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// a regular deployment never has its data touched. Registered so the reset handler always has
 /// a manager to be constructed with.
 /// </summary>
-internal sealed class DisabledDemoDataManager : IDemoDataManager
+public sealed class DisabledDemoDataManager : IDemoDataManager
 {
     /// <inheritdoc/>
     public Task SeedAsync(CancellationToken ct) => Task.CompletedTask;

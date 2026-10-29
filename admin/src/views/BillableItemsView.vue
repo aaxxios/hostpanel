@@ -2,18 +2,18 @@
 /**
  * Billable items: the uninvoiced and recurring charges of every client, narrowed as the operator
  * types by client, description, amount and status, paged on the page, with a confirmed bulk
- * delete of the ticked rows.
+ * delete of the ticked rows. The outcome of the delete (success, or the API's sentence) shows above
+ * the table; a refused load shows the sentence with a Retry.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import UiClientSelect from '@/components/ui/UiClientSelect.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiFilterCard from '@/components/ui/UiFilterCard.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -24,6 +24,7 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -32,19 +33,16 @@ import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useClientOptions } from '@/composables/useClientOptions'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { useBillableItemsStore } from '@/stores/billableItems'
 import { pageSlice } from '@/lib/paging'
 import { BillableItemType } from '@/types/billableitem'
 import type { BillableItem } from '@/types/billableitem'
 import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 import { AppRoute } from '@/lib/routes'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 /** What the status filter can single out. */
 const ItemStatus = {
@@ -82,6 +80,28 @@ const selectedIds = ref<number[]>([])
 
 /** True while the bulk-delete confirmation is open. */
 const deleteOpen = ref(false)
+
+/** True while the bulk delete runs. */
+const deleting = ref(false)
+
+/** The sentence of the last refused list load, shown with Retry; null when the list loaded. */
+const loadError = ref<string | null>(null)
+
+/** The outcome line of the last bulk delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the items and records whether the load was refused.
+ *
+ * @returns Resolves when the list has settled.
+ */
+const load = async (): Promise<void> => {
+  await store.fetchAll()
+  loadError.value = store.error
+}
 
 /** Options of the status select. */
 const statusOptions = computed(() => [
@@ -176,15 +196,37 @@ const clearFilters = (): void => {
   filterStatus.value = ItemStatus.Any
 }
 
-/** Deletes the ticked rows one by one; the store reloads the list after each. */
+/**
+ * Deletes the ticked rows one by one (the store reloads the list after each), stopping at the
+ * first refusal, and shows the outcome.
+ *
+ * @returns Resolves when the deletes have settled.
+ */
 const deleteSelected = async (): Promise<void> => {
-  deleteOpen.value = false
+  feedback.clear()
+  deleting.value = true
+  let refused = false
   for (const id of selectedIds.value) {
     if (!(await store.removeItem(id))) {
+      refused = true
       break
     }
   }
+  deleting.value = false
+  deleteOpen.value = false
   selectedIds.value = []
+  if (refused) {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
+  } else {
+    feedback.show(t('billing.billableItems.itemsDeleted'), false)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteOpen.value = false
+  }
 }
 
 /** Filtering from the first page again whenever a filter changes. */
@@ -192,8 +234,9 @@ watch([filterClientId, filterDescription, filterAmount, filterStatus], () => {
   page.value = 1
 })
 
+/** Loads the items and the client picker's options. */
 onMounted(() => {
-  void store.fetchAll()
+  void load()
   void loadClients()
 })
 </script>
@@ -247,9 +290,15 @@ onMounted(() => {
       </template>
     </UiFilterCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="billing-billable-items-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-billable-items-feedback" />
+
+    <UiErrorState
+      v-if="loadError !== null"
+      :message="loadError"
+      :loading="store.loading"
+      testid="billing-billable-items-error"
+      @retry="load"
+    />
 
     <UiText tone="muted" size="md" data-testid="billing-billable-items-count">
       {{ t('billing.billableItems.lengthRecordsFound', { length: filteredItems.length }) }}
@@ -291,7 +340,7 @@ onMounted(() => {
               />
             </UiTableCell>
             <UiTableCell muted>{{ item.id }}</UiTableCell>
-            <UiTableCell>{{ clientLabel(item.clientName, item.clientId) }}</UiTableCell>
+            <UiTableCell>{{ item.clientName }}</UiTableCell>
             <UiTableCell>{{ item.description }}</UiTableCell>
             <UiTableCell>{{ item.currency }} {{ item.amount.toFixed(2) }}</UiTableCell>
             <UiTableCell muted>{{ typeLabel(item.type) }}</UiTableCell>
@@ -331,10 +380,10 @@ onMounted(() => {
       :message="t('billing.billableItems.deleteItemsMessage', { count: selectedIds.length }, selectedIds.length)"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
-      :loading="store.loading"
+      :loading="deleting"
       tone="danger"
       @confirm="deleteSelected"
-      @close="deleteOpen = false"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

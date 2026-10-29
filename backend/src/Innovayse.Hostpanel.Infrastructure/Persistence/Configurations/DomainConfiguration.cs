@@ -1,8 +1,11 @@
+using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="Domain"/> aggregate.</summary>
 public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDomain>
 {
@@ -11,6 +14,10 @@ public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDom
     public void Configure(EntityTypeBuilder<RegisteredDomain> builder)
     {
         builder.HasKey(x => x.Id);
+
+        // A registrar callback, the expiry sweep and a staff edit that load the same domain cannot
+        // all save over each other; the later save fails with ConcurrencyConflictException.
+        builder.UseXminConcurrencyToken();
 
         builder.Property(x => x.ClientId).IsRequired();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(255);
@@ -25,13 +32,13 @@ public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDom
         builder.Property(x => x.EppCode).HasMaxLength(50);
         builder.Property(x => x.LinkedServiceId);
 
-        builder.Property(x => x.RecurringAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0m);
-        builder.Property(x => x.PriceCurrency).HasMaxLength(3).HasDefaultValue("USD");
+        builder.Property(x => x.RecurringAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.PriceCurrency).HasMaxLength(3);
         builder.Property(x => x.NextDueDate);
         builder.Property(x => x.Registrar).HasMaxLength(100);
-        builder.Property(x => x.RegistrationPeriod).HasDefaultValue(1);
+        builder.Property(x => x.RegistrarModule).HasConversion<string>().HasMaxLength(30);
 
-        builder.Property(x => x.FirstPaymentAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0m);
+        builder.Property(x => x.FirstPaymentAmount).HasColumnType("numeric(18,4)");
         builder.Property(x => x.PaymentMethod).HasMaxLength(100);
         builder.Property(x => x.PromotionCode).HasMaxLength(100);
         builder.Property(x => x.SubscriptionId).HasMaxLength(255);
@@ -40,6 +47,9 @@ public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDom
 
         builder.HasIndex(x => x.Name).IsUnique();
         builder.HasIndex(x => x.ClientId);
+        builder.HasIndex(x => new { x.Status, x.ExpiresAt });
+
+        // The domains report filters by expiry with no status, which the composite above cannot serve.
         builder.HasIndex(x => x.ExpiresAt);
 
         // Navigation: Domain owns a collection of Nameservers via private backing field _nameservers.
@@ -81,5 +91,18 @@ public sealed class DomainConfiguration : IEntityTypeConfiguration<RegisteredDom
         builder.Navigation(x => x.Reminders)
             .HasField("_reminders")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        // A client who still has this record cannot be deleted: billing, service and support history
+        // is kept, so the database refuses the delete instead of leaving rows without an owner.
+        builder.HasOne<Client>()
+            .WithMany()
+            .HasForeignKey(x => x.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A domain outlives the hosting service it was ordered with: deleting the service clears the link.
+        builder.HasOne<ClientService>()
+            .WithMany()
+            .HasForeignKey(x => x.LinkedServiceId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

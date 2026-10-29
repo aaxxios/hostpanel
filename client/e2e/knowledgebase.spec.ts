@@ -8,6 +8,7 @@
 import { expect, test } from './support/test'
 import { KB_ARTICLES } from './support/fixtures.mjs'
 import { required, waitForHydration } from './support/helpers'
+import { kbCategorySlug } from '../utils/kbCategory'
 
 /** The article whose body carries hostile markup. */
 const HOSTILE = required(KB_ARTICLES[0], 'hostile article')
@@ -19,7 +20,7 @@ test('an article opens from its category with formatting kept and active content
   await page.goto('/knowledgebase')
   await waitForHydration(page)
 
-  await page.getByTestId(`kb-category-${HOSTILE.category}`).click()
+  await page.getByTestId(`kb-category-card-${kbCategorySlug(HOSTILE.category)}`).click()
   await expect(page.getByTestId('kb-category-page')).toBeVisible()
 
   await page.getByTestId(`kb-article-${HOSTILE.id}`).click()

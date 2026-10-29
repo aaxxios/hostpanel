@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Application.Products.Queries.GetProductGroups;
 
 /// <summary>
 ///     Validator for GetProductGroupsQuery.
-///     Its one input is a flag, which every value of is valid, so no rule is declared — decided, not
+///     Its one input is a flag, which every value of is valid, so no rule is declared: decided, not
 ///     forgotten.
 /// </summary>
 public sealed class GetProductGroupsValidator : LocalizedValidator<GetProductGroupsQuery>

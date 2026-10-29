@@ -31,7 +31,7 @@
 /**
  * nova template homepage.
  *
- * Presentation only — every value it displays arrives as a prop from
+ * Presentation only: every value it displays arrives as a prop from
  * pages/index.vue, which owns the fetching, the SEO and the structured data.
  *
  * `id="nova-main"` is what the header's skip link points at. It sits here

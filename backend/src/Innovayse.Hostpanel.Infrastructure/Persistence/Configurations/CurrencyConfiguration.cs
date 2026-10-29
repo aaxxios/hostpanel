@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core mapping for <see cref="Domain.Billing.Currency"/>.</summary>
 public sealed class CurrencyConfiguration : IEntityTypeConfiguration<Domain.Billing.Currency>
 {
@@ -14,7 +15,7 @@ public sealed class CurrencyConfiguration : IEntityTypeConfiguration<Domain.Bill
 
     /// <summary>
     /// Predicate of the partial unique index over <see cref="Domain.Billing.Currency.IsBase"/>. The column name
-    /// is EF's default — the property name, quoted because it is mixed-case in PostgreSQL.
+    /// is EF's default: the property name, quoted because it is mixed-case in PostgreSQL.
     /// </summary>
     private const string BaseRowFilter = "\"IsBase\" = true";
 

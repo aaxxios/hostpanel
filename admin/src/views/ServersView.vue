@@ -4,21 +4,24 @@
  *
  * Lists all provisioning servers grouped by module, then shows server groups.
  * Provides Add/Edit/Delete actions for both servers and groups. Every refusal sentence belongs to
- * the servers store and is shown as the API returned it.
+ * the servers store and is shown as the API returned it: a refused load with a retry, a refused save
+ * inside its dialog, a delete (confirmed first in a danger prompt) or a saved dialog in the outcome
+ * line under the header. The SSH key management dialog confirms its own saves: it stays open, since
+ * its later steps use what was saved.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useServersStore } from '@/stores/servers'
 import { FILL_TYPE_LABELS, MODULE_LABELS } from '@/types/server'
 import type { ServerDto, ServerGroupDto, ServerGroupPayload, ServerModule, ServerPayload } from '@/types/server'
-import type { UiTone } from '@/utils/ui/tone'
+import { UiTone } from '@/utils/ui/tone'
 import GroupFormModal from '@/components/servers/GroupFormModal.vue'
 import ServerFormModal from '@/components/servers/ServerFormModal.vue'
 import ServerSshSettingsModal from '@/components/servers/ServerSshSettingsModal.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
@@ -30,7 +33,9 @@ import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 
 /** Translation function and the active locale (for date formatting). */
 const { t, locale } = useI18n()
@@ -76,6 +81,34 @@ const deleteServerTarget = ref<ServerDto | null>(null)
 /** Server whose SSH key management settings dialog is open, null when closed. */
 const sshServerTarget = ref<ServerDto | null>(null)
 
+/** The outcome line of the last save or delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Shows the outcome of a delete: the success sentence, or the API's refusal.
+ *
+ * @param ok - Whether the API accepted the delete.
+ */
+const reportDelete = (ok: boolean): void => {
+  if (ok) {
+    feedback.show(t('shared.recordDeleted'), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
+
+/**
+ * Loads the servers and the groups.
+ *
+ * @returns Resolves when both loads have settled.
+ */
+const loadAll = async (): Promise<void> => {
+  await Promise.all([store.fetchServers(), store.fetchGroups()])
+}
+
 /** True while the staged server is being deleted. */
 const deletingServer = ref(false)
 
@@ -98,11 +131,6 @@ const serversByModule = computed<{ module: ServerModule; servers: ServerDto[] }[
   }
   return groups
 })
-
-/** Whether the page-level refusal is shown (a dialog shows its own while it is open). */
-const showPageError = computed<boolean>(() =>
-  store.actionError !== null && !showServerModal.value && !showGroupModal.value,
-)
 
 /**
  * Tests connectivity to a server and shows the result in its row.
@@ -159,7 +187,7 @@ const accountsLabel = (server: ServerDto): string => {
   if (server.accountsCount === null) {
     return '—'
   }
-  return server.maxAccounts === null ? `${server.accountsCount}` : `${server.accountsCount} / ${server.maxAccounts}`
+  return server.limits.maxAccounts === null ? `${server.accountsCount}` : `${server.accountsCount} / ${server.limits.maxAccounts}`
 }
 
 /** Opens the server create dialog. */
@@ -211,6 +239,7 @@ const handleSaveServer = async (payload: ServerPayload): Promise<void> => {
   savingServer.value = false
   if (saved) {
     showServerModal.value = false
+    feedback.show(t('shared.changesSavedSuccessfully'), false)
   }
 }
 
@@ -220,10 +249,17 @@ const confirmDeleteServer = async (): Promise<void> => {
   if (!target) {
     return
   }
+  feedback.clear()
   deletingServer.value = true
   const deleted = await store.deleteServer(target.id)
   deletingServer.value = false
-  if (deleted) {
+  deleteServerTarget.value = null
+  reportDelete(deleted)
+}
+
+/** Closes the server delete confirmation; ignored while the delete runs. */
+const dismissDeleteServer = (): void => {
+  if (!deletingServer.value) {
     deleteServerTarget.value = null
   }
 }
@@ -241,6 +277,7 @@ const handleSaveGroup = async (payload: ServerGroupPayload): Promise<void> => {
   savingGroup.value = false
   if (saved) {
     showGroupModal.value = false
+    feedback.show(t('shared.changesSavedSuccessfully'), false)
   }
 }
 
@@ -250,23 +287,27 @@ const confirmDeleteGroup = async (): Promise<void> => {
   if (!target) {
     return
   }
+  feedback.clear()
   deletingGroup.value = true
   const deleted = await store.deleteGroup(target.id)
   deletingGroup.value = false
-  if (deleted) {
+  deleteGroupTarget.value = null
+  reportDelete(deleted)
+}
+
+/** Closes the group delete confirmation; ignored while the delete runs. */
+const dismissDeleteGroup = (): void => {
+  if (!deletingGroup.value) {
     deleteGroupTarget.value = null
   }
 }
 
-/** Loads the servers and the groups. */
-onMounted(async () => {
-  await Promise.all([store.fetchServers(), store.fetchGroups()])
-})
+onMounted(loadAll)
 </script>
 
 <template>
   <UiStack gap="lg" class="w-full">
-    <UiAlert v-if="showPageError" variant="error" data-testid="servers-error">{{ store.actionError }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="servers-feedback" />
 
     <UiPageHeader
       :title="t('servers.servers.servers')"
@@ -282,8 +323,16 @@ onMounted(async () => {
       </template>
     </UiPageHeader>
 
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="servers-error"
+      @retry="loadAll"
+    />
+
     <!-- Loading -->
-    <UiSkeleton v-if="store.loading && store.servers.length === 0" :lines="4" data-testid="servers-loading" />
+    <UiSkeleton v-else-if="store.loading && store.servers.length === 0" :lines="4" data-testid="servers-loading" />
 
     <!-- Servers, one table per module -->
     <UiStack v-else-if="store.servers.length > 0" gap="md" data-testid="servers-list">
@@ -304,10 +353,10 @@ onMounted(async () => {
               <UiTableCell>
                 <UiStack direction="row" align="center" gap="sm">
                   <UiText tone="primary" size="lg" class="font-medium">{{ server.name }}</UiText>
-                  <UiBadge v-if="server.isDefault" tone="warning" small>{{ t('servers.servers.default') }}</UiBadge>
+                  <UiBadge v-if="server.limits.isDefault" tone="warning" small>{{ t('servers.servers.default') }}</UiBadge>
                 </UiStack>
               </UiTableCell>
-              <UiTableCell muted class="font-mono">{{ server.ipAddress ?? '—' }}</UiTableCell>
+              <UiTableCell muted class="font-mono">{{ server.endpoint.ipAddress ?? '—' }}</UiTableCell>
               <UiTableCell muted>{{ accountsLabel(server) }}</UiTableCell>
               <UiTableCell>
                 <UiText v-if="testingIds.includes(server.id)" tone="muted" size="sm">{{ t('shared.testing') }}</UiText>
@@ -446,9 +495,9 @@ onMounted(async () => {
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deletingServer"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="confirmDeleteServer"
-      @close="deleteServerTarget = null"
+      @close="dismissDeleteServer"
     />
 
     <UiDialog
@@ -459,9 +508,9 @@ onMounted(async () => {
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deletingGroup"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="confirmDeleteGroup"
-      @close="deleteGroupTarget = null"
+      @close="dismissDeleteGroup"
     />
   </UiStack>
 </template>

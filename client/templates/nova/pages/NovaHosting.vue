@@ -33,7 +33,7 @@
  * nova hosting page.
  *
  * Its own h1 states what the page is, so the pricing section below it renders
- * without a heading — two headings saying the same thing is a hierarchy problem
+ * without a heading: two headings saying the same thing is a hierarchy problem
  * rather than emphasis. Data arrives from pages/hosting/index.vue.
  */
 import NovaTrustBar from '~/templates/nova/sections/NovaTrustBar.vue'

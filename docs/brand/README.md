@@ -18,6 +18,8 @@ Colours: tile `#0B0B14`, share-card background `#0A0A0F`, wordmark `#0F172A` (li
 | `app-icon.svg` | Mark and wordmark on the rounded dark tile | `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` |
 | `mark-64.png` … `mark-1024.png` | Mark at 64, 96, 128, 256, 1024 | Docs, slides, third-party listings |
 | `avatar-400.png`, `avatar-1000.png` | The full original app icon | GitHub organisation and Docker Hub avatars |
+| `social-preview.html` | 1280x640 source of the repository share card: cube mark and wordmark (`logo-dark.svg` inlined), headline, subline and stack badges | Source for `social-preview.png` |
+| `social-preview.png` | 1280x640 render of `social-preview.html`, under 1 MB | The repository social preview: upload it by hand in GitHub, Settings, General, Social preview (GitHub has no API for it) |
 
 ## Served files (`client/public/` and `admin/public/`)
 
@@ -45,3 +47,7 @@ and `admin/public/site.webmanifest`.
 Render the PNGs from these SVGs in a headless browser at exactly the listed pixel sizes, with a
 transparent background except the tile, maskable, share-card and avatar images. Build `favicon.ico`
 from the 16, 32 and 48 renders as PNG-in-ICO. Keep the file names: code and manifests reference them.
+
+### Social preview
+
+Open `social-preview.html` in a headless browser at a 1280x640 viewport and screenshot the page (clip 0, 0, 1280, 640) to `social-preview.png`. The page needs no network: the wordmark is the outlined SVG, and the text uses Inter when installed, otherwise the system sans-serif. Check the result by eye, then upload the PNG in the repository settings.

@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Users.Queries.ListUsers;
 
 /// <summary>
 ///     Validates <see cref="ListUsersQuery"/>. <c>Search</c> is free text and <c>Page</c>/
-///     <c>PageSize</c> are clamped by the handler, so every value of every field is accepted —
+///     <c>PageSize</c> are clamped by the handler, so every value of every field is accepted:
 ///     decided, not forgotten.
 /// </summary>
 public sealed class ListUsersValidator : LocalizedValidator<ListUsersQuery>

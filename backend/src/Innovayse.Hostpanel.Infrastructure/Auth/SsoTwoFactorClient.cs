@@ -1,18 +1,18 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
+
 /// <summary>
-/// The SSO's own TOTP endpoints, as this product calls them on behalf of the signed-in
+/// The sign-on provider's own TOTP endpoints, as this product calls them on behalf of the signed-in
 /// caller.
 ///
 /// <para>
 /// Every call carries the caller's own bearer token, never the service key: two-factor is a
 /// self-service action on the signed-in person's own account, not something this product
-/// performs on its own authority, and the SSO's TOTP endpoints are shaped to match — they
+/// performs on its own authority, and the sign-on provider's TOTP endpoints are shaped to match; they
 /// authenticate the same way hostpanel's own <c>[Authorize]</c> endpoints already do in this
 /// mode. Passed as a parameter on every call rather than set as a default header on the
 /// client, because unlike <see cref="SsoServiceClient"/> this client has no single fixed
@@ -21,11 +21,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Auth;
 /// </summary>
 public sealed class SsoTwoFactorClient
 {
-    /// <summary>The http this class uses.</summary>
+    /// <summary>The sign-on provider's TOTP client, base address and resilience profile set at registration.</summary>
     private readonly HttpClient _http;
 
     /// <summary>Initializes a new instance of the <see cref="SsoTwoFactorClient"/> class.</summary>
-    /// <param name="http">The http this class uses.</param>
+    /// <param name="http">The sign-on provider's TOTP client, base address and resilience profile set at registration.</param>
     public SsoTwoFactorClient(HttpClient http)
     {
         _http = http;
@@ -34,6 +34,7 @@ public sealed class SsoTwoFactorClient
     /// <summary>Starts enrolment and returns the secret and QR URI to show the caller.</summary>
     /// <param name="bearerToken">The caller's own access token.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns>The pending secret and its QR URI.</returns>
     public async Task<SsoTotpEnrolment> EnableAsync(string bearerToken, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/totp/enable");
@@ -42,26 +43,26 @@ public sealed class SsoTwoFactorClient
         using var response = await _http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<TotpEnrolmentResponse>(ct)
+        var body = await response.Content.ReadFromJsonAsync<SsoTotpEnrolmentWire>(ct)
             ?? throw new InvalidOperationException("SSO returned an empty TOTP enrolment response.");
         return new SsoTotpEnrolment(body.Secret, body.QrUri);
     }
 
     /// <summary>
-    /// Submits a TOTP code to complete enrolment (or, on the SSO's own re-auth challenge
-    /// path, to satisfy it — hostpanel only ever calls this to complete enrolment).
+    /// Submits a TOTP code to complete enrolment (or, on the sign-on provider's own re-auth challenge
+    /// path, to satisfy it: hostpanel only ever calls this to complete enrolment).
     /// </summary>
     /// <param name="bearerToken">The caller's own access token.</param>
     /// <param name="totpCode">The six digits the authenticator app currently shows.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The verification result, or null when the SSO rejected the code as not matching.
+    /// The verification result, or null when the sign-on provider rejected the code as not matching.
     /// </returns>
     public async Task<SsoTotpVerification?> VerifyAsync(string bearerToken, string totpCode, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/totp/verify")
         {
-            Content = JsonContent.Create(new TotpCodeRequest(totpCode)),
+            Content = JsonContent.Create(new SsoTotpCodeWire(totpCode)),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, bearerToken);
 
@@ -73,7 +74,7 @@ public sealed class SsoTwoFactorClient
 
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<TotpVerificationResponse>(ct);
+        var body = await response.Content.ReadFromJsonAsync<SsoTotpVerificationWire>(ct);
         return new SsoTotpVerification(body?.BackupCodes);
     }
 
@@ -81,12 +82,12 @@ public sealed class SsoTwoFactorClient
     /// <param name="bearerToken">The caller's own access token.</param>
     /// <param name="totpCode">A current code from the authenticator app.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>True when it was switched off; false when the SSO rejected the code.</returns>
+    /// <returns>True when it was switched off; false when the sign-on provider rejected the code.</returns>
     public async Task<bool> DisableAsync(string bearerToken, string totpCode, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/totp/disable")
         {
-            Content = JsonContent.Create(new TotpCodeRequest(totpCode)),
+            Content = JsonContent.Create(new SsoTotpCodeWire(totpCode)),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, bearerToken);
 
@@ -99,30 +100,4 @@ public sealed class SsoTwoFactorClient
         response.EnsureSuccessStatusCode();
         return true;
     }
-
-    /// <summary>The secret and enrolment URI the SSO issued.</summary>
-    public sealed record SsoTotpEnrolment(string Secret, string QrUri);
-
-    /// <summary>
-    /// The result of submitting a code. <see cref="BackupCodes"/> is present when this
-    /// completed an enrolment and null when it satisfied a re-auth challenge instead.
-    /// </summary>
-    public sealed record SsoTotpVerification(IReadOnlyList<string>? BackupCodes);
-
-    /// <summary>Request body carrying a one-time code to the SSO.</summary>
-    /// <param name="TotpCode">The six-digit code the person typed.</param>
-    private sealed record TotpCodeRequest(
-        [property: JsonPropertyName("totpCode")] string TotpCode);
-
-    /// <summary>Wire shape of the SSO answer that starts a TOTP enrolment.</summary>
-    /// <param name="Secret">The shared secret in base32.</param>
-    /// <param name="QrUri">The <c>otpauth://</c> URI an authenticator app scans.</param>
-    private sealed record TotpEnrolmentResponse(
-        [property: JsonPropertyName("secret")] string Secret,
-        [property: JsonPropertyName("qrUri")] string QrUri);
-
-    /// <summary>Wire shape of the SSO answer to a submitted TOTP code.</summary>
-    /// <param name="BackupCodes">Recovery codes when the code completed an enrolment; null otherwise.</param>
-    private sealed record TotpVerificationResponse(
-        [property: JsonPropertyName("backupCodes")] IReadOnlyList<string>? BackupCodes);
 }

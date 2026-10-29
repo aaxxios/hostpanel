@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// rating is refused by the validator, an id names no ticket is refused <c>TICKET_NOT_FOUND</c>,
 /// and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>TicketsAdminEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class LeaveFeedbackTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -21,7 +17,7 @@ public sealed class LeaveFeedbackTests(IntegrationTestFactory factory) : IClassF
     public async Task AdminCanLeaveFeedbackAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.PostAsJsonAsync(
             $"/api/tickets/{id}/feedback", new { rating = 5, comment = "ok", leftBy = "Client" });
@@ -38,7 +34,7 @@ public sealed class LeaveFeedbackTests(IntegrationTestFactory factory) : IClassF
     public async Task LeaveFeedbackRefusesAnOutOfRangeRatingAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.PostAsJsonAsync(
             $"/api/tickets/{id}/feedback", new { rating = 11, comment = "too high", leftBy = "Client" });

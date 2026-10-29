@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
+
 /// <summary>Registry of plugins that expose themselves as integrations in the admin UI.</summary>
 public interface IPluginIntegrationRegistry
 {

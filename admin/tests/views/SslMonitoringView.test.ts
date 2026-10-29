@@ -1,5 +1,5 @@
 /**
- * Tests of SslMonitoringView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of SslMonitoringView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses, and runs its own actions.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -24,6 +24,7 @@ runReportCase({
     }),
   },
   expected: ['SSL Certificate Monitoring', 'Active domains', 'beta.test', 'Valid', 'Test CA'],
+  retryable: true,
 })
 
 describe('SslMonitoringView actions', () => {

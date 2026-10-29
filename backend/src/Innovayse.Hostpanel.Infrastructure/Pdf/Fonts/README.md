@@ -1,6 +1,6 @@
 # Invoice PDF fonts
 
-Embedded into the Infrastructure assembly and read by `Pdf/PdfFonts.cs`. The production image
+Embedded into the Infrastructure assembly and read by `Pdf/EmbeddedFontResolver.cs`. The production image
 (`aspnet:9.0-alpine`) has no system fonts, so the PDF renderer can only use what is here.
 
 | File | Source | Licence |

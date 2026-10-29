@@ -1,5 +1,5 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Servers;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -13,5 +13,5 @@ public sealed class RecordingProvisioningProviderFactory(RecordingProvisioningPr
     : IProvisioningProviderFactory
 {
     /// <inheritdoc/>
-    public IProvisioningProvider CreateFor(Server server) => provider;
+    public IProvisioningProvider CreateFor(ServerConnectionDto server) => provider;
 }

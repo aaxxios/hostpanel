@@ -5,8 +5,8 @@ namespace Innovayse.Hostpanel.Application.Notifications.Common;
 /// absolute URL, and the brand colours with the text colour that stays readable on them.
 /// </summary>
 /// <remarks>
-/// Every value is filled in — the operator's setting where there is one, the storefront's own
-/// default otherwise — so a template can use <c>{{ brand.primary }}</c> without a guard.
+/// Every value is filled in, the operator's setting where there is one, the storefront's own
+/// default otherwise, so a template can use <c>{{ brand.primary }}</c> without a guard.
 /// Exposed to Liquid as the <c>brand</c> and <c>site</c> objects by <c>TemplateRenderer</c>.
 /// </remarks>
 /// <param name="SiteName">The site name; <c>portal.site.name</c> or the built-in name.</param>
@@ -29,8 +29,8 @@ public sealed record EmailBranding(
     /// <summary>The storefront's built-in accent, Tailwind's purple-500.</summary>
     public const string DefaultAccent = "#a855f7";
 
-    /// <summary>The built-in site name.</summary>
-    public const string DefaultSiteName = "Innovayse";
+    /// <summary>The neutral site name used when the operator has not set one.</summary>
+    public const string DefaultSiteName = "Hostpanel";
 
     /// <summary>The dictionary shape Liquid reads as <c>brand.*</c>.</summary>
     /// <returns>Lower-snake keys, matching the storefront's setting names.</returns>

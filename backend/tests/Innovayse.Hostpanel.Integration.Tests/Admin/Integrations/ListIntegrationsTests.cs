@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
@@ -13,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 /// the route is closed to a caller with no credential. This use case refuses nothing once
 /// authorized.
 /// </summary>
-/// <remarks>Split out of the deleted <c>IntegrationsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListIntegrationsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -26,6 +22,29 @@ public sealed class ListIntegrationsTests(IntegrationTestFactory factory) : ICla
         var list = await client.GetFromJsonAsync<List<JsonElement>>("/api/admin/integrations");
 
         list!.Should().Contain(i => i.GetProperty("slug").GetString() == "stripe");
+    }
+
+    /// <summary>
+    /// Once the card gateway's required secret key is stored, its row reports it as configured;
+    /// the list carries no description and no last test moment, which nothing stores.
+    /// </summary>
+    [Fact]
+    public async Task ReportsAnIntegrationWithItsRequiredFieldsAsConfiguredAsync()
+    {
+        var client = await IntegrationsTestSeeds.AdminClientAsync(factory);
+        var save = await client.PutAsJsonAsync("/api/admin/integrations/stripe", new
+        {
+            isEnabled = false,
+            config = new Dictionary<string, string> { ["secret_key"] = "sk_test_configured" },
+        });
+        save.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await client.GetFromJsonAsync<List<JsonElement>>("/api/admin/integrations");
+
+        var stripe = list!.Single(i => i.GetProperty("slug").GetString() == "stripe");
+        stripe.GetProperty("isConfigured").GetBoolean().Should().BeTrue();
+        stripe.TryGetProperty("description", out _).Should().BeFalse();
+        stripe.TryGetProperty("lastTestedAt", out _).Should().BeFalse();
     }
 
     /// <summary>A caller with only the Client role is refused with 403.</summary>

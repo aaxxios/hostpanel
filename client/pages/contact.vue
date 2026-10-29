@@ -270,8 +270,7 @@
               </UiButton>
 
               <!-- Failure Message. Rendered from the API's answer, never from a sentence
-                   written here — see handleSubmit. It replaces an alert() that fired for
-                   every failure with the same line. -->
+                   written here: see handleSubmit. -->
               <Transition
                 enter-active-class="transition duration-300 ease-out"
                 leave-active-class="transition duration-300 ease-in"
@@ -455,12 +454,12 @@ const errorMessage = computed(() => localError.value || contactError.value)
  * Submits the contact form.
  *
  * The success state is set **only** after the POST resolves. The route behind it answers 204
- * once the backend's SMTP relay has accepted the message and rejects otherwise, so there is no
- * longer any path on which the visitor is told a message was sent that was not.
+ * once the backend's SMTP relay has accepted the message and rejects otherwise, so the visitor
+ * is never told a message was sent that was not.
  *
  * Failure wording comes from the response, whole. The API resolves it from its own resources
- * in the language `X-Language` asked for, so the two codes this page used to word itself —
- * CONTACT_SEND_FAILED and CONTACT_NOT_CONFIGURED — arrive in ru or hy like every other refusal.
+ * in the language `X-Language` asked for, so CONTACT_SEND_FAILED and CONTACT_NOT_CONFIGURED
+ * arrive in ru or hy like every other refusal.
  * The recovery action still differs between them, and that difference is carried by the wording
  * the API chose: the unconfigured-inbox sentence sends the visitor to the phone number and email
  * beside the form rather than inviting a retry. No sentence is written here.

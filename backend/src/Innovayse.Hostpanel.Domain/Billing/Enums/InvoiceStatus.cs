@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Billing.Enums;
+
 /// <summary>Lifecycle states for an <see cref="Invoice"/>.</summary>
 public enum InvoiceStatus
 {

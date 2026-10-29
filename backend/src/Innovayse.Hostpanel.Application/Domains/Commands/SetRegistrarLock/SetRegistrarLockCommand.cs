@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetRegistrarLock;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Enabled">Whether the domain should be locked.</param>
-public record SetRegistrarLockCommand(int? DomainId, bool Enabled);
+public sealed record SetRegistrarLockCommand(int? DomainId, bool Enabled);

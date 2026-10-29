@@ -18,13 +18,18 @@ public sealed class CreateMigrationJobHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>
     ///     Initializes the handler.
     /// </summary>
     /// <param name="context">The module's data context.</param>
-    public CreateMigrationJobHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public CreateMigrationJobHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
@@ -43,28 +48,30 @@ public sealed class CreateMigrationJobHandler
             sourceUrl += PluginPath;
         }
 
-        var job = MigrationJob.Create(
+        var selection = cmd.Selection;
+        var job = MigrationJob.Create(new MigrationJobSetup(
             cmd.Label,
             sourceUrl,
-            cmd.Selection.Clients,
-            cmd.Selection.Invoices,
-            cmd.Selection.Services,
-            cmd.Selection.Domains,
-            cmd.Selection.Tickets,
-            cmd.Selection.Products,
-            cmd.Selection.Orders,
-            cmd.Selection.Transactions,
-            cmd.Selection.Quotes,
-            cmd.Selection.Knowledgebase,
-            cmd.Selection.Contacts,
-            cmd.Selection.TicketReplies,
-            cmd.Selection.Announcements,
-            cmd.Selection.Downloads,
-            cmd.Selection.NetworkIssues);
+            new MigrationExportSelection(
+                selection.Clients,
+                selection.Invoices,
+                selection.Services,
+                selection.Domains,
+                selection.Tickets,
+                selection.Products,
+                selection.Orders,
+                selection.Transactions,
+                selection.Quotes,
+                selection.Knowledgebase,
+                selection.Contacts,
+                selection.TicketReplies,
+                selection.Announcements,
+                selection.Downloads,
+                selection.NetworkIssues)));
 
         _context.MigrationJobs.Add(job);
         await _context.SaveChangesAsync(ct);
 
-        return Result<MigrationJobDto>.Success(job.ToDto());
+        return Result<MigrationJobDto>.Success(job.ToDto(_clock.UtcNow));
     }
 }

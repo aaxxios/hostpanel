@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Products.Enums;
+
 /// <summary>Classifies a product by the type of service it represents.</summary>
 public enum ProductType
 {

@@ -7,11 +7,8 @@ namespace Innovayse.Hostpanel.Application.Resources;
 /// <remarks>
 /// <para>
 /// The sentence a refusal carries is written here, in <c>ApplicationValidationMessages.resx</c> and its
-/// per-language siblings, and not in the frontend. The portal ships en/ru/hy and used to keep a
-/// mapping table of its own (<c>client/utils/portalErrorMessages.ts</c>) that translated a
-/// handful of codes and let every other message through in English -- so a Russian or Armenian
-/// customer read English for all but five failures. Moving the wording here makes one place
-/// answer for all three languages, and the response body still carries the machine-readable
+/// per-language siblings, and not in the frontend, so one place answers for all three languages
+/// (en/ru/hy). The response body still carries the machine-readable
 /// <c>code</c> beside the sentence so a page can branch without matching on prose.
 /// </para>
 /// <para>
@@ -19,7 +16,7 @@ namespace Innovayse.Hostpanel.Application.Resources;
 /// <c>ResourceManagerStringLocalizerFactory</c> builds it from the assembly's root namespace and
 /// the type name, so <c>Innovayse.Hostpanel.Application.Resources.ApplicationValidationMessages</c> has to keep matching
 /// the manifest name MSBuild gives <c>Resources/ApplicationValidationMessages.resx</c>. Move or rename either
-/// half and the localizer silently starts answering with the key names instead of sentences --
+/// half and the localizer silently starts answering with the key names instead of sentences:
 /// there is no exception, which is why <c>ValidationMessagesLocalizationTests</c> asserts a real lookup.
 /// </para>
 /// <para>

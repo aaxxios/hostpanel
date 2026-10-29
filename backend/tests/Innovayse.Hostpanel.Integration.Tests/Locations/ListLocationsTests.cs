@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Locations;
 
 /// <summary>
-/// Integration tests for the <c>ListLocations</c> use case — <c>GET /api/admin/locations</c>.
+/// Integration tests for the <c>ListLocations</c> use case: <c>GET /api/admin/locations</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListLocationsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

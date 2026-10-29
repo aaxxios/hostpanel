@@ -44,13 +44,13 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 }))
 
 /** The family's group. */
-const groups: PortalProductGroup[] = [{ id: 3, name: 'Alpha Suite', description: 'The family description', isActive: true, productCount: 3 }]
+const groups: PortalProductGroup[] = [{ id: 3, name: 'Alpha Suite', description: 'The family description', productCount: 3 }]
 
 /** A family with a parent and two plans. */
 const catalogue: PortalProduct[] = [
-  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
-  { id: 11, pid: 11, groupId: 3, name: 'Starter', slug: 'starter', description: 'For a first site<br />✔ One site', pricing: { monthly: 10, annual: 100 } },
-  { id: 12, pid: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: null } },
+  { id: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', description: 'Learn online<br />✔ Courses' },
+  { id: 11, groupId: 3, name: 'Starter', slug: 'starter', description: 'For a first site<br />✔ One site', pricing: { monthly: 10, annual: 100 } },
+  { id: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: null } },
 ]
 
 /** Specification lines the two plans share, so the family is comparable. */

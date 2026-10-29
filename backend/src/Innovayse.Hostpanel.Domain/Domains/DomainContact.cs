@@ -2,7 +2,7 @@ namespace Innovayse.Hostpanel.Domain.Domains;
 
 /// <summary>
 /// Value object representing WHOIS registrant contact details.
-/// Not persisted — used as a parameter for registrar API calls.
+/// Not persisted: used as a parameter for registrar API calls.
 /// </summary>
 /// <param name="FirstName">Registrant first name.</param>
 /// <param name="LastName">Registrant last name.</param>

@@ -64,7 +64,7 @@ const clear = async (): Promise<void> => {
 </script>
 
 <template>
-  <ReportPage :title="t('reports.dailyPerformance.dailyPerformance')" :description="t('reports.dailyPerformance.overviewOfDailyActivityMetrics')">
+  <ReportPage :retry="load" :title="t('reports.dailyPerformance.dailyPerformance')" :description="t('reports.dailyPerformance.overviewOfDailyActivityMetrics')">
     <template #filters>
       <ReportFilterBar :generate-label="t('shared.apply')" clearable @generate="load" @clear="clear">
         <template #fields>

@@ -19,6 +19,7 @@ import SectionsCTA from '~/components/sections/SectionsCTA.vue'
 import type { BillingCurrency } from '~/types/currency'
 import type { PortalProduct } from '~/types/portalproduct'
 import type { PortalProductGroup } from '~/types/portalproductgroup'
+import { ProductType } from '~/types/producttype'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { fetchProducts: vi.fn(), fetchProductGroups: vi.fn(), fetchProductFeatures: vi.fn() }
@@ -58,23 +59,27 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** The groups: one family with products and one that is empty. */
 const groups: PortalProductGroup[] = [
-  { id: 3, name: 'Alpha Suite', isActive: true, productCount: 3 },
-  { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
-  { id: 6, name: 'Domains', isActive: true, productCount: 1 },
+  { id: 3, name: 'Alpha Suite', productCount: 3 },
+  { id: 4, name: 'Beta Kit', productCount: 0 },
+  { id: 6, name: 'Domains', productCount: 1 },
 ]
 
 /** A SaaS family: its parent and two plans, one of them priced. */
 const catalogue: PortalProduct[] = [
-  { id: 10, pid: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', type: 'Vps', description: 'Learn online<br />✔ Courses' },
-  { id: 20, pid: 20, groupId: 6, name: 'Domain Registration', slug: 'domain-registration', type: 'Domain', description: 'Register' },
-  { id: 11, pid: 11, groupId: 3, name: 'Starter', slug: 'starter', description: '✔ One site', pricing: { monthly: 10, annual: 100 } },
-  { id: 12, pid: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: 200 } },
+  { id: 10, groupId: 3, name: 'Alpha Suite', slug: 'alpha-suite', type: ProductType.Vps, description: 'Learn online<br />✔ Courses' },
+  { id: 20, groupId: 6, name: 'Domain Registration', slug: 'domain-registration', type: ProductType.Domain, description: 'Register' },
+  { id: 11, groupId: 3, name: 'Starter', slug: 'starter', description: '✔ One site', pricing: { monthly: 10, annual: 100 } },
+  { id: 12, groupId: 3, name: 'Pro', slug: 'pro', description: '✔ Two sites', pricing: { monthly: 20, annual: 200 } },
 ]
 
 /** What the stood-in runtime recorded for the current test. */
 let spies: PublicPageSpies
 
-/** Mounts the page and lets the catalogue and the currencies load. */
+/**
+ * Mounts the page and lets the catalogue and the currencies load.
+ *
+ * @returns The wrapper.
+ */
 const mountProducts = async () => {
   const wrapper = await mountPage(ProductsPage, {
     components: {

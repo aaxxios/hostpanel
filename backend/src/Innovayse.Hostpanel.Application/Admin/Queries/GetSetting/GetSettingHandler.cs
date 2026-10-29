@@ -35,7 +35,6 @@ public sealed class GetSettingHandler
     /// <returns>The setting, or <c>SETTING_NOT_FOUND</c> when the id names no setting.</returns>
     public async Task<Result<SettingDto>> HandleAsync(GetSettingQuery query, CancellationToken ct)
     {
-        // Was ISettingRepository.FindByIdAsync -- read-only, so no tracking is needed.
         var setting = await _context.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == query.Id, ct);
         if (setting is null)
         {

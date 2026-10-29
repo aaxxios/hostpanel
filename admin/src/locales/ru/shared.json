@@ -49,10 +49,8 @@
   "addBillableItem": "Добавить оплачиваемую позицию",
   "client": "Клиент",
   "productService": "Продукт/услуга",
-  "hoursQty": "Часы/кол-во",
   "hours": "Часы",
   "qty": "Кол-во",
-  "invoiceAction": "Действие со счётом",
   "selectDate": "Выберите дату...",
   "subject": "Тема",
   "stage": "Этап",
@@ -125,7 +123,6 @@
   "domainEmails": "Письма по доменам",
   "affiliateEmails": "Письма партнёрской программы",
   "settings": "Настройки",
-  "lateFees": "Штрафы за просрочку",
   "overdueNotices": "Уведомления о просрочке",
   "taxExempt": "Освобождён от налога",
   "separateInvoices": "Отдельные счета",
@@ -182,8 +179,6 @@
   "year": "Год",
   "unknown": "Неизвестно",
   "notAvailable": "Н/Д",
-  "clientFallback": "Клиент №{id}",
-  "productFallback": "Продукт №{id}",
   "years": "{n} год | {n} года | {n} лет",
   "month": "Месяц",
   "noData": "Нет данных.",
@@ -227,5 +222,7 @@
     "internalPath": "/order/product",
     "tagManagerId": "GTM-XXXXXXX",
     "colorHex": "#06b6d4"
-  }
+  },
+  "recordDeleted": "Запись удалена.",
+  "recordCreated": "Запись создана."
 }

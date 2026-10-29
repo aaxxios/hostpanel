@@ -1,25 +1,28 @@
 <script setup lang="ts">
 /**
- * Slides settings view — list and manage homepage slides.
+ * Slides settings view: list and manage homepage slides.
  *
  * Shows the slides in a table ordered by sort order, with drag-and-drop reordering through
  * vuedraggable, audience and status badges, and navigation to the dedicated create and edit pages.
+ * A refused load offers a retry; a delete (confirmed first in a danger prompt) or a reorder shows its
+ * outcome (success, or the API's sentence) above the header.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiImage from '@/components/ui/UiImage.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiTableHead from '@/components/ui/UiTableHead.vue'
@@ -31,7 +34,8 @@ import { storefrontAssetUrl } from '@/lib/runtimeConfig'
 import { useSlidesStore } from '@/stores/slides'
 import type { Slide } from '@/types/slide'
 import { SlideAudience } from '@/types/slideaudience'
-import type { UiTone } from '@/utils/ui/tone'
+import { UiTone } from '@/utils/ui/tone'
+import { UiDialogVariant } from '@/utils/ui/dialog'
 import { AppRoute, createPath, editPath } from '@/lib/routes'
 
 const { t } = useI18n()
@@ -73,10 +77,31 @@ const syncLocal = (): void => {
   localSlides.value = [...store.slides].sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
-onMounted(async () => {
+/** Locale key of the success sentence of the last delete or reorder, null when there is none to show. */
+const successKey = ref<string | null>(null)
+
+/** The outcome line: the API's refusal first, else the success sentence, else nothing. */
+const outcomeMessage = computed<string | null>(() => {
+  if (store.actionError) {
+    return store.actionError
+  }
+  return successKey.value === null ? null : t(successKey.value)
+})
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const outcomeTone = computed<UiTone>(() => (store.actionError ? UiTone.Danger : UiTone.Success))
+
+/**
+ * Loads the slides and syncs the draggable list.
+ *
+ * @returns Resolves when the load has settled.
+ */
+const loadSlides = async (): Promise<void> => {
   await store.fetchSlides()
   syncLocal()
-})
+}
+
+onMounted(loadSlides)
 
 /**
  * Badge tone of a slide's audience; an audience this build does not know reads as neutral.
@@ -121,7 +146,7 @@ const navigateEdit = (slide: Slide): void => {
 const slideTitle = (slide: Slide): string => slide.translations[0]?.title ?? t('settings.slides.slideNumber', { id: slide.id })
 
 /**
- * Stages a slide for deletion. Only opens the prompt — {@link confirmDelete} does the work, so the
+ * Stages a slide for deletion. Only opens the prompt: {@link confirmDelete} does the work, so the
  * question is asked by the app's own dialog rather than the browser's blocking one.
  *
  * @param slide - The slide to delete.
@@ -136,23 +161,38 @@ const confirmDelete = async (): Promise<void> => {
   if (!target) {
     return
   }
+  successKey.value = null
   deleting.value = true
-  await store.deleteSlide(target.id)
+  const deleted = await store.deleteSlide(target.id)
   syncLocal()
   deleting.value = false
   deleteTarget.value = null
+  if (deleted) {
+    successKey.value = 'shared.recordDeleted'
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
 }
 
 /** Called after a drag ends: saves the new sort order to the backend. */
 const onDragEnd = async (): Promise<void> => {
+  successKey.value = null
   savingOrder.value = true
   const items = localSlides.value.map((slide, index) => ({
     id: slide.id,
     sortOrder: index,
   }))
-  await store.updateOrder(items)
+  const saved = await store.updateOrder(items)
   syncLocal()
   savingOrder.value = false
+  if (saved) {
+    successKey.value = 'storefront.list.orderSaved'
+  }
 }
 
 /**
@@ -186,9 +226,7 @@ const formatDateRange = (from: string | null, until: string | null): string => {
 
 <template>
   <UiStack gap="none" data-testid="slides-view">
-    <UiAlert v-if="store.actionError" variant="danger" class="mb-4" data-testid="slides-action-error">
-      {{ store.actionError }}
-    </UiAlert>
+    <UiStatusMessage :message="outcomeMessage" :tone="outcomeTone" class="mb-4" data-testid="slides-action-error" />
 
     <UiPageHeader :title="t('settings.slides.slides')" :subtitle="t('settings.slides.manageHomepageHeroSlidesDrag')">
       <template #actions>
@@ -203,9 +241,7 @@ const formatDateRange = (from: string | null, until: string | null): string => {
 
     <SettingsLoading v-if="store.loading" :message="t('settings.slides.loadingSlides')" />
 
-    <UiAlert v-else-if="store.error" variant="danger" data-testid="slides-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState v-else-if="store.error" :message="store.error" testid="slides-error" @retry="loadSlides" />
 
     <UiCard v-else class="overflow-hidden">
       <UiTable density="comfortable" :empty="localSlides.length === 0" :colspan="7">
@@ -312,15 +348,15 @@ const formatDateRange = (from: string | null, until: string | null): string => {
     <!-- Delete confirmation -->
     <UiDialog
       v-if="deleteTarget"
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :title="t('settings.slides.deleteSlide2')"
       :message="t('settings.slides.deleteMessage', { title: slideTitle(deleteTarget) })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deleting"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="confirmDelete"
-      @close="deleteTarget = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

@@ -5,7 +5,7 @@
  * Shows the product type cards (create mode only), the group selector, the name, slug and package
  * fields, the server group, the description, a pricing grid with one row per configured currency,
  * and a hidden toggle. Emits `save` with the payload on submit, and `close` on cancel, Escape or a
- * backdrop click.
+ * backdrop click. A refused save (the `error` prop) shows next to the save button.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,6 +20,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -34,6 +35,7 @@ import { useCurrenciesStore } from '@/stores/currencies'
 import { useServersStore } from '@/stores/servers'
 import type { CreateProductPayload, Product, ProductGroup, ProductPrice } from '@/types/product'
 import { ProductStatus, ProductType } from '@/types/productenums'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
@@ -51,6 +53,8 @@ const props = defineProps<{
   groups: ProductGroup[]
   /** True while the save request is in flight. */
   saving: boolean
+  /** The API's sentence for the last refused save, shown next to the save button; null when none. */
+  error?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -197,7 +201,7 @@ const currencyRows = computed(() =>
 
 /**
  * Returns the pricing row for a currency code, creating a blank one if {@link resetPriceRows} has
- * not run for it yet — every code in {@link currencyRows} is populated on mount and on every
+ * not run for it yet: every code in {@link currencyRows} is populated on mount and on every
  * product change, so this is a defensive default rather than a path the UI normally takes.
  *
  * @param code - ISO 4217 currency code.
@@ -465,6 +469,8 @@ const handleSubmit = (): void => {
         </UiStack>
         <UiToggle v-model="isHidden" data-testid="product-form-hidden" />
       </UiStack>
+
+      <UiStatusMessage :message="error ?? null" :tone="UiTone.Danger" data-testid="product-form-error" />
 
       <UiStack direction="row" align="center" justify="end" gap="sm">
         <UiButton type="button" variant="secondary" data-testid="product-form-cancel" @click="emit('close')">

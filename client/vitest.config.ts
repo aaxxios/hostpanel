@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 /**
  * Stands in for the build flags Nuxt injects: the unit environment is a browser (happy-dom), so
- * `import.meta.client` is true and `import.meta.server` false. A plain `define` entry is not applied to
+ * `import.meta.client` is true, `import.meta.server` false and `import.meta.dev` false. A plain `define` entry is not applied to
  * `import.meta.*` members while vitest serves modules, hence a transform.
  *
  * @returns The Vite plugin.
@@ -17,7 +17,7 @@ const nuxtBuildFlags = (): Plugin => ({
     if (id.includes('node_modules') || !code.includes('import.meta.')) {
       return null
     }
-    return code.replace(/import\.meta\.client/g, 'true').replace(/import\.meta\.server/g, 'false')
+    return code.replace(/import\.meta\.client/g, 'true').replace(/import\.meta\.server/g, 'false').replace(/import\.meta\.dev/g, 'false')
   },
 })
 
@@ -48,6 +48,10 @@ export default defineConfig({
           name: 'dom',
           // happy-dom so component tests can mount; `vitest.setup.ts` stubs the Nuxt auto-imports.
           environment: 'happy-dom',
+          // A unit test never fetches a third-party script: a `<script src>` a plugin appends (the tag
+          // manager) settles as loaded, as it would in a browser, instead of happy-dom printing a
+          // "file loading is disabled" DOMException for a request it was never going to make.
+          environmentOptions: { happyDOM: { settings: { handleDisabledFileLoadingAsSuccess: true } } },
           // Tests live in `tests/`, mirroring the source tree; e2e specs belong to Playwright.
           include: ['tests/**/*.test.ts'],
           exclude: ['node_modules/**', '.nuxt/**', '.output/**', 'dist/**', 'e2e/**', 'tests/server/**', 'tests/composables/apis/**', 'tests/composables/useApi.test.ts'],

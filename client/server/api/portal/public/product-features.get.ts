@@ -5,7 +5,7 @@
  *
  * Query params: gid (product group), pid (single product).
  *
- * A backend without the endpoint — one running an older build than this client —
+ * A backend without the endpoint, one running an older build than this client,
  * yields an empty list rather than an error, because the comparison table is an
  * addition to the plans page and must not be able to take the page down with it.
  *
@@ -34,9 +34,8 @@ export default defineCachedEventHandler(async (event) => {
   name: 'backend-product-features',
   // A minute, not the hour the products endpoint uses. This is edited far more
   // often than a product is: an operator adds a specification line, reloads the
-  // plans page to check it, and sees nothing. Verified against a live backend —
-  // the line was in the API and absent from this response. An hour of that reads
-  // as a broken feature, and the table is cheap enough to re-fetch.
+  // plans page to check it, and would see nothing for the whole cache lifetime. An
+  // hour of that reads as a broken feature, and the table is cheap enough to re-fetch.
   maxAge: 60,
   swr: true,
   getKey: (event) => {

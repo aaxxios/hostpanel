@@ -1,6 +1,6 @@
 /**
- * Builds the `:root` declarations the storefront emits for the operator's brand — colour
- * scales, the text colours that sit on them, and the typefaces — from the raw settings.
+ * Builds the `:root` declarations the storefront emits for the operator's brand (colour
+ * scales, the text colours that sit on them, and the typefaces) from the raw settings.
  *
  * Pure, so `plugins/brand-tokens.ts` can call it on the server and a test can assert the
  * exact CSS. Returns `''` when nothing is set, and the plugin then emits no `<style>` at
@@ -34,7 +34,7 @@ export interface BrandSettings {
 const channels = (hex: string): string => (hexToRgb(hex) ?? [0, 0, 0]).join(' ')
 
 /**
- * The `:root { … }` rule for the given settings, or `''` when every setting is empty.
+ * The `:root` rule for the given settings, or `''` when every setting is empty.
  *
  * A colour that fails to parse is ignored rather than thrown on: the API already refuses
  * a malformed value, so this only happens with a hand-edited row or an older backend, and
@@ -61,8 +61,8 @@ export const brandTokensCss = (s: BrandSettings): string => {
   if (accent) {
     const scale = buildScale(accent)
     parts.push(scaleToDeclarations('brand-accent', scale))
-    // Nova fills badges and the pricing toggle with the accent — its 500 in light mode, the
-    // 400 tint in dark — and needs to know what text survives on each.
+    // Nova fills badges and the pricing toggle with the accent (its 500 in light mode, the
+    // 400 tint in dark) and needs to know what text survives on each.
     parts.push(`--brand-on-accent:${channels(bestTextOn(accent))}`)
     parts.push(`--brand-on-accent-tint:${channels(bestTextOn(rgbToHex(scale[400])))}`)
   }

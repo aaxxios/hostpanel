@@ -39,7 +39,7 @@ public sealed class NameAmOptions
     public bool TestMode { get; set; }
 
     /// <summary>
-    /// Whether the credentials were left unset -- a deployment that does not use Name.am.
+    /// Whether the credentials were left unset: a deployment that does not use Name.am.
     /// <see cref="ApiUrl"/> is excluded because it has a default and is therefore never empty.
     /// </summary>
     public bool IsAbsent => Email.Length == 0 && Password.Length == 0;
@@ -48,7 +48,7 @@ public sealed class NameAmOptions
     public bool IsConfigured => Email.Length > 0 && Password.Length > 0 && ApiUrl.Length > 0;
 
     /// <summary>
-    /// Whether this section is in a state the process may start with -- entirely unset, or
+    /// Whether this section is in a state the process may start with: entirely unset, or
     /// complete. Half-filled is neither.
     /// </summary>
     public bool IsUsable => IsAbsent || IsConfigured;

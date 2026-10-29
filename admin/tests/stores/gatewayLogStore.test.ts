@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe('gatewayLogStore', () => {
   it('fetchPage fills the entries and the total', async () => {
-    stubFetch(json({ items: [{ id: 'tx-1' }], totalCount: 7, page: 1, pageSize: 20 }))
+    stubFetch(json({ items: [{ id: 'tx-1' }], pageNumber: 1, pageSize: 20, totalCount: 7, totalPages: 1 }))
     const store = useGatewayLogStore()
 
     await store.fetchPage(NO_FILTERS, 1, 20)

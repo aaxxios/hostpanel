@@ -1,12 +1,17 @@
 /**
  * Unit tests for UiCodeBlock: the text is shown verbatim, copied exactly, and the button tells the
- * reader it worked; a refused clipboard leaves the text in place.
+ * reader it worked for a moment; a refused clipboard leaves the text in place, and a pending reset
+ * is cancelled when the block goes away.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import UiCodeBlock from '@/components/ui/UiCodeBlock.vue'
 
-/** Mounts a block with a recognisable command. */
+/**
+ * Mounts a block with a recognisable command.
+ *
+ * @returns The mounted block.
+ */
 const mountBlock = () =>
   mount(UiCodeBlock, {
     props: { code: 'sudo ./install.sh --provider cwp "ssh-ed25519 AAAA x"', copyLabel: 'Copy', copiedLabel: 'Copied' },
@@ -15,6 +20,7 @@ const mountBlock = () =>
 
 describe('UiCodeBlock', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -45,5 +51,36 @@ describe('UiCodeBlock', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="cmd-copy"]').text()).toBe('Copy')
+  })
+
+  it('returns to the copy label after a moment', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    const wrapper = mountBlock()
+
+    await wrapper.get('[data-testid="cmd-copy"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="cmd-copy"]').text()).toBe('Copied')
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(wrapper.get('[data-testid="cmd-copy"]').text()).toBe('Copy')
+  })
+
+  it('cancels the pending reset when it is unmounted', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    const wrapper = mountBlock()
+
+    await wrapper.get('[data-testid="cmd-copy"]').trigger('click')
+    await flushPromises()
+    wrapper.unmount()
+
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('gives the button no test id when the box has none', () => {
+    const wrapper = mount(UiCodeBlock, { props: { code: 'x', copyLabel: 'Copy', copiedLabel: 'Copied' } })
+
+    expect(wrapper.find('button').attributes('data-testid')).toBeUndefined()
   })
 })

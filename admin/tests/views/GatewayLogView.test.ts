@@ -7,7 +7,7 @@ import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import GatewayLogView from '@/views/GatewayLogView.vue'
 import { mountRouted } from '../helpers/mount'
-import { callOf, json, stubFetch } from '../helpers/fetch'
+import { callOf, json, stubFetch, problem } from '../helpers/fetch'
 
 /** A log page with one settled payment. */
 const page = {
@@ -21,9 +21,10 @@ const page = {
       invoiceId: 5,
     },
   ],
-  totalCount: 1,
-  page: 1,
+  pageNumber: 1,
   pageSize: 20,
+  totalCount: 1,
+  totalPages: 1,
 }
 
 afterEach(() => {
@@ -33,7 +34,7 @@ afterEach(() => {
 describe('GatewayLogView', () => {
   it('shows the empty state when the log has no entries', async () => {
     setActivePinia(createPinia())
-    stubFetch(json({ items: [], totalCount: 0, page: 1, pageSize: 20 }))
+    stubFetch(json({ items: [], pageNumber: 1, pageSize: 20, totalCount: 0, totalPages: 0 }))
     const { wrapper } = await mountRouted(GatewayLogView, '/billing/gateway-log', '/billing/gateway-log')
     await flushPromises()
 
@@ -69,5 +70,18 @@ describe('GatewayLogView', () => {
     await flushPromises()
     expect((wrapper.get('[data-testid="billing-gateway-log-debug"]').element as HTMLInputElement).value).toBe('')
     expect(callOf(mock, 2).url).toBe('/api/gateway-logs?page=1&pageSize=20')
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = (await mountRouted(GatewayLogView, '/billing/gateway-log', '/billing/gateway-log')).wrapper
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="billing-gateway-log-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

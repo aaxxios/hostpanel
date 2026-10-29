@@ -13,8 +13,8 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.SetDefaultPaymentMeth
 /// run.
 /// </param>
 /// <param name="SetAsDefault">
-/// Must be <see langword="true"/>. The card gateway allows no other update to an existing card — its
-/// number, brand and expiry cannot be changed once issued — so this is the only update
+/// Must be <see langword="true"/>. The card gateway allows no other update to an existing card, its
+/// number, brand and expiry cannot be changed once issued, so this is the only update
 /// <c>PUT api/me/payment-methods/{id}</c> accepts, and a body that omits or clears it is
 /// refused by <c>SetDefaultPaymentMethodValidator</c> rather than silently accepted and
 /// ignored.

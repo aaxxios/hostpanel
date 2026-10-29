@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using FluentAssertions;
+using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -12,10 +12,11 @@ namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.SshAgent;
 /// <summary>The setup adapters: key generation, the bundle and the host key scanner.</summary>
 public sealed class SshAgentSetupAdapterTests
 {
+    /// <summary>Each generated pair is new, loads as an ED25519 key, and its comment is stripped to safe characters.</summary>
     [Fact]
     public void Generator_ProducesDistinctLoadableEd25519Pairs()
     {
-        var generator = new BouncyCastleSshIdentityGenerator();
+        var generator = new SshIdentityGenerator();
 
         var a = generator.Generate("hostpanel-server-1");
         var b = generator.Generate("hostpanel-server-1; rm -rf /");
@@ -28,6 +29,7 @@ public sealed class SshAgentSetupAdapterTests
         a.PublicKey.Split(' ')[1].Should().Be(Convert.ToBase64String(((Renci.SshNet.Security.KeyHostAlgorithm)keyFile.HostKeyAlgorithms.First()).Data));
     }
 
+    /// <summary>Two bundles built from the same files are byte-identical and carry the agent version.</summary>
     [Fact]
     public void Bundle_IsDeterministicAndVersioned()
     {
@@ -48,7 +50,7 @@ public sealed class SshAgentSetupAdapterTests
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
 
-        var probe = await Scanner().ScanAsync("127.0.0.1", port, TimeSpan.FromSeconds(2), CancellationToken.None);
+        var probe = await Scanner().ScanAsync(new SshEndpoint("127.0.0.1", port, TimeSpan.FromSeconds(2)), CancellationToken.None);
 
         probe.Key.Should().BeNull();
         probe.Failure.Should().Be(SshEndpointFailure.Refused);
@@ -71,7 +73,7 @@ public sealed class SshAgentSetupAdapterTests
             }
         });
 
-        var probe = await Scanner().ScanAsync("127.0.0.1", port, TimeSpan.FromSeconds(3), CancellationToken.None);
+        var probe = await Scanner().ScanAsync(new SshEndpoint("127.0.0.1", port, TimeSpan.FromSeconds(3)), CancellationToken.None);
         listener.Stop();
         await server.ContinueWith(_ => { }, TaskScheduler.Default);
 
@@ -87,7 +89,7 @@ public sealed class SshAgentSetupAdapterTests
     public async Task Scanner_ReportsSilenceAsNoAnswer()
     {
         // TEST-NET-1 (RFC 5737) is never routed, so the connection gets no answer.
-        var probe = await Scanner().ScanAsync("192.0.2.1", 22, TimeSpan.FromSeconds(1), CancellationToken.None);
+        var probe = await Scanner().ScanAsync(new SshEndpoint("192.0.2.1", 22, TimeSpan.FromSeconds(1)), CancellationToken.None);
 
         probe.Key.Should().BeNull();
         probe.Failure.Should().Be(SshEndpointFailure.NoAnswer);
@@ -95,5 +97,5 @@ public sealed class SshAgentSetupAdapterTests
 
     /// <summary>The scanner under test.</summary>
     /// <returns>A scanner with a silent logger.</returns>
-    private static SshNetHostKeyScanner Scanner() => new(NullLogger<SshNetHostKeyScanner>.Instance);
+    private static SshHostKeyScanner Scanner() => new(NullLogger<SshHostKeyScanner>.Instance);
 }

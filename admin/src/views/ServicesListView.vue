@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
- * Services list view — paged table of all client hosted services.
+ * Services list view: paged table of all client hosted services.
  *
  * Shows id, product, domain, client, price, billing cycle, next due date and status. Reads
- * `stores/services`; a refused load shows `store.error`.
+ * `stores/services`; a refused load shows `store.error` with a retry.
  */
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
@@ -34,11 +33,6 @@ import { clientPath } from '@/lib/routes'
 
 const { t } = useI18n()
 
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel, productLabel } = useFallbackLabels()
-
 const store = useServicesStore()
 
 /**
@@ -62,9 +56,13 @@ onMounted(() => store.fetchAll())
       data-testid="services-header"
     />
 
-    <UiAlert v-if="store.error" variant="danger" data-testid="services-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="services-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else-if="store.services.length > 0 || store.loading">
       <UiTable
@@ -94,11 +92,11 @@ onMounted(() => store.fetchAll())
             :data-testid="`services-row-${service.id}`"
           >
             <UiTableCell muted>{{ service.id }}</UiTableCell>
-            <UiTableCell>{{ productLabel(service.productName) }}</UiTableCell>
+            <UiTableCell>{{ service.productName }}</UiTableCell>
             <UiTableCell>{{ service.domain ?? '—' }}</UiTableCell>
             <UiTableCell>
               <UiLink variant="link" :to="clientPath(service.clientId)" :data-testid="`services-client-${service.id}`">
-                {{ clientLabel(service.clientName, service.clientId) }}
+                {{ service.clientName }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>{{ formatPrice(service.price, service.priceCurrency) }}</UiTableCell>

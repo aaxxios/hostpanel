@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSupportApi } from '@/composables/apis/useSupportApi'
 import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
 import { SupportOverviewPeriod } from '@/types/supportoverviewstats'
-import { TicketBulkAction, TicketPriority, TicketStatus } from '@/types/ticket'
+import { TicketBulkAction, TicketFlagFilter, TicketPriority, TicketStatus } from '@/types/ticket'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -22,6 +22,13 @@ describe('useSupportApi', () => {
 
     await useSupportApi().listTickets({ page: 1, pageSize: 20, status: null, search: '' })
     expect(callOf(mock, 1).url).toBe('/api/tickets?page=1&pageSize=20')
+  })
+
+  it('listTickets sends the flagged filter as its own parameter, not as a status', async () => {
+    const mock = stubFetch(json({ items: [], totalCount: 0 }))
+
+    await useSupportApi().listTickets({ page: 1, pageSize: 20, status: TicketFlagFilter.Flagged })
+    expect(callOf(mock).url).toBe('/api/tickets?page=1&pageSize=20&flagged=true')
   })
 
   it('getTicket, getOverview and listDepartments read their paths', async () => {

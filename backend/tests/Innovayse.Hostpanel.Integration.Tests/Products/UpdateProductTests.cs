@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
@@ -13,10 +11,9 @@ namespace Innovayse.Hostpanel.Integration.Tests.Products;
 /// and the missing-product refusal.
 /// </summary>
 /// <remarks>
-/// Split from the deleted <c>ProductPricingEndpointTests</c>. Pins how <c>UpdateProductHandler</c>
+/// Pins how <c>UpdateProductHandler</c>
 /// resolves the per-currency price list against the legacy single-currency pair, and the refusal
-/// converted from a bare <c>InvalidOperationException</c> to a <c>Result</c> code:
-/// <c>PRODUCT_NOT_FOUND</c> (404) (A7 Task 6).
+/// <c>PRODUCT_NOT_FOUND</c> (404).
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateProductTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -68,7 +65,7 @@ public sealed class UpdateProductTests(IntegrationTestFactory factory) : IClassF
         var prices = dto.GetProperty("prices").EnumerateArray().ToList();
         prices.Should().ContainSingle();
         prices[0].GetProperty("currencyCode").GetString().Should().Be("USD");
-        prices[0].GetProperty(BillingCycleNames.Monthly).GetDecimal().Should().Be(3.49m);
+        prices[0].GetProperty("monthly").GetDecimal().Should().Be(3.49m);
     }
 
     /// <summary>An empty price list on update clears every price, and the product becomes unsellable.</summary>
@@ -132,9 +129,9 @@ public sealed class UpdateProductTests(IntegrationTestFactory factory) : IClassF
         var prices = dto.GetProperty("prices").EnumerateArray().ToList();
         prices.Should().HaveCount(2);
         prices.Should().Contain(p => p.GetProperty("currencyCode").GetString() == "AMD"
-            && p.GetProperty(BillingCycleNames.Monthly).GetDecimal() == 1200m);
+            && p.GetProperty("monthly").GetDecimal() == 1200m);
         prices.Should().Contain(p => p.GetProperty("currencyCode").GetString() == "USD"
-            && p.GetProperty(BillingCycleNames.Monthly).GetDecimal() == 4.99m);
+            && p.GetProperty("monthly").GetDecimal() == 4.99m);
     }
 
     /// <summary>Featuring a product on update clears the flag on its group's other featured product.</summary>

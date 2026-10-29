@@ -1,9 +1,7 @@
-/** One knowledgebase category, as `GET /api/portal/knowledgebase/categories` lists it. */
+/** One knowledgebase category, as `GET /api/portal/knowledgebase/categories` lists it (the backend's `PublishedKbCategoryDto`). */
 export interface KbCategory {
-  /** Category id, used as the category-page route parameter. */
-  id: string | number
-  /** Category display name. */
+  /** Category name; the published articles carry it, and the category page routes on it. */
   name: string
-  /** How many articles the category holds — shown beside the name. */
-  articlecount?: number
+  /** How many published articles the category holds, shown beside the name. */
+  articleCount: number
 }

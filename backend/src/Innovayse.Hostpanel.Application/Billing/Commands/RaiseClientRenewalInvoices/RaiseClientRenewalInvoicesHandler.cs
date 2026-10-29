@@ -1,15 +1,17 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Domains.Registrar;
+using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Queries.GetTldRenewPrice;
+using Innovayse.Hostpanel.Application.Orders.Queries.ListPendingDomainRenewOrderInvoices;
+using Innovayse.Hostpanel.Application.Products.Extensions;
+using Innovayse.Hostpanel.Application.Services.Extensions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Domain.Domains;
-using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
-using Innovayse.Hostpanel.Domain.Orders;
-using Innovayse.Hostpanel.Domain.Orders.Enums;
-using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,22 +23,22 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInv
 /// Handles <see cref="RaiseClientRenewalInvoicesCommand"/>: finds the client's services and domains
 /// inside the lead time that are not already invoiced for their next period, prices them, raises one
 /// invoice (or one per line under <c>SeparateInvoices</c>), and applies credit. Nothing is extended
-/// here -- that happens only when the line is paid (<c>ApplyPaidRenewalsCommand</c>).
+/// here: that happens only when the line is paid (<c>ApplyPaidRenewalsCommand</c>).
 /// <para>
 /// Due date: the earliest period start on the invoice when that is still ahead; when a period
 /// already started (a back-dated renewal date, a service catching up after a missed payment) the
-/// client gets the normal payment window instead -- now plus <c>invoice_days_before</c> -- capped at
+/// client gets the normal payment window instead, now plus <c>invoice_days_before</c>, capped at
 /// the earliest period on the invoice that has not started yet, so a back-dated line never pushes a
 /// future one past its own start.
 /// </para>
 /// </summary>
 /// <remarks>
 /// Duplicate rule: any renewal line for the target on a still-open invoice blocks a new one; so does
-/// any line on a paid invoice that is not applied yet (its extension is still pending -- a registrar
-/// claim left for staff, say -- so an edited date must not bill the same term again); and a line for
-/// this exact period blocks it on every invoice except a cancelled one -- so a paid, overdue or
+/// any line on a paid invoice that is not applied yet (its extension is still pending, a registrar
+/// claim left for staff, say, so an edited date must not bill the same term again); and a line for
+/// this exact period blocks it on every invoice except a cancelled one, so a paid, overdue or
 /// refunded period is never re-billed automatically, while a cancelled one is re-raised on the next
-/// run while still due (stopping renewal is <c>AutoRenew = false</c>).
+/// run while still due (stopping renewal is manual billing, <c>AutoRenew</c> off, set from the service automation section).
 /// </remarks>
 public sealed class RaiseClientRenewalInvoicesHandler
 {
@@ -49,8 +51,11 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// </summary>
     private static readonly InvoiceStatus[] RenewOrderBlockingStatuses = [.. RenewalInvoiceStatuses.Open, InvoiceStatus.Paid];
 
-    /// <summary>Data context.</summary>
+    /// <summary>Invoices and currencies.</summary>
     private readonly IHostpanelDbContext _context;
+
+    /// <summary>Takes applied credit off the client's balance in the same save as the invoice.</summary>
+    private readonly IClientCredit _clientCredit;
 
     /// <summary>The client's billing currency.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
@@ -58,43 +63,61 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// <summary>Lead time and credit switch.</summary>
     private readonly RenewalSettingsReader _settings;
 
-    /// <summary>Alerts staff about unpriceable domains.</summary>
+    /// <summary>Reads the client's brief, the due services, domains, products, renew orders and TLD prices from their modules, and alerts staff about unpriceable domains.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<RaiseClientRenewalInvoicesHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">Data context.</param>
+    /// <param name="context">Invoices and currencies.</param>
+    /// <param name="clientCredit">Takes applied credit off the client's balance in the same save as the invoice.</param>
     /// <param name="payerCurrency">The client's billing currency.</param>
     /// <param name="settings">Lead time and credit switch.</param>
-    /// <param name="bus">Alerts staff about unpriceable domains.</param>
+    /// <param name="bus">Reads the client's brief, the due services, domains, products, renew orders and TLD prices from their modules, and alerts staff about unpriceable domains.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
     public RaiseClientRenewalInvoicesHandler(
-        IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency, RenewalSettingsReader settings,
-        IMessageBus bus, ILogger<RaiseClientRenewalInvoicesHandler> logger)
+        IHostpanelDbContext context, IClientCredit clientCredit, IPayerCurrencyResolver payerCurrency, RenewalSettingsReader settings,
+        IMessageBus bus, ILogger<RaiseClientRenewalInvoicesHandler> logger,
+        IClock clock)
     {
         _context = context;
+        _clientCredit = clientCredit;
         _payerCurrency = payerCurrency;
         _settings = settings;
         _bus = bus;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>Raises the client's due renewal invoices.</summary>
     /// <param name="cmd">The client.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The number of invoices raised, or <c>CLIENT_NOT_FOUND</c>.</returns>
+    /// <returns>
+    /// The number of invoices raised, <c>CLIENT_NOT_FOUND</c>, or <c>CLIENT_SUSPENDED</c> / <c>CLIENT_CLOSED</c> when the
+    /// account is not billed.
+    /// </returns>
     public async Task<Result<int>> HandleAsync(RaiseClientRenewalInvoicesCommand cmd, CancellationToken ct)
     {
-        var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == cmd.ClientId, ct);
+        var client = await _bus.FindClientBriefAsync(cmd.ClientId, withEmail: false, ct);
         if (client is null)
         {
             return Result<int>.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
         }
 
+        // A suspended or closed account is not billed: its renewals wait for staff (suspended) or never come (closed).
+        var mayBill = client.Status.EnsureMayTransact();
+        if (mayBill.IsFailure)
+        {
+            return Result<int>.FailureCode(mayBill.ErrorCode!);
+        }
+
         var settings = await _settings.ReadAsync(ct);
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var horizon = now.AddDays(settings.InvoiceDaysBefore);
         var payer = await _payerCurrency.ForClientAsync(client.Id, ct);
 
@@ -106,21 +129,30 @@ public sealed class RaiseClientRenewalInvoicesHandler
             return Result.Success(0);
         }
 
-        var groups = client.SeparateInvoices ? lines.Select(l => new[] { l }) : [lines.ToArray()];
+        var groups = client.Settings.SeparateInvoices ? lines.Select(l => new[] { l }) : [lines.ToArray()];
+        // The balance carries no currency of its own: it is held in the client's billing currency, the
+        // one IPayerCurrencyResolver answers and every invoice of this client is raised in (payer.Code),
+        // so it is applied as is. Converting here would charge the client a rate on their own money.
+        var credit = client.CreditBalance;
         var raised = 0;
         foreach (var group in groups)
         {
-            var invoice = Invoice.Create(client.Id, DueDateOf(group, now, settings.InvoiceDaysBefore), payer.Code);
+            var invoice = Invoice.Create(client.Id, DueDateOf(group, now, settings.InvoiceDaysBefore), payer.Code, now);
             foreach (var line in group)
             {
                 line.AddTo(invoice);
             }
 
-            if (settings.AutoApplyCredit && client.CreditBalance > 0 && invoice.Total > 0)
+            if (settings.AutoApplyCredit && credit > 0 && invoice.Total > 0)
             {
-                var amount = Math.Min(client.CreditBalance, invoice.Total);
-                client.DeductCredit(amount);
-                invoice.ApplyCredit(amount);
+                var amount = Math.Min(credit, invoice.Total);
+                var applied = await _clientCredit.ApplyFromBalanceAsync(invoice, amount, ct);
+                if (applied.IsFailure)
+                {
+                    return Result<int>.FailureCode(applied.ErrorCode!);
+                }
+
+                credit -= amount;
             }
 
             _context.Invoices.Add(invoice);
@@ -131,9 +163,9 @@ public sealed class RaiseClientRenewalInvoicesHandler
                 // Credit (or a zero-price service) covered it. Marked paid only after the first save:
                 // PaymentReceivedEvent is built with the invoice id at MarkPaid time (not deferred),
                 // and before the save that id is 0. No ledger row: the money was booked when the
-                // credit was added, as PayInvoiceHandler does for a zero total. The payment event's
+                // credit was added. The payment event's
                 // fast path (or the daily sweep) then applies the renewal.
-                invoice.MarkPaid(PaymentMethodNames.CreditBalance);
+                invoice.MarkPaid(PaymentMethodNames.CreditBalance, now);
                 await _context.SaveChangesAsync(ct);
             }
 
@@ -162,8 +194,8 @@ public sealed class RaiseClientRenewalInvoicesHandler
             return earliest;
         }
 
-        // A period that already started would otherwise be born overdue -- and suspended after the
-        // grace -- before the client could see the invoice. It gets the normal payment window.
+        // A period that already started would otherwise be born overdue, and suspended after the
+        // grace, before the client could see the invoice. It gets the normal payment window.
         var window = now.AddDays(leadDays);
         var earliestFuture = group.Where(l => l.Start >= now).Select(l => (DateTimeOffset?)l.Start).Min() ?? DateTimeOffset.MaxValue;
         return window < earliestFuture ? window : earliestFuture;
@@ -175,6 +207,7 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// <param name="horizon">Now plus the lead time.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The lines to raise.</returns>
+    /// <exception cref="InvalidOperationException">A service names a product that does not exist, so the database is broken.</exception>
     /// <remarks>
     /// A service set to terminate at the end of its cycle, or with an open cancellation request, is
     /// not invoiced. Termination of those is someone else's job; when its renewal date has already
@@ -182,32 +215,23 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// </remarks>
     private async Task<List<PendingLine>> DueServiceLinesAsync(int clientId, DateTimeOffset now, DateTimeOffset horizon, CancellationToken ct)
     {
-        // AutoTerminateEndOfCycle is filtered below rather than here, so a lapsed one can be reported.
-        var services = await _context.ClientServices.AsNoTracking()
-            .Where(s => s.ClientId == clientId && s.Status == ServiceStatus.Active && s.AutoRenew
-                        && s.NextRenewalAt != null && s.NextRenewalAt <= horizon)
-            .ToListAsync(ct);
+        // AutoTerminateEndOfCycle is filtered below rather than by the query, so a lapsed one can be reported.
+        var services = await _bus.GetRenewableServicesAsync(clientId, horizon, ct);
         if (services.Count == 0)
         {
             return [];
         }
 
-        var ids = services.Select(s => s.Id).ToList();
-        var cancelling = await _context.CancellationRequests.AsNoTracking()
-            .Where(r => ids.Contains(r.ServiceId) && r.Status == CancellationStatus.Open)
-            .Select(r => r.ServiceId)
-            .ToListAsync(ct);
+        // FK_ClientServices_Products_ProductId restricts deleting a product that has services, so every product is there.
         var productIds = services.Select(s => s.ProductId).Distinct().ToList();
-        var productNames = await _context.Products.AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+        var products = await _bus.GetRequiredProductSummariesByIdAsync(productIds, ct);
 
         var result = new List<PendingLine>();
         foreach (var service in services)
         {
-            var start = service.NextRenewalAt!.Value;
+            var start = service.NextRenewalAt;
             var terminating = service.AutoTerminateEndOfCycle;
-            if (terminating || cancelling.Contains(service.Id))
+            if (terminating || service.HasOpenCancellation)
             {
                 if (start < now)
                 {
@@ -219,12 +243,7 @@ public sealed class RaiseClientRenewalInvoicesHandler
                 continue;
             }
 
-            var end = RenewalPeriod.EndOf(start, service.BillingCycle, service.CreatedAt.Day);
-            if (end is null)
-            {
-                _logger.LogWarning("Service {ServiceId} has a non-renewable cycle '{Cycle}'; not invoiced.", service.Id, service.BillingCycle);
-                continue;
-            }
+            var end = RenewalPeriod.EndOf(start, service.BillingCycle, service.AnchorDay);
 
             if (service.RecurringAmount < 0)
             {
@@ -240,8 +259,8 @@ public sealed class RaiseClientRenewalInvoicesHandler
                 continue;
             }
 
-            var name = productNames.GetValueOrDefault(service.ProductId, $"Service #{service.Id}");
-            result.Add(new PendingLine(start, inv => inv.AddServiceRenewal($"Renewal: {name}", service.RecurringAmount, service.Id, start, end.Value)));
+            var name = products[service.ProductId].Name;
+            result.Add(new PendingLine(start, inv => inv.AddServiceRenewal($"Renewal: {name}", service.RecurringAmount, service.Id, start, end)));
         }
 
         return result;
@@ -258,9 +277,7 @@ public sealed class RaiseClientRenewalInvoicesHandler
         int clientId, DateTimeOffset now, RenewalSettings settings, Currency payer, CancellationToken ct)
     {
         var horizon = now.AddDays(settings.InvoiceDaysBefore);
-        var domains = await _context.Domains.AsNoTracking()
-            .Where(d => d.ClientId == clientId && d.Status == DomainStatus.Active && d.AutoRenew && d.ExpiresAt <= horizon)
-            .ToListAsync(ct);
+        var domains = await _bus.GetRenewableDomainsAsync(clientId, horizon, ct);
 
         var result = new List<PendingLine>();
         foreach (var domain in domains)
@@ -292,7 +309,10 @@ public sealed class RaiseClientRenewalInvoicesHandler
                 if (IsAlertCheckpoint(domain.ExpiresAt, now, settings))
                 {
                     await _bus.PublishAsync(new DomainRenewalFailedEvent(domain.Id, clientId, domain.Name, 0,
-                        $"{reason}; no renewal invoice was raised."));
+                        $"{reason}; no renewal invoice was raised.")
+                    {
+                        OccurredAt = now,
+                    });
                 }
 
                 continue;
@@ -306,8 +326,8 @@ public sealed class RaiseClientRenewalInvoicesHandler
     }
 
     /// <summary>
-    /// Whether this run mails staff about an unpriceable domain: only on the checkpoint days --
-    /// the lead time, each reminder day, and expiry day -- counted as whole days left. Stateless, so
+    /// Whether this run mails staff about an unpriceable domain: only on the checkpoint days,
+    /// the lead time, each reminder day, and expiry day, counted as whole days left. Stateless, so
     /// a domain already inside the window at go-live, after a lead-time change, an import or a missed
     /// run still reaches a later checkpoint, while staff get a handful of mails rather than a daily one.
     /// The Warning log is the record on every other run.
@@ -362,24 +382,30 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// <summary>
     /// Whether the client has a renew order for <paramref name="domainName"/> that still bills it: an
     /// order still Pending (not fulfilled, not cancelled, not fraud) carrying a renew line for the name,
-    /// whose invoice is open -- or paid with fulfillment not run yet, the registrar renewal pending.
+    /// whose invoice is open, or paid with fulfillment not run yet, the registrar renewal pending.
     /// A fulfilled order is Active, a cancelled one Cancelled, and neither blocks.
     /// </summary>
     /// <param name="clientId">The client.</param>
     /// <param name="domainName">The domain name, as the order line carries it.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns><see langword="true"/> when the auto-renewal must not raise a line.</returns>
-    private Task<bool> HasOpenRenewOrderAsync(int clientId, string domainName, CancellationToken ct) =>
-        _context.Orders.AnyAsync(
-            o => o.ClientId == clientId
-                 && o.Status == OrderStatus.Pending
-                 && o.InvoiceId != null
-                 && o.Items.Any(l => l.DomainAction == DomainActionNames.Renew && l.Domain == domainName)
-                 && _context.Invoices.Any(i => i.Id == o.InvoiceId && RenewOrderBlockingStatuses.Contains(i.Status)),
-            ct);
+    private async Task<bool> HasOpenRenewOrderAsync(int clientId, string domainName, CancellationToken ct)
+    {
+        // The orders are the Orders module's; their invoices' statuses are this module's.
+        var orders = await _bus.InvokeAsync<Result<IReadOnlyList<int>>>(
+            new ListPendingDomainRenewOrderInvoicesQuery(clientId, domainName), ct);
+        var invoiceIds = orders.Value ?? [];
+        if (invoiceIds.Count == 0)
+        {
+            return false;
+        }
+
+        return await _context.Invoices.AnyAsync(
+            i => invoiceIds.Contains(i.Id) && RenewOrderBlockingStatuses.Contains(i.Status), ct);
+    }
 
     /// <summary>The TLD's renew price for <paramref name="years"/>, in the payer currency.</summary>
-    /// <param name="domain">The domain.</param>
+    /// <param name="domain">The domain being renewed, whose TLD sets the price.</param>
     /// <param name="years">The period.</param>
     /// <param name="payer">The invoice currency.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -387,40 +413,24 @@ public sealed class RaiseClientRenewalInvoicesHandler
     /// The price, or <see langword="null"/> with the reason staff are told: no TLD configuration or
     /// renew price for the period, or no currency row to convert the sell price with.
     /// </returns>
-    private async Task<(decimal? Price, string Reason)> RenewPriceAsync(RegisteredDomain domain, int years, Currency payer, CancellationToken ct)
+    private async Task<RenewPriceQuote> RenewPriceAsync(RenewableDomainDto domain, int years, Currency payer, CancellationToken ct)
     {
         var noPrice = $"No renew price for {years} year(s) in the TLD configuration";
 
-        // Longest suffix first, as the registrar resolver matches: "example.co.am" is priced as
-        // "co.am" when that TLD is configured, else as "am".
-        foreach (var tld in RegistrarProviderResolver.ExtractTldCandidates(domain.Name))
+        // The TLD's sell price is the Domains module's; converting it into the invoice currency is billing's.
+        var configured = await _bus.InvokeAsync<Result<TldRenewPriceDto>>(new GetTldRenewPriceQuery(domain.Name, years), ct);
+        if (configured.Value is not { SellPrice: { } sell } tld)
         {
-            var config = await _context.TldConfigs.AsNoTracking().FirstOrDefaultAsync(t => t.Tld == tld, ct);
-            if (config is null)
-            {
-                continue;
-            }
-
-            if (!config.SellRenew.TryGetValue(years, out var sell))
-            {
-                return (null, noPrice);
-            }
-
-            var from = await _context.Currencies.AsNoTracking().FirstOrDefaultAsync(c => c.Code == config.SellCurrency, ct);
-            if (from is null)
-            {
-                return (null, $"No exchange rate for {config.SellCurrency}\u2192{payer.Code}");
-            }
-
-            var price = from.ConvertTo(sell, payer);
-            return price > 0 ? (price, string.Empty) : (null, noPrice);
+            return new RenewPriceQuote(null, noPrice);
         }
 
-        return (null, noPrice);
-    }
+        var from = await _context.Currencies.AsNoTracking().FirstOrDefaultAsync(c => c.Code == tld.SellCurrency, ct);
+        if (from is null)
+        {
+            return new RenewPriceQuote(null, $"No exchange rate for {tld.SellCurrency}\u2192{payer.Code}");
+        }
 
-    /// <summary>A line waiting to be added: its period start (for the due date) and how to add it.</summary>
-    /// <param name="Start">Period start.</param>
-    /// <param name="AddTo">Adds the line to an invoice.</param>
-    private sealed record PendingLine(DateTimeOffset Start, Action<Invoice> AddTo);
+        var price = from.ConvertTo(sell, payer);
+        return price > 0 ? new RenewPriceQuote(price, string.Empty) : new RenewPriceQuote(null, noPrice);
+    }
 }

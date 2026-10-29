@@ -3,6 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { h, nextTick, ref } from 'vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import { createTestI18n } from '../../helpers/i18n'
 
@@ -29,6 +30,16 @@ describe('UiDialog', () => {
     expect(dialog.attributes('aria-labelledby')).toBe(wrapper.get('h2').attributes('id'))
     expect(wrapper.get('h2').text()).toBe('Edit client')
     expect(wrapper.find('[data-testid="body"]').exists()).toBe(true)
+  })
+
+  it('puts the attributes a caller passes onto the dialog panel', () => {
+    const wrapper = mount(UiDialog, {
+      props: { title: 'Cancel invoices' },
+      attrs: { 'data-testid': 'cancel-invoices-dialog' },
+      global: { plugins: [createTestI18n()], stubs: { teleport: true } },
+    })
+
+    expect(wrapper.get('[data-testid="cancel-invoices-dialog"]').attributes('role')).toBe('dialog')
   })
 
   it('pins header and footer and scrolls only the body region', () => {
@@ -84,6 +95,24 @@ describe('UiDialog', () => {
     await wrapper.get('[role="dialog"]').trigger('keydown', { key: 'Escape' })
 
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('closes only the topmost of two nested dialogs on Escape', async () => {
+    // The inner dialog opens after the outer one, the way a confirmation opens from a dialog.
+    const innerOpen = ref(false)
+    const outer = mount(UiDialog, {
+      props: { title: 'outer' },
+      slots: { default: () => h(UiDialog, { title: 'inner', open: innerOpen.value }) },
+      global: { plugins: [createTestI18n()], stubs: { teleport: true } },
+    })
+    innerOpen.value = true
+    await nextTick()
+    const inner = outer.findAllComponents(UiDialog).find(dialog => dialog.props('title') === 'inner')
+
+    await outer.get('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+
+    expect(inner?.emitted('close')).toHaveLength(1)
+    expect(outer.emitted('close')).toBeUndefined()
   })
 
   it('closes on a backdrop click unless that is turned off', async () => {

@@ -3,7 +3,7 @@
  *
  * `utils/formatCurrency.ts` covers the case where only an ISO code (or nothing) is known about
  * an amount's currency. This module covers the opposite, now-common case: the caller has a
- * full {@link MoneyCurrency} row — `prefix`, `suffix` and `decimals` — read from
+ * full {@link MoneyCurrency} row (`prefix`, `suffix` and `decimals`) read from
  * `GET /api/currencies` or `GET /api/admin/currencies` through `stores/currency.ts`. Those
  * fields are the operator's own configuration, not a guess, so they are used directly instead
  * of asking `Intl` to infer them from an ISO code.
@@ -15,7 +15,7 @@ import { EMPTY_AMOUNT } from '~/utils/formatCurrency'
 
 /** The formatting is a fixed number of decimal places wrapped in the operator's own symbols. */
 export interface MoneyCurrency {
-  /** ISO 4217 alpha code, e.g. `AMD`. Not used for formatting — kept for callers that log it. */
+  /** ISO 4217 alpha code, e.g. `AMD`. Not used for formatting: kept for callers that log it. */
   code?: string
   /** Text printed before the amount, e.g. `$`. */
   prefix?: string | null
@@ -45,8 +45,8 @@ export const formatMoneyDigits = (amount: number, decimals: number): string =>
  * Grouping and decimal separators come from `Intl.NumberFormat`'s default locale handling
  * (digit grouping is not currency-specific, unlike the symbol and decimal count, which the
  * caller already supplied); the decimal *count* is pinned to `currency.decimals` rather than
- * left to `Intl`'s own currency table, because the operator's configuration — not a browser's
- * idea of what AMD does — is what actually printed on the price the visitor is paying.
+ * left to `Intl`'s own currency table, because the operator's configuration, not a browser's
+ * idea of what AMD does, is what actually printed on the price the visitor is paying.
  *
  * @param amount - The numeric amount, in the given currency. `null`/`undefined` renders as
  * an em dash, matching {@link EMPTY_AMOUNT} in `utils/formatCurrency.ts`.

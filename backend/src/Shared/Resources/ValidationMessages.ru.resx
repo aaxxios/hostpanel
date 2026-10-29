@@ -106,14 +106,13 @@
   <data name="Forbidden" xml:space="preserve">
     <value>Доступ запрещён</value>
   </data>
+  <data name="CsrfHeaderMissingDetail" xml:space="preserve">
+    <value>Этот запрос должен отправляться из самой панели. Обновите страницу и повторите попытку.</value>
+  </data>
   <data name="ForbiddenDetail" xml:space="preserve">
     <value>У вас нет прав на выполнение этого действия.</value>
   </data>
   <data name="InvalidFieldValue" xml:space="preserve">
     <value>Это значение недействительно.</value>
-  </data>
-  <data name="RateLimited" xml:space="preserve">
-    <value>Слишком много запросов подряд. Подождите немного и попробуйте снова.</value>
-    <comment>RATE_LIMITED. Wording reused from client/locales/*/error.json -&gt; error.rateLimited.</comment>
   </data>
 </root>

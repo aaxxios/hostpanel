@@ -22,7 +22,7 @@ public sealed class SetUserPasswordHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>IDENTITY_USER_NOT_FOUND</c> when the subject names no account here, or
-    /// <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c> where an SSO owns the accounts.
+    /// <c>USER_PROVISIONING_NOT_ALLOWED_SET_PASSWORD</c> where an external sign-on provider owns the accounts.
     /// </returns>
     public async Task<Result> HandleAsync(SetUserPasswordCommand cmd, CancellationToken ct)
     {

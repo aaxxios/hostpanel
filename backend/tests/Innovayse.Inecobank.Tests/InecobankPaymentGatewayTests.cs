@@ -1,15 +1,36 @@
-using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Providers.Inecobank;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Innovayse.Inecobank.Tests;
+
 /// <summary>Tests for <see cref="InecobankPaymentGateway"/> config handling and status mapping.</summary>
-public class InecobankPaymentGatewayTests
+public class InecobankPaymentGatewayTests : IAsyncLifetime
 {
+    /// <summary>The loopback server standing in for the gateway; the client's requests are redirected to it.</summary>
+    private StubHttpServer _http = null!;
+
+    /// <summary>Starts the stub gateway before each test.</summary>
+    /// <returns>A task that completes when the server listens.</returns>
+    public async Task InitializeAsync()
+    {
+        _http = await StubHttpServer.StartAsync();
+    }
+
+    /// <summary>Stops the stub gateway after each test.</summary>
+    /// <returns>A task that completes when the server is down.</returns>
+    public async Task DisposeAsync()
+    {
+        await _http.DisposeAsync();
+    }
+
+    /// <summary>Builds the HTTP client every request of which reaches the stub gateway.</summary>
+    /// <returns>The client.</returns>
+    private HttpClient CreateHttpClient() => new(new RedirectToStubHandler(_http.BaseAddress));
+
     /// <summary>Builds a configuration holding valid gateway settings.</summary>
     /// <param name="overrides">Settings that replace or add to the defaults.</param>
     /// <returns>The configuration.</returns>
@@ -29,40 +50,38 @@ public class InecobankPaymentGatewayTests
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
     }
 
-    /// <summary>Builds a gateway wired to a fake handler.</summary>
+    /// <summary>Builds a gateway wired to the stub gateway.</summary>
     /// <param name="configOverrides">Settings that replace or add to the defaults.</param>
-    /// <returns>The gateway and the handler whose responses and requests the test controls.</returns>
-    private static (InecobankPaymentGateway Gateway, FakeHttpMessageHandler Http) CreateGateway(
+    /// <returns>The gateway under test.</returns>
+    private InecobankPaymentGateway CreateGateway(
         Dictionary<string, string?>? configOverrides = null)
     {
-        var handler = new FakeHttpMessageHandler();
-        var gateway = new InecobankPaymentGateway(
+        return new InecobankPaymentGateway(
             BuildConfig(configOverrides),
             NullLogger<InecobankPaymentGateway>.Instance,
-            new HttpClient(handler));
-        return (gateway, handler);
+            CreateHttpClient());
     }
 
     /// <summary>Create payment async, uses configured currency defaults.</summary>
     [Fact]
     public async Task CreatePaymentAsync_UsesConfiguredCurrencyDefaults()
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue("""{"orderId":"gw-1","formUrl":"https://testpg.example.am/pay?mdOrder=gw-1"}""");
+        var gateway = CreateGateway();
+        _http.Enqueue("""{"orderId":"gw-1","formUrl":"https://testpg.example.am/pay?mdOrder=gw-1"}""");
 
         var session = await gateway.CreatePaymentAsync(
             new PaymentRequest("INV7-1755850000", 120000, "https://portal/result?invoice=7", "Invoice #7", null),
             CancellationToken.None);
 
         session.Should().Be(new PaymentSession("gw-1", "https://testpg.example.am/pay?mdOrder=gw-1"));
-        http.Requests[0].Body.Should().Contain("currency=051").And.Contain("language=hy");
+        _http.Requests[0].Body.Should().Contain("currency=051").And.Contain("language=hy");
     }
 
     /// <summary>Currency code, defaults to051 amd.</summary>
     [Fact]
     public void CurrencyCode_DefaultsTo051Amd()
     {
-        var (gateway, _) = CreateGateway();
+        var gateway = CreateGateway();
 
         gateway.CurrencyCode.Should().Be("051");
     }
@@ -71,7 +90,7 @@ public class InecobankPaymentGatewayTests
     [Fact]
     public void CurrencyCode_UsesConfiguredValue()
     {
-        var (gateway, _) = CreateGateway(new() { ["integration:inecobank:currency"] = "840" });
+        var gateway = CreateGateway(new() { ["integration:inecobank:currency"] = "840" });
 
         gateway.CurrencyCode.Should().Be("840");
     }
@@ -80,7 +99,7 @@ public class InecobankPaymentGatewayTests
     [Fact]
     public async Task CreatePaymentAsync_MissingRequiredConfig_Throws()
     {
-        var (gateway, _) = CreateGateway(new() { ["integration:inecobank:username"] = null });
+        var gateway = CreateGateway(new() { ["integration:inecobank:username"] = null });
 
         var act = () => gateway.CreatePaymentAsync(
             new PaymentRequest("INV1-1", 100, "https://portal/r", null, null), CancellationToken.None);
@@ -101,8 +120,8 @@ public class InecobankPaymentGatewayTests
     [InlineData(6, GatewayPaymentState.Declined)]
     public async Task GetStatusAsync_MapsOrderStatus(int orderStatus, GatewayPaymentState expected)
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue($$"""{"errorCode":0,"orderStatus":{{orderStatus}},"authRefNum":"ref-1"}""");
+        var gateway = CreateGateway();
+        _http.Enqueue($$"""{"errorCode":0,"orderStatus":{{orderStatus}},"authRefNum":"ref-1"}""");
 
         var status = await gateway.GetStatusAsync("gw-1", CancellationToken.None);
 
@@ -117,8 +136,8 @@ public class InecobankPaymentGatewayTests
     [Fact]
     public async Task GetStatusAsync_UnknownOrder_ErrorCode6_IsDeclined_NotThrown()
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue("""{"errorCode":6,"errorMessage":"Unregistered OrderId"}""");
+        var gateway = CreateGateway();
+        _http.Enqueue("""{"errorCode":6,"errorMessage":"Unregistered OrderId"}""");
 
         var status = await gateway.GetStatusAsync("bogus", CancellationToken.None);
 
@@ -129,20 +148,22 @@ public class InecobankPaymentGatewayTests
     [Fact]
     public async Task GetStatusAsync_AccessDenied_ErrorCode5_Throws()
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue("""{"errorCode":5,"errorMessage":"Access denied"}""");
+        var gateway = CreateGateway();
+        _http.Enqueue("""{"errorCode":5,"errorMessage":"Access denied"}""");
 
         var act = () => gateway.GetStatusAsync("gw-1", CancellationToken.None);
 
-        (await act.Should().ThrowAsync<InecobankApiException>()).Which.ErrorCode.Should().Be(5);
+        var ex = (await act.Should().ThrowAsync<InecobankApiException>()).Which;
+        ex.ErrorCode.Should().Be(5);
+        ex.Message.Should().NotContain("Access denied");
     }
 
     /// <summary>Get status async, paid without auth ref num, falls back to gateway order id.</summary>
     [Fact]
     public async Task GetStatusAsync_PaidWithoutAuthRefNum_FallsBackToGatewayOrderId()
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue("""{"errorCode":0,"orderStatus":2}""");
+        var gateway = CreateGateway();
+        _http.Enqueue("""{"errorCode":0,"orderStatus":2}""");
 
         var status = await gateway.GetStatusAsync("gw-9", CancellationToken.None);
 
@@ -153,12 +174,12 @@ public class InecobankPaymentGatewayTests
     [Fact]
     public async Task RefundAsync_ReturnsGatewayOrderIdAsReference()
     {
-        var (gateway, http) = CreateGateway();
-        http.Enqueue("""{"errorCode":0}""");
+        var gateway = CreateGateway();
+        _http.Enqueue("""{"errorCode":0}""");
 
         var reference = await gateway.RefundAsync("gw-3", 5000, CancellationToken.None);
 
         reference.Should().Be("gw-3");
-        http.Requests[0].Url.Should().EndWith("/payment/rest/refund.do");
+        _http.Requests[0].PathAndQuery.Should().EndWith("/payment/rest/refund.do");
     }
 }

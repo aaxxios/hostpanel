@@ -10,23 +10,20 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 /// This is a marker, not a mechanism: implementing it grants nothing and enforces nothing at
 /// runtime. What it buys is that the requirement is written on the message type itself rather
 /// than living only in the memory of whoever wrote the handler, so a test can ask the question.
-/// Two do, both in <c>Innovayse.Hostpanel.Integration.Tests</c> —
+/// Two do, both in <c>Innovayse.Hostpanel.Integration.Tests</c>:
 /// <c>MyServicesRoutesAreOwnershipScopedTests</c> checks that every <c>MyServicesController</c>
 /// action taking a service id off the route dispatches a message carrying this marker, and
 /// <c>CallerScopedServiceMessageTests</c> checks that every marked message has a handler that takes
-/// <see cref="IServiceOwnership"/>. Together they fail on a <b>new</b> unguarded route, which is
-/// the failure mode that produced the five this marker was introduced to close.
+/// <see cref="IServiceOwnership"/>. Together they fail on a <b>new</b> unguarded route.
 /// </para>
 /// <para>
-/// A Wolverine middleware keyed on this marker would enforce it rather than merely describe it,
-/// and is the better end state. It is not what this does, because registering one means editing
-/// <c>Program.cs</c>'s <c>UseWolverine</c> block — the composition root — and the two tests above
-/// catch the same omission at build time without it. The marker is deliberately shaped so that
-/// swapping to middleware later is a registration and no change to any message.
+/// A Wolverine middleware keyed on this marker would enforce it rather than describe it. The two
+/// tests above catch the same omission without touching the composition root, and the marker is
+/// shaped so that adding such a middleware is a registration and no change to any message.
 /// </para>
 /// <para>
 /// Only <b>client-facing</b> messages carry this. The shared use cases an admin route also
-/// dispatches — <c>GetControlPanelSsoUrlQuery</c>, <c>ChangePasswordCommand</c> and their siblings —
+/// dispatches, <c>GetControlPanelSsoUrlQuery</c>, <c>ChangePasswordCommand</c> and their siblings,
 /// deliberately do not, because an administrator acting on any client's service is legitimate and
 /// a marker on the shared message would refuse them.
 /// </para>

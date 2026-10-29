@@ -1,6 +1,8 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Shared.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Orders.Extensions;
 
@@ -36,5 +38,42 @@ public static class OrderExtensions
         }
 
         return Result.Success(order);
+    }
+
+    /// <summary>
+    /// Loads an order for an anonymous payment call, checks the payment token and that the order
+    /// was invoiced, and answers with the order.
+    /// </summary>
+    /// <remarks>
+    /// The one lookup every order payment endpoint starts with, so they refuse in the same order
+    /// and with the same codes.
+    /// </remarks>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="orderId">The order being paid.</param>
+    /// <param name="paymentToken">The token the caller presented, or null when none was sent.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// The order, whose <see cref="Order.InvoiceId"/> is set; or <c>ORDER_NOT_FOUND</c> when no
+    /// such order exists or the token does not match it, or <c>ORDER_NOT_INVOICED</c> when the
+    /// order was never billed.
+    /// </returns>
+    public static async Task<Result<Order>> FindPayableInvoicedOrderAsync(
+        this IHostpanelDbContext context, int orderId, string? paymentToken, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var found = await context.Orders.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+        var payable = found.EnsurePayableWith(paymentToken);
+        if (payable.IsFailure)
+        {
+            return payable;
+        }
+
+        if (payable.Value!.InvoiceId is null)
+        {
+            return Result<Order>.FailureCode(HostpanelErrorCodes.ORDER_NOT_INVOICED);
+        }
+
+        return payable;
     }
 }

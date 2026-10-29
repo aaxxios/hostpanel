@@ -63,13 +63,12 @@
 import { CLIENT_DOMAINS_PATH, CLIENT_INVOICES_PATH, CLIENT_SERVICES_PATH } from '~/constants/clientRoutes'
 import { CheckCircle } from 'lucide-vue-next'
 import { useClientStore } from '~/stores/client'
+import { useInvoicePaymentStore } from '~/stores/invoicepayment'
 import { DomainOrderAction } from '~/types/domainorderaction'
 import { UiHeadingLevel } from '~/utils/ui/enums'
+import { formatCurrency } from '~/utils/formatCurrency'
 
 definePageMeta({ middleware: 'client-auth' })
-
-/** Amounts the checkout writes when nothing was charged; shown as a dash. */
-const ZERO_AMOUNTS = ['0', '0.00', '$0.00']
 
 /** What the page shows where a value is missing. */
 const DASH = '—'
@@ -80,14 +79,19 @@ const localePath = useLocalePath()
 const route = useRoute()
 /** Client store: the signed-in person and their services, invoices, domains and tickets. */
 const store = useClientStore()
+/** Invoice store: reads the order's invoice, the authority for what was charged. */
+const invoiceStore = useInvoicePaymentStore()
 
 /** Order number from query params. */
 const orderNumber = computed(() => (route.query.order as string) || DASH)
 
-/** Formatted amount from query params; a dash when zero or missing. */
+/** The order's invoice id from query params; absent when the link carries none. */
+const invoiceId = computed(() => (route.query.invoice as string) || null)
+
+/** The invoice total in the invoice's own currency; a dash until the invoice is read or when there is none. */
 const amount = computed(() => {
-  const raw = (route.query.amount as string) || ''
-  return !raw || ZERO_AMOUNTS.includes(raw) ? DASH : raw
+  const invoice = invoiceStore.invoice
+  return invoice ? formatCurrency(invoice.total, { code: invoice.currency }) : DASH
 })
 
 /** Domain name from query params (set when a domain was purchased). */
@@ -95,6 +99,12 @@ const domainName = computed(() => (route.query.domain as string) || null)
 
 /** Domain action from query params, when a domain was registered or transferred. */
 const domainAction = computed(() => (route.query.action as DomainOrderAction) || null)
+
+onMounted(async () => {
+  if (invoiceId.value) {
+    await invoiceStore.loadInvoice(invoiceId.value)
+  }
+})
 
 /**
  * Loads the services afresh, then opens the services page.

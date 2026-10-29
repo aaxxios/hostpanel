@@ -1,4 +1,7 @@
+using Innovayse.Hostpanel.Application.Admin.Common;
+using Innovayse.Hostpanel.Application.Admin.Queries.GetSettingValues;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -8,6 +11,7 @@ using Innovayse.Hostpanel.Domain.Settings;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetInvoicePdf;
 
@@ -15,12 +19,17 @@ namespace Innovayse.Hostpanel.Application.Billing.Queries.GetInvoicePdf;
 /// <remarks>
 /// Serves the staff route as it is, and the client route once <c>GetMyInvoicePdfHandler</c> has
 /// settled that the caller owns a published invoice. It prints whatever invoice it is given,
-/// drafts included; keeping drafts from clients is the client handler's job.
+/// drafts included; keeping drafts from clients is the ownership rule's job. It reads invoices and
+/// currencies, which are Billing's own; the client's address and the seller's settings belong to
+/// other modules and are asked for over the bus.
 /// </remarks>
 public sealed class GetInvoicePdfHandler
 {
     /// <summary>The PDF's content type.</summary>
     private const string PdfContentType = "application/pdf";
+
+    /// <summary>Decimal places written when the invoice's currency has no <c>Currencies</c> row to say otherwise.</summary>
+    private const int FallbackDecimals = 2;
 
     /// <summary>The portal settings the seller block and logo are read from.</summary>
     private static readonly List<string> SellerKeys =
@@ -28,6 +37,9 @@ public sealed class GetInvoicePdfHandler
 
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
+
+    /// <summary>The message bus, for the client's address and the seller's settings.</summary>
+    private readonly IMessageBus _bus;
 
     /// <summary>Draws the PDF.</summary>
     private readonly IInvoicePdfRenderer _renderer;
@@ -37,11 +49,13 @@ public sealed class GetInvoicePdfHandler
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
+    /// <param name="bus">The message bus, for the client's address and the seller's settings.</param>
     /// <param name="renderer">Draws the PDF.</param>
     /// <param name="options">How large an invoice this deployment will render.</param>
-    public GetInvoicePdfHandler(IHostpanelDbContext context, IInvoicePdfRenderer renderer, IOptions<InvoicePdfOptions> options)
+    public GetInvoicePdfHandler(IHostpanelDbContext context, IMessageBus bus, IInvoicePdfRenderer renderer, IOptions<InvoicePdfOptions> options)
     {
         _context = context;
+        _bus = bus;
         _renderer = renderer;
         _maxLines = options.Value.MaxLines;
     }
@@ -53,14 +67,15 @@ public sealed class GetInvoicePdfHandler
     /// The PDF as <c>invoice-{id}.pdf</c>, <c>INVOICE_NOT_FOUND</c> when the id names no invoice, or
     /// <c>INVOICE_PDF_EXCEEDS_LIMIT</c> when it has more lines than <c>InvoicePdf:MaxLines</c>.
     /// </returns>
+    /// <exception cref="InvalidOperationException">The invoice names a client that does not exist, so the database is broken.</exception>
     public async Task<Result<FileDownloadDto>> HandleAsync(GetInvoicePdfQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // One statement: the line items join in, and the client and the currency row come back as
-        // correlated subqueries. AsSingleQuery() overrides the context's split-query default, which
-        // would otherwise send the items as a second round trip. The items stop one past the
-        // ceiling, which is enough to tell an invoice over it without reading all of its lines.
+        // One statement: the line items join in and the currency row comes back as a correlated
+        // subquery. AsSingleQuery() overrides the context's split-query default, which would
+        // otherwise send the items as a second round trip. The items stop one past the ceiling,
+        // which is enough to tell an invoice over it without reading all of its lines.
         var invoice = await _context.Invoices
             .AsNoTracking()
             .AsSingleQuery()
@@ -68,6 +83,7 @@ public sealed class GetInvoicePdfHandler
             .Select(i => new
             {
                 i.Id,
+                i.ClientId,
                 i.Status,
                 i.InvoiceDate,
                 i.DueDate,
@@ -83,10 +99,6 @@ public sealed class GetInvoicePdfHandler
                     .Take(_maxLines + 1)
                     .Select(item => new InvoicePdfLine(item.Description, item.Quantity, item.UnitPrice, item.Amount))
                     .ToList(),
-                Client = _context.Clients
-                    .Where(c => c.Id == i.ClientId)
-                    .Select(c => new { c.FirstName, c.LastName, c.CompanyName, c.Street, c.Address2, c.City, c.State, c.PostCode, c.Country })
-                    .FirstOrDefault(),
                 Money = _context.Currencies
                     .Where(c => c.Code == i.Currency)
                     .Select(c => new InvoicePdfMoneyFormat(c.Prefix, c.Suffix, c.Decimals))
@@ -103,12 +115,14 @@ public sealed class GetInvoicePdfHandler
             return Result<FileDownloadDto>.FailureCode(HostpanelErrorCodes.INVOICE_PDF_EXCEEDS_LIMIT);
         }
 
-        var client = invoice.Client;
+        // FK_Invoices_Clients_ClientId restricts deleting a client that has invoices, so a missing
+        // client is a broken database, not an invoice to print without an addressee.
+        var client = await _bus.GetRequiredClientBriefAsync(invoice.ClientId, withEmail: false, ct);
 
-        var settings = await _context.Settings
-            .AsNoTracking()
-            .Where(s => SellerKeys.Contains(s.Key))
-            .ToDictionaryAsync(s => s.Key, s => s.Value.Trim(), ct);
+        var rows = await _bus.InvokeAsync<Result<IReadOnlyList<SettingDto>>>(new GetSettingValuesQuery(SellerKeys), ct);
+        var settings = (rows.Value ?? [])
+            .Where(s => s.Value is not null)
+            .ToDictionary(s => s.Key, s => s.Value!.Trim(), StringComparer.Ordinal);
         string Setting(string key) => settings.GetValueOrDefault(key) ?? string.Empty;
 
         var sellerName = Setting(PortalSettingKeys.SiteName);
@@ -122,11 +136,15 @@ public sealed class GetInvoicePdfHandler
             sellerLines.Add($"Tax ID: {taxId}");
         }
 
-        var billTo = client is null
-            ? new InvoicePdfParty(string.Empty, [])
-            : new InvoicePdfParty(
-                $"{client.FirstName} {client.LastName}".Trim(),
-                NonEmpty(client.CompanyName, client.Street, client.Address2, $"{client.PostCode} {client.City}".Trim(), client.State, client.Country));
+        var billTo = new InvoicePdfParty(
+            client.FullName,
+            NonEmpty(
+                client.CompanyName,
+                client.Address.Street,
+                client.Address.Address2,
+                $"{client.Address.PostCode} {client.Address.City}".Trim(),
+                client.Address.State,
+                client.Address.Country));
 
         var logo = Setting(PortalSettingKeys.Logo);
         var model = new InvoicePdfModel(
@@ -144,7 +162,9 @@ public sealed class GetInvoicePdfHandler
             Tax: invoice.Tax,
             Credit: invoice.Credit,
             Total: invoice.Total,
-            Money: invoice.Money ?? InvoicePdfMoneyFormat.FallbackFor(invoice.Currency));
+            // A currency with no row still prints, with its code after each amount so the reader
+            // can tell which currency the figures are in.
+            Money: invoice.Money ?? new InvoicePdfMoneyFormat(string.Empty, " " + invoice.Currency, FallbackDecimals));
 
         var bytes = await _renderer.RenderAsync(model, ct);
         return Result<FileDownloadDto>.Success(new FileDownloadDto(bytes, PdfContentType, $"invoice-{invoice.Id}.pdf"));

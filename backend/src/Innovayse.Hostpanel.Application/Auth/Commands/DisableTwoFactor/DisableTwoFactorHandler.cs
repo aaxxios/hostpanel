@@ -1,4 +1,4 @@
-using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
@@ -31,19 +31,21 @@ public sealed class DisableTwoFactorHandler
     /// <param name="cmd">The command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success once it is switched off, or <c>TWO_FACTOR_CODE_INVALID</c> when the code did not match.
+    /// Success once it is switched off, <c>CURRENT_PASSWORD_INVALID</c> when the password is missing
+    /// or wrong where this deployment owns the accounts, or <c>TWO_FACTOR_CODE_INVALID</c> when the
+    /// code did not match.
     /// </returns>
     /// <remarks>
     /// A code is required to switch it off, not just a signed-in session, and that is the whole
     /// point of the feature: someone who has taken over a session could otherwise remove the
-    /// second factor that was meant to stop them. The SSO in this workspace asks for one on its
-    /// own disable path for the same reason.
+    /// second factor that was meant to stop them. Where this deployment owns the accounts the
+    /// current password is asked for as well, and switching it off ends every session issued before.
     /// </remarks>
     public async Task<Result> HandleAsync(DisableTwoFactorCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var disabled = await _twoFactor.DisableAsync(_caller.RequireUserId(), cmd.Code, ct);
-        return disabled ? Result.Success() : Result.FailureCode(HostpanelErrorCodes.TWO_FACTOR_CODE_INVALID);
+        return await _twoFactor.DisableAsync(
+            new TwoFactorRemoval(_caller.RequireUserId(), cmd.Code, cmd.CurrentPassword), ct);
     }
 }

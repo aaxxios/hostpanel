@@ -1,44 +1,50 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Services.Commands.OrderService;
-using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Application.Orders.Commands.FulfillOrderLines;
+using Innovayse.Hostpanel.Application.Orders.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Orders.Commands.AcceptOrder;
 
 /// <summary>
-/// Accepts a pending order, transitions it to Active, and dispatches
-/// <see cref="OrderServiceCommand"/> for each line item to create client services.
-/// Services are created in Pending status — no auto-provisioning occurs.
+/// Accepts a pending order, transitions it to Active, and fulfils every line through
+/// <see cref="FulfillOrderLinesCommand"/>, the same fulfilment a paid order gets: a domain line is
+/// registered, transferred or renewed, a product line becomes a client service. Every line is
+/// tried; the ones that could not be fulfilled are reported back rather than stopping the rest.
 /// </summary>
 public sealed class AcceptOrderHandler
 {
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Wolverine message bus, used to dispatch service creation per line item.</summary>
+    /// <summary>Wolverine message bus, used to fulfil the order's lines.</summary>
     private readonly IMessageBus _bus;
+
+    /// <summary>Reads the current moment.</summary>
+    private readonly IClock _clock;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="bus">Wolverine message bus, used to dispatch service creation per line item.</param>
-    public AcceptOrderHandler(IHostpanelDbContext context, IMessageBus bus)
+    /// <param name="bus">Wolverine message bus, used to fulfil the order's lines.</param>
+    /// <param name="clock">Reads the current moment.</param>
+    public AcceptOrderHandler(IHostpanelDbContext context, IMessageBus bus, IClock clock)
     {
         _context = context;
         _bus = bus;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The order to accept.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success, or <c>ORDER_NOT_FOUND</c> when the id names no order, or whichever code
-    /// <see cref="OrderServiceCommand"/> refuses a line item with (<c>PRODUCT_NOT_FOUND</c>,
-    /// <c>PRODUCT_NOT_AVAILABLE</c>). The order's own status invariant (must be Pending) still
-    /// throws — see <see cref="Innovayse.Hostpanel.Domain.Orders.Order.Accept"/>.
+    /// The lines that could not be fulfilled (empty when every line was), or <c>ORDER_NOT_FOUND</c>
+    /// when the id names no order. The order's own status invariant (must be Pending) still throws;
+    /// see <see cref="Innovayse.Hostpanel.Domain.Orders.Order.Accept"/>.
     /// </returns>
-    public async Task<Result> HandleAsync(AcceptOrderCommand cmd, CancellationToken ct)
+    public async Task<Result<OrderFulfillmentDto>> HandleAsync(AcceptOrderCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
@@ -47,23 +53,12 @@ public sealed class AcceptOrderHandler
             .FirstOrDefaultAsync(o => o.Id == cmd.OrderId, ct);
         if (order is null)
         {
-            return Result.FailureCode(HostpanelErrorCodes.ORDER_NOT_FOUND);
+            return Result<OrderFulfillmentDto>.FailureCode(HostpanelErrorCodes.ORDER_NOT_FOUND);
         }
 
-        order.Accept();
+        order.Accept(_clock.UtcNow);
         await _context.SaveChangesAsync(ct);
 
-        foreach (var item in order.Items)
-        {
-            var outcome = await _bus.InvokeAsync<Result<int>>(
-                new OrderServiceCommand(order.ClientId, item.ProductId, item.BillingCycle,
-                    item.FirstPaymentAmount, item.RecurringAmount, order.PaymentMethod), ct);
-            if (outcome.IsFailure)
-            {
-                return Result.FailureCode(outcome.ErrorCode ?? HostpanelErrorCodes.HOSTPANEL_UNEXPECTED);
-            }
-        }
-
-        return Result.Success();
+        return await _bus.InvokeAsync<Result<OrderFulfillmentDto>>(new FulfillOrderLinesCommand(order.Id), ct);
     }
 }

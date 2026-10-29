@@ -8,6 +8,30 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useClientsStore } from '@/stores/clients'
 import { json, problem, stubFetch, stubOffline, callOf } from '../helpers/fetch'
 import { installStoreHooks, NO_ANSWER } from '../helpers/storeHooks'
+import { toUpdateClientPayload } from '@/lib/clientPayload'
+import type { ClientDetail } from '@/types/client'
+
+/** A loaded client carrying every group, the way the detail endpoint answers. */
+const DETAIL = {
+  id: 7,
+  firstName: 'Ada',
+  lastName: 'Lovelace',
+  address: {},
+  preferences: {},
+  notifications: { general: true, invoice: true, support: true, product: true, domain: true, affiliate: true },
+  settings: {
+    overdueNotices: true,
+    taxExempt: true,
+    separateInvoices: false,
+    disableCcProcessing: false,
+    marketingOptIn: false,
+    statusUpdate: true,
+    allowSso: true,
+  },
+} as unknown as ClientDetail
+
+/** A complete update payload, built the way a screen builds one from a loaded client. */
+const PAYLOAD = toUpdateClientPayload(DETAIL, {})
 
 describe('clientsStore.updateClient', () => {
   beforeEach(() => {
@@ -22,7 +46,7 @@ describe('clientsStore.updateClient', () => {
     stubFetch(json({ id: 1 }))
     const store = useClientsStore()
 
-    expect(await store.updateClient(1, { firstName: 'A' })).toBe(true)
+    expect(await store.updateClient(1, PAYLOAD)).toBe(true)
     expect(store.saving).toBe(false)
     expect(store.saveError).toBeNull()
     expect(store.current?.id).toBe(1)
@@ -35,7 +59,7 @@ describe('clientsStore.updateClient', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(body, 400)))
     const store = useClientsStore()
 
-    expect(await store.updateClient(1, {})).toBe(false)
+    expect(await store.updateClient(1, PAYLOAD)).toBe(false)
     expect(store.saving).toBe(false)
     expect(store.saveError).toBe('Email is taken.')
   })
@@ -44,8 +68,56 @@ describe('clientsStore.updateClient', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
     const store = useClientsStore()
 
-    expect(await store.updateClient(1, {})).toBe(false)
+    expect(await store.updateClient(1, PAYLOAD)).toBe(false)
     expect(store.saveError).toBe('Could not reach the server. Check your connection and try again.')
+  })
+})
+
+describe('clientsStore.saveAdminNotes', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('sends the whole record with only the notes replaced', async () => {
+    const mock = stubFetch(json({ id: 7 }))
+    const store = useClientsStore()
+    store.current = DETAIL
+
+    expect(await store.saveAdminNotes(7, '  call back  ')).toBe(true)
+
+    const put = callOf(mock, 0)
+    expect(put.method).toBe('PUT')
+    expect(put.url).toBe('/api/clients/7')
+    expect(put.body).toMatchObject({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      notifications: { invoice: true },
+      settings: { taxExempt: true },
+      preferences: { adminNotes: 'call back' },
+    })
+  })
+
+  it('clears the notes when the text is empty', async () => {
+    const mock = stubFetch(json({ id: 7 }))
+    const store = useClientsStore()
+    store.current = DETAIL
+
+    await store.saveAdminNotes(7, '   ')
+
+    expect(callOf(mock, 0).body).toMatchObject({ preferences: { adminNotes: null } })
+  })
+
+  it('does not call the API for a client that is not the open one', async () => {
+    const mock = stubFetch(json({}))
+    const store = useClientsStore()
+    store.current = DETAIL
+
+    expect(await store.saveAdminNotes(8, 'note')).toBe(false)
+    expect(mock).not.toHaveBeenCalled()
   })
 })
 
@@ -56,7 +128,7 @@ describe('clientsStore loads', () => {
     const mock = stubFetch(json({ items: [{ id: 1 }], totalCount: 9 }))
     const store = useClientsStore()
 
-    await store.fetchAll({ search: 'acme', status: '' })
+    await store.fetchAll({ search: 'acme', email: '' })
     expect(store.clients).toEqual([{ id: 1 }])
     expect(store.totalCount).toBe(9)
     expect(store.loading).toBe(false)

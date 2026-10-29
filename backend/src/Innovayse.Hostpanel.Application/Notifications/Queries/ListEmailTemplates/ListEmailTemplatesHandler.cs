@@ -22,7 +22,7 @@ public sealed class ListEmailTemplatesHandler
     /// <summary>Handles the query.</summary>
     /// <param name="query">The list email templates query.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Every template, ordered by slug. Never refuses.</returns>
+    /// <returns>Every language version of every template, ordered by slug, then language. Never refuses.</returns>
     public async Task<Result<IReadOnlyList<EmailTemplateDto>>> HandleAsync(
         ListEmailTemplatesQuery query, CancellationToken ct)
     {
@@ -31,6 +31,7 @@ public sealed class ListEmailTemplatesHandler
         var templates = await _context.EmailTemplates
             .AsNoTracking()
             .OrderBy(t => t.Slug)
+            .ThenBy(t => t.Language)
             .SelectDto()
             .ToListAsync(ct);
 

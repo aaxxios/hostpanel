@@ -8,13 +8,13 @@ namespace Innovayse.Hostpanel.Domain.Faqs;
 /// </summary>
 public sealed class FaqTranslation : BaseEntity
 {
-    /// <summary>Longest a locale code may be — matches the <c>FaqTranslations.Locale</c> column.</summary>
+    /// <summary>Longest a locale code may be: matches the <c>FaqTranslations.Locale</c> column.</summary>
     public const int LocaleMaxLength = 10;
 
-    /// <summary>Longest Question may be — matches the <c>FaqTranslations.Question</c> column.</summary>
+    /// <summary>Longest Question may be: matches the <c>FaqTranslations.Question</c> column.</summary>
     public const int QuestionMaxLength = 500;
 
-    /// <summary>Longest Answer may be — matches the <c>FaqTranslations.Answer</c> column.</summary>
+    /// <summary>Longest Answer may be: matches the <c>FaqTranslations.Answer</c> column.</summary>
     public const int AnswerMaxLength = 4000;
 
     /// <summary>Gets the FK to the parent <see cref="Faq"/>.</summary>
@@ -29,7 +29,7 @@ public sealed class FaqTranslation : BaseEntity
     /// <summary>Gets the answer in this locale.</summary>
     public string Answer { get; private set; } = string.Empty;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private FaqTranslation() { }
 
     /// <summary>

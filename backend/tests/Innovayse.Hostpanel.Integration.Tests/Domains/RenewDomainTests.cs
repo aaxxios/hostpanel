@@ -1,26 +1,25 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.RenewDomain;
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
+using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Integration.Tests.Billing;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>RenewDomain</c> use case —
+/// Integration tests for the admin <c>RenewDomain</c> use case:
 /// <c>POST /api/domains/{id}/renew</c>, an outright renewal that calls the registrar at once and
 /// raises no invoice. The client-facing equivalent, <c>RenewMyDomain</c>, places a paid order
-/// instead. Had no Integration coverage of its own before this batch.
+/// instead.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class RenewDomainTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -80,8 +79,8 @@ public sealed class RenewDomainTests(IntegrationTestFactory factory) : IClassFix
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddDays(30),
-            autoRenew: false, whoisPrivacy: false);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
         var originalExpiry = (await context.Domains.AsNoTracking()
@@ -109,10 +108,9 @@ public sealed class RenewDomainTests(IntegrationTestFactory factory) : IClassFix
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddDays(200),
-            autoRenew: false, whoisPrivacy: false);
-        domain.Activate("REF-STUB");
-        context.Domains.Add(domain);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(200),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
+        await DomainsTestSeeds.AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         var originalExpiry = (await context.Domains.AsNoTracking()
             .FirstAsync(d => d.Id == domain.Id, CancellationToken.None)).ExpiresAt;
@@ -124,10 +122,105 @@ public sealed class RenewDomainTests(IntegrationTestFactory factory) : IClassFix
         var reloaded = await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id, CancellationToken.None);
         reloaded.ExpiresAt.Should().Be(originalExpiry.AddYears(2));
     }
+
+    /// <summary>
+    /// A registrar that names its own reason (here: not configured) is answered with that reason,
+    /// not with the generic renewal refusal.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task RenewDomain_RegistrarNotConfigured_FailsWithTheRegistrarCodeAsync()
+    {
+        var result = await RenewWithAsync<NotConfiguredRegistrar>();
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.REGISTRAR_NOT_CONFIGURED);
+    }
+
+    /// <summary>A plain registrar refusal is answered with the renewal's own upstream code.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task RenewDomain_RegistrarRefuses_FailsWithTheRenewalCodeAsync()
+    {
+        var result = await RenewWithAsync<RefusingRegistrar>();
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.DOMAIN_RENEWAL_UPSTREAM_FAILED);
+    }
+
+    /// <summary>
+    /// Renewing an expired domain brings it back to active and moves the due date with the new
+    /// expiry, in the renewal's own save.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task RenewDomain_ExpiredDomain_ReturnsToActiveAndMovesDueDateAsync()
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var domain = RegisteredDomain.Register(
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(-2),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
+        await DomainsTestSeeds.AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
+        domain.MarkExpired(DateTimeOffset.UtcNow);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var result = await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync<Result>(new RenewDomainCommand(domain.Id, 1), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var reloaded = await context.Domains.AsNoTracking().FirstAsync(d => d.Id == domain.Id, CancellationToken.None);
+        reloaded.Status.Should().Be(DomainStatus.Active);
+        reloaded.NextDueDate.Should().Be(reloaded.ExpiresAt);
+    }
+
+    /// <summary>
+    /// A cancelled domain is refused with <c>DOMAIN_RENEW_NOT_ALLOWED</c> before the registrar is
+    /// called: the refusing registrar would otherwise answer with its own upstream code.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task RenewDomain_CancelledDomain_RefusesBeforeTheRegistrarAsync()
+    {
+        var host = factory.WithWebHostBuilder(b =>
+            b.ConfigureTestServices(s => s.AddScoped<IRegistrarProvider, RefusingRegistrar>()));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var domain = RegisteredDomain.Register(
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(-2),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
+        await DomainsTestSeeds.AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
+        domain.MarkExpired(DateTimeOffset.UtcNow);
+        domain.Cancel();
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var result = await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync<Result>(new RenewDomainCommand(domain.Id, 1), CancellationToken.None);
+
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.DOMAIN_RENEW_NOT_ALLOWED);
+    }
+
+    /// <summary>Renews a fresh active domain through a host whose registrar is <typeparamref name="TRegistrar"/>.</summary>
+    /// <typeparam name="TRegistrar">The registrar the host resolves.</typeparam>
+    /// <returns>The renewal's result.</returns>
+    private async Task<Result> RenewWithAsync<TRegistrar>()
+        where TRegistrar : class, IRegistrarProvider
+    {
+        var host = factory.WithWebHostBuilder(b =>
+            b.ConfigureTestServices(s => s.AddScoped<IRegistrarProvider, TRegistrar>()));
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var domainId = await DomainsTestSeeds.SeedActiveDomainAsync(context);
+
+        return await scope.ServiceProvider.GetRequiredService<IMessageBus>()
+            .InvokeAsync<Result>(new RenewDomainCommand(domainId, 1), CancellationToken.None);
+    }
 }
 
-/// <summary>A registrar that renews but, like Name.am's purchase response, reports no expiry.</summary>
-internal sealed class NoExpiryRegistrar : TestRegistrar
+/// <summary>A registrar that renews but, like a purchase response that carries no dates, reports no expiry.</summary>
+public sealed class NoExpiryRegistrar : TestRegistrar
 {
     /// <inheritdoc/>
     protected override Task<RegistrarResult> Renew(DomainRenewalOrder request, StubRegistrarProvider stub, CancellationToken ct)

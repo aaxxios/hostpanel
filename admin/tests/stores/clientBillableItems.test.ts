@@ -5,7 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useClientBillableItemsStore } from '@/stores/clientBillableItems'
-import { json, problem, stubFetch, stubOffline } from '../helpers/fetch'
+import { BillableItemType } from '@/types/billableitem'
+import { invalid, json, problem, stubFetch, stubOffline } from '../helpers/fetch'
 
 describe('clientBillableItemsStore', () => {
   beforeEach(() => {
@@ -65,11 +66,25 @@ describe('clientBillableItemsStore', () => {
     const store = useClientBillableItemsStore()
     stubFetch(problem('Amount must be positive.'))
 
-    expect(await store.addItem('7', { amount: -1 })).toBe(false)
+    expect(
+      await store.addItem('7', { description: 'Setup', amount: -1, currency: 'USD', type: BillableItemType.OneTime }),
+    ).toBe(false)
     expect(store.saveError).toBe('Amount must be positive.')
 
     stubOffline()
     expect(await store.addTimeBilling('7', [])).toBe(false)
     expect(store.saveError).toBe('Could not reach the server. Check your connection and try again.')
+  })
+
+  it('clearSaveErrors forgets the sentence and the field messages of the last refused add', async () => {
+    const store = useClientBillableItemsStore()
+    stubFetch(invalid('Some fields are not valid.', { Amount: ['The amount cannot be negative.'] }))
+    await store.addItem('7', { description: 'Setup', amount: -1, currency: 'USD', type: BillableItemType.OneTime })
+    expect(store.fieldErrors).toEqual({ amount: 'The amount cannot be negative.' })
+
+    store.clearSaveErrors()
+
+    expect(store.saveError).toBeNull()
+    expect(store.fieldErrors).toEqual({})
   })
 })

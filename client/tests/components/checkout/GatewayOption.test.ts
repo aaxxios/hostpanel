@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
 import GatewayOption from '~/components/checkout/GatewayOption.vue'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_INECOBANK, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
 
 /**
  * Mounts a row for one gateway.
@@ -23,7 +23,7 @@ const mountOption = (module: string, displayName: string, modelValue?: string) =
 
 describe('GatewayOption', () => {
   it('shows the display name with the card description for a card gateway', () => {
-    const wrapper = mountOption(PAYMENT_MODULE_INECOBANK, 'Bank Card (Inecobank)')
+    const wrapper = mountOption(PaymentModule.Inecobank, 'Bank Card (Inecobank)')
 
     expect(wrapper.text()).toContain('Bank Card (Inecobank)')
     expect(wrapper.text()).toContain('checkout.gatewayKinds.card')
@@ -31,7 +31,7 @@ describe('GatewayOption', () => {
   })
 
   it('describes a bank transfer as such', () => {
-    const wrapper = mountOption(PAYMENT_MODULE_BANK_TRANSFER, 'Bank transfer')
+    const wrapper = mountOption(PaymentModule.BankTransfer, 'Bank transfer')
 
     expect(wrapper.text()).toContain('checkout.gatewayKinds.bankTransfer')
   })
@@ -44,18 +44,18 @@ describe('GatewayOption', () => {
   })
 
   it('marks the chosen gateway', () => {
-    const on = mountOption(PAYMENT_MODULE_STRIPE, 'Card', PAYMENT_MODULE_STRIPE)
-    const off = mountOption(PAYMENT_MODULE_STRIPE, 'Card', PAYMENT_MODULE_BANK_TRANSFER)
+    const on = mountOption(PaymentModule.Stripe, 'Card', PaymentModule.Stripe)
+    const off = mountOption(PaymentModule.Stripe, 'Card', PaymentModule.BankTransfer)
 
     expect(on.find('[data-testid="gw-row"]').attributes('data-state')).toBe('checked')
     expect(off.find('[data-testid="gw-row"]').attributes('data-state')).toBe('unchecked')
   })
 
   it('reports the module of the gateway that was chosen', async () => {
-    const wrapper = mountOption(PAYMENT_MODULE_STRIPE, 'Card')
+    const wrapper = mountOption(PaymentModule.Stripe, 'Card')
 
     await wrapper.find('[data-testid="gw-row-input"]').setValue(true)
 
-    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([PAYMENT_MODULE_STRIPE])
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([PaymentModule.Stripe])
   })
 })

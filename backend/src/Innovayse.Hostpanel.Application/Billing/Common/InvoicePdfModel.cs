@@ -11,7 +11,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// document that gets forwarded to customers and accountants, the admin's copy included.
 /// </remarks>
 /// <param name="InvoiceId">Invoice primary key, printed as the invoice number.</param>
-/// <param name="Status">Lifecycle state; a paid or draft invoice gets a stamp.</param>
+/// <param name="Status">Lifecycle state; a paid, draft, cancelled or refunded invoice gets a stamp.</param>
 /// <param name="InvoiceDate">Date the invoice was issued.</param>
 /// <param name="DueDate">Date payment is due.</param>
 /// <param name="PaidAt">When the invoice was paid, printed on the PAID stamp; null when unpaid.</param>

@@ -1,8 +1,9 @@
 using Innovayse.Hostpanel.Domain.Domains;
-
 using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Common;
-/// <summary>DTO representing a domain in a list — summary data for table/grid display.</summary>
+
+/// <summary>DTO representing a domain in a list: summary data for table/grid display.</summary>
 /// <param name="Id">Domain primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
 /// <param name="Name">Domain name including TLD (e.g. "example.com").</param>

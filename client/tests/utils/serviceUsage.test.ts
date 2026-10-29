@@ -6,32 +6,24 @@ import { hasUsageLimit, usagePercent } from '~/utils/serviceUsage'
 
 describe('hasUsageLimit', () => {
   it.each([
-    ['1024', true],
-    ['0', false],
-    ['', false],
-    [undefined, false],
-    [null, false],
-  ])('reads %s as %s', (limit, expected) => {
+    [1024, true],
+    [0, false],
+    [-1, false]
+  ])('reads %s as a limit: %s', (limit, expected) => {
     expect(hasUsageLimit(limit)).toBe(expected)
   })
 })
 
 describe('usagePercent', () => {
-  it('divides use by allowance', () => {
-    expect(usagePercent('256', '1024')).toBe(25)
+  it('gives the share used', () => {
+    expect(usagePercent(256, 1024)).toBe(25)
   })
 
-  it('caps the figure at 100', () => {
-    expect(usagePercent('2048', '1024')).toBe(100)
+  it('caps at 100', () => {
+    expect(usagePercent(5000, 1024)).toBe(100)
   })
 
-  it.each([
-    ['abc', '1024'],
-    ['10', 'abc'],
-    ['10', '0'],
-    [undefined, '1024'],
-    ['10', undefined],
-  ])('reads %s of %s as empty', (used, limit) => {
-    expect(usagePercent(used, limit)).toBe(0)
+  it('is 0 for an unlimited allowance', () => {
+    expect(usagePercent(10, 0)).toBe(0)
   })
 })

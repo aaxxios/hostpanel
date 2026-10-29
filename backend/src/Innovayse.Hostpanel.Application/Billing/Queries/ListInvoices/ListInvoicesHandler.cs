@@ -1,12 +1,13 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListInvoices;
 
@@ -16,18 +17,23 @@ public sealed class ListInvoicesHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public ListInvoicesHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public ListInvoicesHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
     /// <param name="query">The list invoices query.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Success with a page of invoice list items. Never refuses.</returns>
-    public async Task<Result<PagedResult<InvoiceListItemDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<InvoiceListItemDto>>> HandleAsync(
         ListInvoicesQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -35,17 +41,11 @@ public sealed class ListInvoicesHandler
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
-        InvoiceStatus? status = null;
-        if (!string.IsNullOrEmpty(query.Status) && Enum.TryParse<InvoiceStatus>(query.Status, out var parsed))
-        {
-            status = parsed;
-        }
-
         IQueryable<Invoice> filtered = _context.Invoices.AsNoTracking();
 
-        if (status.HasValue)
+        if (query.Status is { } status)
         {
-            filtered = filtered.Where(x => x.Status == status.Value);
+            filtered = filtered.Where(x => x.Status == status);
         }
 
         if (query.From.HasValue)
@@ -66,20 +66,16 @@ public sealed class ListInvoicesHandler
             .ToListAsync(ct);
 
         var clientIds = items.Select(i => i.ClientId).Distinct().ToList();
-        var clientMap = await _context.Clients
-            .AsNoTracking()
-            .Where(c => clientIds.Contains(c.Id))
-            .Select(c => new { c.Id, Name = (c.FirstName + " " + c.LastName).Trim() })
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var clientMap = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
 
         var dtos = items
             .Select(inv => inv with
             {
-                ClientName = clientMap.TryGetValue(inv.ClientId, out var name) ? name : null,
+                ClientName = clientMap[inv.ClientId].FullName,
             })
             .ToList();
 
-        return Result<PagedResult<InvoiceListItemDto>>.Success(new PagedResult<InvoiceListItemDto>(
+        return Result<PaginatedList<InvoiceListItemDto>>.Success(new PaginatedList<InvoiceListItemDto>(
             dtos, total, page, pageSize));
     }
 }

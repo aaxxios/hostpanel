@@ -1,6 +1,7 @@
 using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Ssh;
 using Innovayse.Hostpanel.Domain.Ssh.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +52,7 @@ public sealed class ScanServerSshHostKeyHandler
         }
 
         var probe = await _scanner.ScanAsync(
-            settings.AgentHost, settings.AgentPort, TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds), ct);
+            new SshEndpoint(settings.AgentHost, settings.AgentPort, TimeSpan.FromSeconds(settings.ConnectTimeoutSeconds)), ct);
         if (probe.Key is not { } scan)
         {
             return Result<SshHostKeyScanDto>.FailureCode(probe.Failure switch

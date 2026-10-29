@@ -1,7 +1,5 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;

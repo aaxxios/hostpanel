@@ -2,7 +2,7 @@
 /**
  * Line icon drawn from stored SVG markup, without `v-html`.
  *
- * `markup` is the inner SVG (shape tags only, e.g. `<path d="..."/>`); it is parsed into nodes
+ * `markup` is the inner SVG (shape tags only, such as `<path>`); it is parsed into nodes
  * whose tags and attributes are whitelisted, so a malformed or hostile string cannot inject
  * script or styles. The icon takes the current text colour.
  */

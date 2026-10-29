@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 /// <param name="RequiredFields">
 /// Field keys that must hold a non-blank stored value for the integration to count as configured.
 /// Kept separate from the form's <see cref="FieldDefinitionDto.Required"/> flags on purpose: the two
-/// have always differed for a few integrations (for example the form marks the Stripe publishable key
+/// have always differed for a few integrations (for example the form marks the card gateway's publishable key
 /// as required while configuration only needs the secret key), and this catalogue preserves both.
 /// </param>
 public sealed record IntegrationCatalogueEntry(

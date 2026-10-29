@@ -73,8 +73,8 @@
             </UiAccentButton>
           </UiMagnetic>
 
-          <UiMagnetic v-if="item.demoUrl" :strength="0.15">
-            <UiButton :href="item.demoUrl" target="_blank" rel="noopener noreferrer" variant="subtle" size="lg" class="w-full font-bold sm:w-auto sm:px-10 sm:py-4" :data-testid="`slider-demo-${item.id}`">
+          <UiMagnetic v-if="demoHref" :strength="0.15">
+            <UiButton :href="demoHref" target="_blank" rel="noopener noreferrer" variant="subtle" size="lg" class="w-full font-bold sm:w-auto sm:px-10 sm:py-4" :data-testid="`slider-demo-${item.id}`">
               <span class="truncate">{{ $t('products.pricing.cta.viewDemo') }}</span>
               <PlayCircle :size="18" :stroke-width="2.5" class="ml-2 flex-shrink-0 text-primary-400" />
             </UiButton>
@@ -96,6 +96,7 @@
 import { ArrowRight, CheckCircle, PlayCircle } from 'lucide-vue-next'
 import { revealDelay } from '~/utils/reveal'
 import { slideCover } from '~/utils/productTypeCover'
+import { safeHref } from '~/utils/safeUrl'
 import { ACCENT_CLASSES } from '~/utils/ui/accent'
 import { SlideCoverKind } from '~/types/slidecoverkind'
 import type { SliderItem } from '~/types/slideritem'
@@ -118,4 +119,7 @@ const localePath = useLocalePath()
 
 /** The cover to draw beside the text. */
 const cover = computed(() => slideCover(props.item.image, props.item.learnMoreUrl))
+
+/** The demo address when it is a safe web link; the button is not drawn for anything else. */
+const demoHref = computed(() => safeHref(props.item.demoUrl))
 </script>

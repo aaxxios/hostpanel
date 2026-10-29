@@ -6,7 +6,7 @@ internal sealed class CwpAccountRequest
     /// <summary>Gets or initializes the CWP API key for authentication.</summary>
     public required string Key { get; init; }
 
-    /// <summary>Gets or initializes the action to perform (add, susp, unsp, del, detail).</summary>
+    /// <summary>Gets or initializes the action to perform (add, susp, unsp, del, list).</summary>
     public required string Action { get; init; }
 
     /// <summary>Gets or initializes the primary domain for the account.</summary>

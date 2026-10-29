@@ -1,4 +1,6 @@
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Clients.Events;
 using Wolverine;
 
@@ -23,7 +25,10 @@ public sealed class ClientRegisteredHandler
     /// <returns>A task representing the asynchronous send operation.</returns>
     public async Task HandleAsync(ClientCreatedEvent evt, CancellationToken ct)
     {
-        var data = new { client = new { email = evt.Email } };
-        await _bus.InvokeAsync(new SendEmailCommand(evt.Email, "welcome", data), ct);
+        // The brief carries the language the person chose at sign-up; a record already gone again
+        // still gets its welcome, in the default language.
+        var client = await _bus.FindClientBriefAsync(evt.ClientId, withEmail: true, ct);
+        var data = new WelcomeTemplateModel(new WelcomeClientTemplateData(evt.Email));
+        await _bus.InvokeAsync(new SendEmailCommand(evt.Email, client?.Language, "welcome", data), ct);
     }
 }

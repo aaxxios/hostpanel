@@ -1,13 +1,12 @@
 using System.Security.Claims;
-using FluentAssertions;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Innovayse.SDK.Plugins.Fulfilment;
 using Innovayse.SDK.Plugins.Hosting;
 using Innovayse.SDK.Plugins.Identity;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
+
 /// <summary>
 /// Pins the plugin SDK's public surface. A third party compiles against the published package,
 /// so a renamed member here is a breaking change for every plugin in the wild; these tests make

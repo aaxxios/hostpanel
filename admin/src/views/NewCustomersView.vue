@@ -58,7 +58,7 @@ const series = computed<UiChartSeries[]>(() => [
 </script>
 
 <template>
-  <ReportPage :title="t('reports.newCustomers.newCustomers')" :description="t('reports.newCustomers.monthlyNewSignupsAndOrder')">
+  <ReportPage :retry="load" :title="t('reports.newCustomers.newCustomers')" :description="t('reports.newCustomers.monthlyNewSignupsAndOrder')">
     <template #filters>
       <ReportPeriodFilter v-model:year="year" :years-back="9" @generate="load" />
     </template>

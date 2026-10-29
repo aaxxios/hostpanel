@@ -1,12 +1,16 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.RenewDomain;
+using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Services.Commands.ExtendServiceRenewal;
 using Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
+using Innovayse.Hostpanel.Application.Services.Extensions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Innovayse.Hostpanel.Domain.Services.Enums;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,8 +25,8 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 /// unapplied lines for the daily sweep, never a doubled extension.
 /// </summary>
 /// <remarks>
-/// A domain line is claimed (<see cref="InvoiceItem.RenewalAttemptAt"/>, set by one conditional
-/// update) before the registrar is called, so a concurrent sweep, a lost save after a registrar
+/// A domain line is claimed (<see cref="InvoiceItem.ClaimRenewal"/>, saved against the line's
+/// renewal concurrency tokens) before the registrar is called, so a concurrent sweep, a lost save after a registrar
 /// success, or a registrar timeout that actually renewed can never lead to a second paid period at
 /// the registrar. A claimed-but-unapplied line is skipped by every runner; only a clean registrar
 /// refusal releases the claim, an unknown outcome leaves it for a person.
@@ -41,24 +45,29 @@ public sealed class ApplyPaidRenewalsHandler
     /// </summary>
     private static readonly TimeSpan AlreadyRenewedSlack = TimeSpan.FromDays(30);
 
-    /// <summary>Invoices, services, domains.</summary>
+    /// <summary>The invoices and their renewal lines.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Dispatches the registrar renewal, the unsuspend and the staff alert.</summary>
+    /// <summary>Reaches the Services and Domains modules: their state, the extension, the registrar renewal, the unsuspend, and the staff alert.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<ApplyPaidRenewalsHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">Invoices, services, domains.</param>
-    /// <param name="bus">Dispatches the registrar renewal, the unsuspend and the staff alert.</param>
+    /// <param name="context">The invoices and their renewal lines.</param>
+    /// <param name="bus">Reaches the Services and Domains modules: their state, the extension, the registrar renewal, the unsuspend, and the staff alert.</param>
     /// <param name="logger">Structured logger.</param>
-    public ApplyPaidRenewalsHandler(IHostpanelDbContext context, IMessageBus bus, ILogger<ApplyPaidRenewalsHandler> logger)
+    /// <param name="clock">The clock the current moment is read from.</param>
+    public ApplyPaidRenewalsHandler(IHostpanelDbContext context, IMessageBus bus, ILogger<ApplyPaidRenewalsHandler> logger, IClock clock)
     {
         _context = context;
         _bus = bus;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>Applies the invoice's pending renewal lines.</summary>
@@ -78,10 +87,9 @@ public sealed class ApplyPaidRenewalsHandler
 
         if (!invoice.IsPaidInFull)
         {
-            // A partial payment leaves the invoice open, so this is normally an unpaid invoice whose
-            // renewals wait for the rest. Paid without its payments covering the total means the
-            // money was settled some other way (an invoice marked unpaid and paid again, a refund);
-            // extending would give a whole period for part of the price, so staff must resolve it.
+            // Extending would give a whole period for part of the price. A partial payment keeps the
+            // invoice open now, so a Paid invoice that is short is one marked Unpaid and paid again,
+            // or older data; staff resolve it.
             if (invoice.Status is InvoiceStatus.Paid)
             {
                 _logger.LogWarning(
@@ -106,7 +114,7 @@ public sealed class ApplyPaidRenewalsHandler
             }
         }
 
-        // Every service the invoice charged for -- renewal or legacy line -- may have been
+        // Every service the invoice charged for, renewal or legacy line, may have been
         // suspended for this invoice being overdue; the legacy ones have no period to apply but
         // their suspension is still this payment's to lift.
         foreach (var serviceId in invoice.Items.Where(l => l.ClientServiceId is not null).Select(l => l.ClientServiceId!.Value).Distinct())
@@ -117,27 +125,49 @@ public sealed class ApplyPaidRenewalsHandler
         return Result.Success();
     }
 
-    /// <summary>Extends one service and marks its line applied, in one save.</summary>
+    /// <summary>
+    /// Extends one service through the Services module, then marks its line applied. The extension is
+    /// saved first, in its own scope: a crash before the marker lands leaves the line unapplied, and
+    /// the sweep sends the same period again, which changes nothing because a renewal date only
+    /// ever moves forward.
+    /// </summary>
     /// <param name="line">The renewal line.</param>
     /// <param name="serviceId">The service.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
     private async Task ApplyServiceAsync(InvoiceItem line, int serviceId, CancellationToken ct)
     {
-        var service = await _context.ClientServices.FirstOrDefaultAsync(s => s.Id == serviceId, ct);
-        if (service is not null)
+        var outcome = await _bus.InvokeAsync<Result>(new ExtendServiceRenewalCommand(serviceId, line.RenewalPeriodEnd!.Value), ct);
+        if (outcome.IsFailure)
         {
-            service.ExtendRenewalTo(line.RenewalPeriodEnd!.Value);
-        }
-        else
-        {
+            if (outcome.ErrorCode != HostpanelErrorCodes.SERVICE_NOT_FOUND)
+            {
+                // Nothing was extended; the line stays unapplied and the sweep retries it.
+                _logger.LogWarning(
+                    "Extending service {ServiceId} for renewal line {LineId} refused ({Code}); the sweep retries it.",
+                    serviceId, line.Id, outcome.ErrorCode);
+                return;
+            }
+
             _logger.LogWarning("Renewal line {LineId} names service {ServiceId}, which no longer exists.", line.Id, serviceId);
         }
 
         // Marked even when the service is gone: there is nothing left to extend, and an unmarked
         // line would be retried by the sweep every day forever.
-        line.MarkRenewalApplied(DateTimeOffset.UtcNow);
-        await _context.SaveChangesAsync(ct);
+        line.MarkRenewalApplied(_clock.UtcNow);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            // A service line has no claim, so the payment event and the sweep can both extend it;
+            // the extension is idempotent, only the second marker save loses on the line's renewal
+            // token. The line is applied either way. Reloading puts the tracked line back to what
+            // the database holds, so the invoice's other lines and the unsuspend still run.
+            await _context.ReloadAsync(line, ct);
+            _logger.LogInformation("Renewal line {LineId} was marked applied by another runner; skipped.", line.Id);
+        }
     }
 
     /// <summary>Renews one domain at the registrar and marks its line applied when that succeeded.</summary>
@@ -148,11 +178,8 @@ public sealed class ApplyPaidRenewalsHandler
     /// <returns>A task.</returns>
     private async Task ApplyDomainAsync(Invoice invoice, InvoiceItem line, int domainId, CancellationToken ct)
     {
-        var current = await _context.Domains.AsNoTracking()
-            .Where(d => d.Id == domainId)
-            .Select(d => new { d.Name, d.ExpiresAt, d.Status, d.RegistrarRef })
-            .FirstOrDefaultAsync(ct);
-        if (current is null)
+        var states = await _bus.GetDomainRenewalStatesAsync([domainId], ct);
+        if (!states.TryGetValue(domainId, out var current))
         {
             await CloseWithoutEffectAsync(invoice, line, domainId, "(deleted)",
                 "The domain no longer exists; the paid renewal was not applied. Review for a refund.", ct);
@@ -168,7 +195,7 @@ public sealed class ApplyPaidRenewalsHandler
             return;
         }
 
-        if (current.RegistrarRef is null)
+        if (!current.IsAtRegistrar)
         {
             // Never placed at a registrar, so RenewDomainCommand refuses it every time; releasing the
             // claim would retry and alert daily for ever. Close the line and hand it to staff.
@@ -179,13 +206,13 @@ public sealed class ApplyPaidRenewalsHandler
 
         // A real renewal moves the expiry by at least a year; an admin edit or the registrar sync
         // normalising the time of day nudges it by hours. Only a move past the slack counts as
-        // "already renewed" -- a nudge alone must not leave a paid domain unrenewed.
+        // "already renewed": a nudge alone must not leave a paid domain unrenewed.
         if (current.ExpiresAt > line.RenewalPeriodStart!.Value.Add(AlreadyRenewedSlack))
         {
             // Renewed some other way (a client renew order, staff) after this invoice was raised.
             // Renewing again would buy a second period with one payment's money; tell staff instead.
             // An expiry already at or past the period end most likely means this very invoice was
-            // applied once and its marker lost -- refunding would then be wrong.
+            // applied once and its marker lost: refunding would then be wrong.
             var reason = current.ExpiresAt >= line.RenewalPeriodEnd!.Value
                 ? "Expiry already covers this period: likely already applied for this invoice; verify before refunding."
                 : "Already renewed before this paid invoice was applied; review for a refund.";
@@ -215,7 +242,7 @@ public sealed class ApplyPaidRenewalsHandler
                 "Paid renewal of domain {DomainId} (invoice {InvoiceId}, line {LineId}) ended with an unknown outcome; the line stays claimed.",
                 domainId, invoice.Id, line.Id);
             await AlertAsync(domainId, invoice, current.Name,
-                "Registrar outcome unknown — verify at the registrar before retrying; this line will not be retried automatically");
+                "Registrar outcome unknown. Verify at the registrar before retrying, this line will not be retried automatically.");
             return;
         }
 
@@ -223,39 +250,47 @@ public sealed class ApplyPaidRenewalsHandler
         {
             // A clean refusal renewed nothing: release the claim so the daily sweep tries again,
             // and tell staff now.
-            await _context.InvoiceItems
-                .Where(l => l.Id == line.Id)
-                .ExecuteUpdateAsync(set => set.SetProperty(l => l.RenewalAttemptAt, (DateTimeOffset?)null), ct);
+            line.ReleaseRenewalClaim();
+            await _context.SaveChangesAsync(ct);
             _logger.LogError("Paid renewal of domain {DomainId} refused: {Code}.", domainId, outcome.ErrorCode);
             await AlertAsync(domainId, invoice, current.Name, $"Registrar refused the paid renewal ({outcome.ErrorCode}). It is retried daily.");
             return;
         }
 
-        // Loaded only now: RenewDomainCommand saved the new expiry in its own scope.
-        var domain = await _context.Domains.FirstAsync(d => d.Id == domainId, ct);
-        domain.SyncDueDateToExpiry();
-        line.MarkRenewalApplied(DateTimeOffset.UtcNow);
+        // RenewDomainCommand saved the new expiry and due date in its own scope. Should that save be
+        // lost, the line stays claimed and the stale-claim alert brings it to a person, as for any
+        // registrar call whose outcome was not recorded.
+        line.MarkRenewalApplied(_clock.UtcNow);
         await _context.SaveChangesAsync(ct);
     }
 
     /// <summary>
-    /// Claims a line before the registrar call: one conditional update that only succeeds while
-    /// the line is neither applied nor claimed, so exactly one runner ever wins it.
+    /// Claims a line before the registrar call. The save carries the line's renewal concurrency
+    /// tokens, so it only lands while the line is still neither applied nor claimed in the
+    /// database and exactly one runner ever wins it.
     /// </summary>
-    /// <param name="line">The renewal line.</param>
+    /// <param name="line">The renewal line, read unapplied and unclaimed.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Whether this runner now owns the line.</returns>
     private async Task<bool> ClaimAsync(InvoiceItem line, CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-        var claimed = await _context.InvoiceItems
-            .Where(l => l.Id == line.Id && l.RenewalAppliedAt == null && l.RenewalAttemptAt == null)
-            .ExecuteUpdateAsync(set => set.SetProperty(l => l.RenewalAttemptAt, now), ct);
-        return claimed == 1;
+        line.ClaimRenewal(_clock.UtcNow);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (ConcurrencyConflictException)
+        {
+            // Another runner claimed or applied it first. Reloading puts the tracked line back to
+            // what the database holds, so no later save in this handler retries the lost claim.
+            await _context.ReloadAsync(line, ct);
+            return false;
+        }
     }
 
     /// <summary>
-    /// Marks a domain line applied although nothing was renewed, logs it, and alerts staff -- the
+    /// Marks a domain line applied although nothing was renewed, logs it, and alerts staff: the
     /// warning is the record even where no staff mailbox is configured.
     /// </summary>
     /// <param name="invoice">The paid invoice.</param>
@@ -267,7 +302,7 @@ public sealed class ApplyPaidRenewalsHandler
     /// <returns>A task.</returns>
     private async Task CloseWithoutEffectAsync(Invoice invoice, InvoiceItem line, int domainId, string name, string reason, CancellationToken ct)
     {
-        line.MarkRenewalApplied(DateTimeOffset.UtcNow);
+        line.MarkRenewalApplied(_clock.UtcNow);
         await _context.SaveChangesAsync(ct);
         _logger.LogWarning(
             "Renewal line {LineId} of invoice {InvoiceId} for domain {DomainId} closed without renewing: {Reason}",
@@ -282,8 +317,9 @@ public sealed class ApplyPaidRenewalsHandler
     /// <returns>A task.</returns>
     private async Task LiftOverdueSuspensionAsync(int paidInvoiceId, int serviceId, CancellationToken ct)
     {
-        var service = await _context.ClientServices.AsNoTracking().FirstOrDefaultAsync(s => s.Id == serviceId, ct);
-        if (service is not { Status: ServiceStatus.Suspended, SuspensionSource: SuspensionSource.Overdue })
+        var states = await _bus.GetServiceBillingStatesAsync([serviceId], ct);
+        if (!states.TryGetValue(serviceId, out var service)
+            || service is not { Status: ServiceStatus.Suspended, SuspensionSource: SuspensionSource.Overdue })
         {
             return;
         }
@@ -307,10 +343,10 @@ public sealed class ApplyPaidRenewalsHandler
 
     /// <summary>Tells staff about a domain renewal that needs a person.</summary>
     /// <param name="domainId">The domain.</param>
-    /// <param name="invoice">The invoice.</param>
+    /// <param name="invoice">The paid invoice the domain line is on.</param>
     /// <param name="name">The domain name.</param>
     /// <param name="reason">What happened.</param>
     /// <returns>A task.</returns>
     private Task AlertAsync(int domainId, Invoice invoice, string name, string reason) =>
-        _bus.PublishAsync(new DomainRenewalFailedEvent(domainId, invoice.ClientId, name, invoice.Id, reason)).AsTask();
+        _bus.PublishAsync(new DomainRenewalFailedEvent(domainId, invoice.ClientId, name, invoice.Id, reason) { OccurredAt = _clock.UtcNow }).AsTask();
 }

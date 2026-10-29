@@ -53,12 +53,9 @@
  * `/api/portal/auth/accept-invite`. On success the person is a user of that client account
  * and lands on the dashboard.
  *
- * **It no longer asks for a password.** It used to, and the password had nowhere to go: the
- * backend command carries a token only and resolves who accepted from the credential, so
- * whoever accepts must already be signed in. A form that collected a password and a
- * confirmation, then posted them to an endpoint that reads neither, would have reported a
- * password set that nothing ever stored. The password fields are replaced by the sign-in
- * step that flow actually needs.
+ * **It asks for no password.** The backend command carries a token only and resolves who
+ * accepted from the credential, so whoever accepts must already be signed in; a password
+ * collected here would have nowhere to go. The page offers the sign-in step instead.
  */
 import { CLIENT_DASHBOARD_PATH, CLIENT_LOGIN_PATH, CLIENT_REDIRECT_QUERY } from '~/constants/clientRoutes'
 import { AlertCircle, LogIn, UserPlus } from 'lucide-vue-next'
@@ -86,7 +83,7 @@ authStore.clearInvite()
 /** Invitation token extracted from URL query. */
 const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''))
 
-/** True when no token is present in the URL — the one check made before any request. */
+/** True when no token is present in the URL: the one check made before any request. */
 const invalidToken = computed(() => !token.value)
 
 /** True while the accept-invite request is in flight, and how the last attempt ended; owned by the store. */
@@ -104,8 +101,8 @@ const signInRequired = computed(() => inviteOutcome.value === InviteOutcome.Sign
  *
  * The one sentence this frontend still words itself, and only because the backend never
  * sees the request it answers: `server/api/portal/auth/accept-invite.post.ts` refuses
- * before any call is possible, so there is no API wording to read. Everything else —
- * expired, already accepted — renders what the API said, in the caller's own language.
+ * before any call is possible, so there is no API wording to read. Everything else
+ * (expired, already accepted) renders what the API said, in the caller's own language.
  */
 const error = computed(() => signInRequired.value
   ? t('client.acceptInvite.signInRequired')
@@ -115,7 +112,7 @@ const error = computed(() => signInRequired.value
  * Sends the visitor to sign in and back to this exact URL, token and all.
  *
  * Mirrors what `middleware/client-auth.ts` does for the rest of the client area, because
- * this page is deliberately outside that middleware — the invitation link has to render its
+ * this page is deliberately outside that middleware: the invitation link has to render its
  * own explanation rather than bounce a stranger straight into an identity provider.
  *
  * @returns The navigation, so a caller can await it.
@@ -136,7 +133,7 @@ const goToSignIn = (): ReturnType<typeof navigateTo> => {
  *
  * On success it leaves with a full page load rather than a router push. Accepting grants the
  * Client role and links the account to a client that the running SPA has already decided it
- * does not have — `stores/client.ts` caches that answer for the session — so a router push
+ * does not have, `stores/client.ts` caches that answer for the session, so a router push
  * would land on a dashboard still rendering the no-profile notice.
  *
  * @returns Nothing; a refusal stays in the store's state.

@@ -21,7 +21,10 @@ public sealed class UpdatePredefinedReplyHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The reply to update and its new fields.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>PREDEFINED_REPLY_NOT_FOUND</c> when the id names no reply.</returns>
+    /// <returns>
+    /// Success, <c>PREDEFINED_REPLY_NOT_FOUND</c> when the id names no reply, or
+    /// <c>PREDEFINED_REPLY_CATEGORY_NOT_FOUND</c> when the category names no category.
+    /// </returns>
     public async Task<Result> HandleAsync(UpdatePredefinedReplyCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
@@ -30,6 +33,11 @@ public sealed class UpdatePredefinedReplyHandler
         if (reply is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.PREDEFINED_REPLY_NOT_FOUND);
+        }
+
+        if (!await _context.PredefinedReplyCategories.AnyAsync(c => c.Id == cmd.CategoryId, ct))
+        {
+            return Result.FailureCode(HostpanelErrorCodes.PREDEFINED_REPLY_CATEGORY_NOT_FOUND);
         }
 
         reply.Update(cmd.Name, cmd.Content, cmd.CategoryId);

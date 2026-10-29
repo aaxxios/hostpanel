@@ -1,59 +1,66 @@
-using Innovayse.Hostpanel.Application.Admin.Common;
-using Innovayse.Hostpanel.Application.Common;
+using System.Security.Cryptography;
+using Innovayse.Hostpanel.Application.Auth.Common;
+using Innovayse.Hostpanel.Application.Auth.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using OtpNet;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
+
 /// <summary>
 /// Implements <see cref="IUserService"/> using ASP.NET Core Identity's <see cref="UserManager{TUser}"/>.
 /// </summary>
 public sealed class UserService : IUserService
 {
+    /// <summary>The stand-in account an unknown address is checked against, so it costs a real hash check.</summary>
+    private static readonly AppUser UnknownAccount = new() { FirstName = string.Empty, LastName = string.Empty };
+
+    /// <summary>
+    /// The hash an unknown address is checked against, made once by the configured hasher on first
+    /// use. Two requests racing to make it both produce a valid hash, so no lock is needed.
+    /// </summary>
+    private static string? _unknownAccountHash;
+
     /// <summary>The Identity user manager for <see cref="AppUser"/>.</summary>
     private readonly UserManager<AppUser> _userManager;
-
-    /// <summary>The application DbContext, for the linked client account.</summary>
-    private readonly AppDbContext _db;
-
-    /// <summary>Unit of work for persisting changes.</summary>
-    private readonly IUnitOfWork _uow;
 
     /// <summary>The per-account cap on wrong codes and the replay guard for accepted ones.</summary>
     private readonly ITwoFactorCodeGuard _codeGuard;
 
-    /// <summary>The clock a one-time code is checked against.</summary>
+    /// <summary>The clock a one-time code and a sign-in time are read from.</summary>
     private readonly TimeProvider _time;
+
+    /// <summary>Tells the published demo accounts apart, which wrong passwords never lock.</summary>
+    private readonly IDemoAccountGuard _demoAccounts;
 
     /// <summary>Initializes a new instance of the <see cref="UserService"/> class.</summary>
     /// <param name="userManager">The Identity user manager for <see cref="AppUser"/>.</param>
-    /// <param name="db">The application DbContext, for the linked client account.</param>
-    /// <param name="uow">Unit of work for persisting changes.</param>
     /// <param name="codeGuard">The per-account cap on wrong codes and the replay guard for accepted ones.</param>
-    /// <param name="time">The clock a one-time code is checked against.</param>
-    public UserService(UserManager<AppUser> userManager, AppDbContext db, IUnitOfWork uow, ITwoFactorCodeGuard codeGuard, TimeProvider time)
+    /// <param name="time">The clock a one-time code and a sign-in time are read from.</param>
+    /// <param name="demoAccounts">Tells the published demo accounts apart, which wrong passwords never lock.</param>
+    public UserService(
+        UserManager<AppUser> userManager, ITwoFactorCodeGuard codeGuard, TimeProvider time, IDemoAccountGuard demoAccounts)
     {
         _userManager = userManager;
-        _db = db;
-        _uow = uow;
         _codeGuard = codeGuard;
         _time = time;
+        _demoAccounts = demoAccounts;
     }
 
     /// <inheritdoc/>
-    public async Task<string> CreateAsync(string email, string password, string? firstName = null, string? lastName = null, CancellationToken ct = default)
+    public async Task<string> CreateAsync(CreateUserInput input, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(input);
+
         var user = new AppUser
         {
-            UserName = email,
-            Email = email,
-            FirstName = firstName ?? string.Empty,
-            LastName = lastName ?? string.Empty,
+            UserName = input.Email,
+            Email = input.Email,
+            FirstName = input.FirstName ?? string.Empty,
+            LastName = input.LastName ?? string.Empty,
         };
 
-        var result = await _userManager.CreateAsync(user, password);
+        var result = await _userManager.CreateAsync(user, input.Password);
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
@@ -72,114 +79,51 @@ public sealed class UserService : IUserService
     }
 
     /// <inheritdoc/>
-    public async Task<(string Id, string Email)?> FindByEmailAndPasswordAsync(
-        string email,
-        string password,
-        CancellationToken ct)
+    public async Task<PasswordSignInResult> SignInWithPasswordAsync(PasswordSignInInput input, CancellationToken ct)
     {
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user is null)
+        ArgumentNullException.ThrowIfNull(input);
+
+        var user = await _userManager.FindByEmailAsync(input.Email);
+        if (user is null || user.IsDeleted)
         {
-            return null;
+            // The same hash check a real account costs, so the answer time does not tell which
+            // addresses exist. The result is meaningless and ignored.
+            _userManager.PasswordHasher.VerifyHashedPassword(UnknownAccount, UnknownAccountHash(), input.Password);
+            return new PasswordSignInResult(PasswordSignInOutcome.Failed, null);
         }
 
-        var valid = await _userManager.CheckPasswordAsync(user, password);
-        return valid ? (user.Id, user.Email!) : null;
-    }
-
-    /// <inheritdoc/>
-    public async Task<(string Id, string Email)?> FindByEmailAsync(string email, CancellationToken ct)
-    {
-        var user = await _userManager.FindByEmailAsync(email);
-        return user is null ? null : (user.Id, user.Email!);
-    }
-
-    /// <inheritdoc/>
-    public async Task<(string Id, string Email)?> FindByIdAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        return user is null ? null : (user.Id, user.Email!);
-    }
-
-    /// <inheritdoc/>
-    public async Task<Dictionary<string, string>> GetEmailsByIdsAsync(IEnumerable<string> userIds, CancellationToken ct)
-    {
-        var result = new Dictionary<string, string>();
-        foreach (var id in userIds)
+        // A locked account is refused before its password is looked at, so guessing on cannot
+        // learn anything until the lockout ends.
+        if (await _userManager.IsLockedOutAsync(user))
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user?.Email is not null)
+            return new PasswordSignInResult(PasswordSignInOutcome.LockedOut, null);
+        }
+
+        if (!await _userManager.CheckPasswordAsync(user, input.Password))
+        {
+            // The demo accounts are published for everyone: counting wrong passwords against them
+            // would let any visitor lock the demo for all the others.
+            if (_demoAccounts.IsPublishedDemoAccount(user.Email!))
             {
-                result[id] = user.Email;
+                return new PasswordSignInResult(PasswordSignInOutcome.Failed, null);
             }
+
+            await _userManager.AccessFailedAsync(user);
+            var outcome = await _userManager.IsLockedOutAsync(user)
+                ? PasswordSignInOutcome.LockedOut
+                : PasswordSignInOutcome.Failed;
+            return new PasswordSignInResult(outcome, null);
         }
-        return result;
+
+        await _userManager.ResetAccessFailedCountAsync(user);
+        return new PasswordSignInResult(PasswordSignInOutcome.Succeeded, new UserIdentity(user.Id, user.Email!));
     }
 
     /// <inheritdoc/>
-    public async Task<Dictionary<string, bool>> GetTwoFactorEnabledByIdsAsync(IEnumerable<string> userIds, CancellationToken ct)
-    {
-        // Sequential, like the email lookup above: userManager runs on the request's
-        // scoped DbContext, and EF Core throws "A second operation was started on this
-        // context instance" if two of these overlap.
-        var result = new Dictionary<string, bool>();
-        foreach (var id in userIds)
-        {
-            var user = await _userManager.FindByIdAsync(id);
-            result[id] = user?.TwoFactorEnabled ?? false;
-        }
-        return result;
-    }
-
-    /// <inheritdoc/>
-    public async Task<List<string>> FindUserIdsByEmailAsync(string emailSearch, CancellationToken ct)
-    {
-        var term = emailSearch.ToLower();
-        return await Task.FromResult(
-            _userManager.Users
-                .Where(u => u.Email != null && u.Email.ToLower().Contains(term))
-                .Select(u => u.Id)
-                .ToList());
-    }
-
-    /// <inheritdoc/>
-    public async Task<string?> GetPrimaryRoleAsync(string userId, CancellationToken ct)
+    public async Task<UserIdentity?> FindByIdAsync(string userId, CancellationToken ct)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            return null;
-        }
-
-        var roles = await _userManager.GetRolesAsync(user);
-        return roles.FirstOrDefault();
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> AnyUsersExistAsync(CancellationToken ct)
-    {
-        return Task.FromResult(_userManager.Users.Any());
-    }
-
-    /// <inheritdoc/>
-    public async Task<string> GenerateEmailConfirmationTokenAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-        return await _userManager.GenerateEmailConfirmationTokenAsync(user);
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> ConfirmEmailAsync(string email, string token, CancellationToken ct)
-    {
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user is null)
-        {
-            return false;
-        }
-
-        var result = await _userManager.ConfirmEmailAsync(user, token);
-        return result.Succeeded;
+        return user is null ? null : new UserIdentity(user.Id, user.Email!);
     }
 
     /// <inheritdoc/>
@@ -190,152 +134,11 @@ public sealed class UserService : IUserService
     }
 
     /// <inheritdoc/>
-    public async Task<(List<UserListItemDto> Items, int TotalCount)> ListUsersAsync(
-        int page, int pageSize, string? search, CancellationToken ct)
-    {
-        var query = _userManager.Users.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.ToLower();
-            query = query.Where(u =>
-                u.FirstName.ToLower().Contains(term) ||
-                u.LastName.ToLower().Contains(term) ||
-                (u.Email != null && u.Email.ToLower().Contains(term)));
-        }
-
-        var totalCount = await query.CountAsync(ct);
-
-        var users = await query
-            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
-            .Skip((page - 1) * pageSize).Take(pageSize)
-            .ToListAsync(ct);
-
-        // Batch-lookup linked client IDs. Was IClientRepository.FindClientIdsByUserIdsAsync --
-        // read-only, so no tracking is needed.
-        var userIds = users.Select(u => u.Id).ToList();
-        var clientMap = await _db.Clients
-            .AsNoTracking()
-            .Where(c => userIds.Contains(c.UserId))
-            .ToDictionaryAsync(c => c.UserId, c => c.Id, ct);
-
-        var items = users.Select(u => new UserListItemDto(
-            u.Id, clientMap.GetValueOrDefault(u.Id), u.FirstName, u.LastName,
-            u.Email!, u.Language, u.LastLoginAt, u.CreatedAt)).ToList();
-
-        return (items, totalCount);
-    }
-
-    /// <inheritdoc/>
-    public async Task<UserDetailDto?> GetUserWithAccountsAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            return null;
-        }
-
-        // Was IClientRepository.FindByUserIdAsync -- read-only, so no tracking is needed.
-        var client = await _db.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        var accounts = client is not null
-            ? new List<UserAccountDto>
-            {
-                new(client.Id, client.FirstName, client.LastName, client.CompanyName, true)
-            }
-            : new List<UserAccountDto>();
-
-        return new UserDetailDto(
-            user.Id, user.FirstName, user.LastName, user.Email!,
-            user.Language, user.LastLoginAt, user.CreatedAt, accounts);
-    }
-
-    /// <inheritdoc/>
-    public async Task UpdateUserAsync(
-        string userId, string firstName, string lastName, string email, string? language, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-
-        user.FirstName = firstName;
-        user.LastName = lastName;
-        user.Email = email;
-        user.UserName = email;
-        user.Language = language;
-
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Failed to update user: {errors}");
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task DeleteUserAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-
-        // Close the linked client account before deleting the user. Tracked, not AsNoTracking:
-        // Close() is called on it below and saved in this same pass.
-        var client = await _db.Clients.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        if (client is not null)
-        {
-            client.Close();
-            await _uow.SaveChangesAsync(ct);
-        }
-
-        var result = await _userManager.DeleteAsync(user);
-        if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Failed to delete user: {errors}");
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<string> GeneratePasswordResetTokenAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-        return await _userManager.GeneratePasswordResetTokenAsync(user);
-    }
-
-    /// <inheritdoc/>
-    public async Task ChangePasswordAsync(string userId, string newPassword, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
-        if (!result.Succeeded)
-        {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Failed to change password: {errors}");
-        }
-
-    }
-
-    /// <inheritdoc/>
-    public async Task<bool> ResetPasswordWithTokenAsync(string email, string token, string newPassword, CancellationToken ct)
-    {
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user is null)
-        {
-            return false;
-        }
-
-        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
-        return result.Succeeded;
-    }
-
-    /// <inheritdoc/>
     public async Task UpdateLastLoginAsync(string userId, CancellationToken ct)
     {
         var user = await _userManager.FindByIdAsync(userId)
             ?? throw new InvalidOperationException($"User {userId} not found.");
-        user.LastLoginAt = DateTimeOffset.UtcNow;
+        user.LastLoginAt = _time.GetUtcNow();
         await _userManager.UpdateAsync(user);
     }
 
@@ -353,24 +156,32 @@ public sealed class UserService : IUserService
             ?? throw new InvalidOperationException($"User {userId} not found.");
         var secretBytes = KeyGeneration.GenerateRandomKey(20);
         var secret = Base32Encoding.ToString(secretBytes);
-        user.TwoFactorSecret = secret;
+
+        // Pending, never active: an enabled account keeps signing in with the secret it has until
+        // a code proves the authenticator app holds this one.
+        user.PendingTwoFactorSecret = secret;
         await _userManager.UpdateAsync(user);
         return secret;
     }
 
     /// <inheritdoc/>
-    public async Task<string?> GetTwoFactorSecretAsync(string userId, CancellationToken ct)
+    public async Task<bool> EnableTwoFactorAsync(string userId, string code, CancellationToken ct)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        return user?.TwoFactorSecret;
-    }
+        if (user is null || !VerifyAgainst(userId, user.PendingTwoFactorSecret, code))
+        {
+            return false;
+        }
 
-    /// <inheritdoc/>
-    public async Task EnableTwoFactorAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId)
-            ?? throw new InvalidOperationException($"User {userId} not found.");
-        await _userManager.SetTwoFactorEnabledAsync(user, true);
+        user.TwoFactorSecret = user.PendingTwoFactorSecret;
+        user.PendingTwoFactorSecret = null;
+
+        // Set directly rather than through SetTwoFactorEnabledAsync, which would also change the
+        // security stamp: switching the second factor on strengthens the account, and signing the
+        // person out of the session they just used to do it would only be in their way.
+        user.TwoFactorEnabled = true;
+        await _userManager.UpdateAsync(user);
+        return true;
     }
 
     /// <inheritdoc/>
@@ -379,12 +190,66 @@ public sealed class UserService : IUserService
         var user = await _userManager.FindByIdAsync(userId)
             ?? throw new InvalidOperationException($"User {userId} not found.");
         user.TwoFactorSecret = null;
+        user.PendingTwoFactorSecret = null;
+
+        // Identity changes the security stamp as part of this call, which is what ends every
+        // session issued before the second factor was removed.
         await _userManager.SetTwoFactorEnabledAsync(user, false);
-        await _userManager.UpdateAsync(user);
     }
 
     /// <inheritdoc/>
     public async Task<bool> VerifyTwoFactorCodeAsync(string userId, string code, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        return VerifyAgainst(userId, user?.TwoFactorSecret, code);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> CheckPasswordAsync(string userId, string password, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        return user is not null && !user.IsDeleted && await _userManager.CheckPasswordAsync(user, password);
+    }
+
+    /// <inheritdoc/>
+    public async Task<string?> GetSessionVersionAsync(string userId, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null || user.IsDeleted)
+        {
+            return null;
+        }
+
+        // An account written outside Identity (an import, an old seed) can have no stamp yet;
+        // it gets one here, once, rather than every token for it failing to be issued.
+        if (string.IsNullOrEmpty(user.SecurityStamp))
+        {
+            await _userManager.UpdateSecurityStampAsync(user);
+        }
+
+        return SessionVersion.FromSecurityStamp(user.SecurityStamp!);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> GetRolesAsync(string userId, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return [];
+        }
+
+        return [.. await _userManager.GetRolesAsync(user)];
+    }
+
+    /// <summary>
+    /// Checks a code against one secret under the account's attempt cap and replay guard.
+    /// </summary>
+    /// <param name="userId">Whose attempts the guard counts.</param>
+    /// <param name="secret">The Base32 secret to check against, or null when the account has none.</param>
+    /// <param name="code">The 6-digit TOTP code from the authenticator app.</param>
+    /// <returns>True when the code is valid within the allowed time window and was not used before.</returns>
+    private bool VerifyAgainst(string userId, string? secret, string code)
     {
         // Every door that checks a code (sign-in, enabling, disabling) comes through here, so the
         // limits live here. The attempt is taken before the code is looked at, so parallel guesses
@@ -394,14 +259,12 @@ public sealed class UserService : IUserService
             return false;
         }
 
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user?.TwoFactorSecret is null)
+        if (secret is null)
         {
             return false;
         }
 
-        var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
-        var totp = new Totp(secretBytes);
+        var totp = new Totp(Base32Encoding.ToBytes(secret));
         if (!totp.VerifyTotp(_time.GetUtcNow().UtcDateTime, code, out var timeStep, VerificationWindow.RfcSpecifiedNetworkDelay))
         {
             return false;
@@ -417,24 +280,11 @@ public sealed class UserService : IUserService
         return true;
     }
 
-    /// <inheritdoc/>
-    public async Task<(string Id, string Email)?> FindBySsoSubjectAsync(string sub, CancellationToken ct)
+    /// <summary>Returns the hash an unknown address is checked against, making it on first use.</summary>
+    /// <returns>A hash of a random password, made by the configured hasher.</returns>
+    private string UnknownAccountHash()
     {
-        var user = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.SsoSubjectId == sub, ct);
-        return user is null ? null : (user.Id, user.Email!);
-    }
-
-
-    /// <inheritdoc/>
-    public async Task<IList<string>> GetRolesAsync(string userId, CancellationToken ct)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-        {
-            return [];
-        }
-
-        return await _userManager.GetRolesAsync(user);
+        return _unknownAccountHash ??= _userManager.PasswordHasher.HashPassword(
+            UnknownAccount, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
     }
 }

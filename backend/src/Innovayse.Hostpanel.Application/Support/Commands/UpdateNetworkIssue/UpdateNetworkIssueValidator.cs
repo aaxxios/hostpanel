@@ -1,15 +1,14 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
-using Innovayse.Hostpanel.Domain.Support;
-using Innovayse.Hostpanel.Domain.Support.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Support.Commands.UpdateNetworkIssue;
 
 /// <summary>Validator for <see cref="UpdateNetworkIssueCommand"/>.</summary>
 /// <remarks>
-/// The handler reads <c>Type</c>, <c>Priority</c> and <c>Status</c> with <c>Enum.Parse</c>;
-/// without this, a bad value reached the caller as a 500 rather than a 400.
+/// Binding accepts a numeric value that names no member of <c>Type</c>, <c>Priority</c> or
+/// <c>Status</c>; the rules below refuse it.
 /// </remarks>
 public sealed class UpdateNetworkIssueValidator : LocalizedValidator<UpdateNetworkIssueCommand>
 {
@@ -23,18 +22,15 @@ public sealed class UpdateNetworkIssueValidator : LocalizedValidator<UpdateNetwo
         RuleFor(x => x.Description).NotEmpty().WithMessage(L["NetworkIssueDescriptionRequired"]);
 
         RuleFor(x => x.Type)
-            .NotEmpty()
-            .Must(t => Enum.TryParse<NetworkIssueType>(t, ignoreCase: true, out _))
+            .IsInEnum()
             .WithMessage(L["NetworkIssueTypeInvalid"]);
 
         RuleFor(x => x.Priority)
-            .NotEmpty()
-            .Must(p => Enum.TryParse<NetworkIssuePriority>(p, ignoreCase: true, out _))
+            .IsInEnum()
             .WithMessage(L["NetworkIssuePriorityInvalid"]);
 
         RuleFor(x => x.Status)
-            .NotEmpty()
-            .Must(s => Enum.TryParse<NetworkIssueStatus>(s, ignoreCase: true, out _))
+            .IsInEnum()
             .WithMessage(L["NetworkIssueStatusInvalid"]);
     }
 }

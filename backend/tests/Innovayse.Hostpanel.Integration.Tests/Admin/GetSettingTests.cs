@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -13,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 /// no setting is refused <c>SETTING_NOT_FOUND</c>, a caller with only the Client role is refused,
 /// and the route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SettingsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetSettingTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

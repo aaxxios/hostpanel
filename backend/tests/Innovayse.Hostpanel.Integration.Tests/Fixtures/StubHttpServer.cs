@@ -106,7 +106,9 @@ public sealed class StubHttpServer : IAsyncDisposable
         requests.Enqueue(new RecordedCall(
             context.Request.Method,
             context.Request.Path + context.Request.QueryString.Value,
-            body));
+            body,
+            context.Request.Headers.Authorization.FirstOrDefault(),
+            context.Request.Headers["Idempotency-Key"].FirstOrDefault()));
 
         if (replies.TryDequeue(out var next))
         {

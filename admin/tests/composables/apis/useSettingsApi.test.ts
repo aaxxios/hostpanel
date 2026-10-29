@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSettingsApi } from '@/composables/apis/useSettingsApi'
+import { MessageLanguage } from '@/locales/messages'
 import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
 
 afterEach(() => {
@@ -38,6 +39,21 @@ describe('useSettingsApi', () => {
 
     await useSettingsApi().listEmailTemplates()
     expect(callOf(mock, 0).url).toBe('/api/admin/email-templates')
+  })
+
+  it('createEmailTemplate POSTs the new language version and returns its id', async () => {
+    const mock = stubFetch(json(5))
+    const payload = { slug: 'welcome', language: MessageLanguage.Ru, subject: 'S', body: 'B', description: null }
+
+    expect(await useSettingsApi().createEmailTemplate(payload)).toBe(5)
+    expect(callOf(mock)).toMatchObject({ url: '/api/admin/email-templates', method: 'POST', body: payload })
+  })
+
+  it('updateEmailTemplate PUTs the words by id', async () => {
+    const mock = stubFetch(new Response(null, { status: 204 }))
+
+    await useSettingsApi().updateEmailTemplate(2, { subject: 'S', body: 'B', description: 'D' })
+    expect(callOf(mock)).toMatchObject({ url: '/api/admin/email-templates/2', method: 'PUT', body: { subject: 'S', body: 'B', description: 'D' } })
   })
 
   it('listProducts and listProductGroups ask for inactive rows too', async () => {

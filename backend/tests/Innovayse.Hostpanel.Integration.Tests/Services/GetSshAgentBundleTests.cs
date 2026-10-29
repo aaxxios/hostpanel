@@ -1,14 +1,15 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
 /// <summary><c>GET api/public/ssh-agent/bundle.tar.gz</c>: anonymous, stable, and only what an installer needs.</summary>
+/// <param name="factory">The shared API and PostgreSQL host.</param>
 public sealed class GetSshAgentBundleTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The bundle is served anonymously, is the same on every call and holds the installer and profiles but no tests.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task Bundle_IsAnonymousStableAndHoldsInstallerProfilesAndNoTestsAsync()
     {

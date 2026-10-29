@@ -4,4 +4,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.GetMyDomains;
 /// <remarks>
 /// Carries no user id. Whose domains is resolved inside the handler from the credential.
 /// </remarks>
-public record GetMyDomainsQuery();
+public sealed record GetMyDomainsQuery();

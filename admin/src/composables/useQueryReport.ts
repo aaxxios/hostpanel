@@ -3,8 +3,8 @@
  * transactions).
  *
  * The screen declares what the report is (`ReportQueryConfig`); this composable owns the filters,
- * the chosen columns, the page, and the calls to the reports store. It is the one place the
- * five query screens used to repeat.
+ * the chosen columns, the page, and the calls to the reports store, once for all five query
+ * screens.
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { Ref } from 'vue'
@@ -12,7 +12,8 @@ import type { FilterRow } from '@/components/ui/UiAdvancedFilters.vue'
 import { buildQueryParams, filterPage } from '@/lib/reportsQuery'
 import { useReportsStore } from '@/stores/reports'
 import type { ReportColumn } from '@/types/reportcolumn'
-import type { ReportQueryConfig, ReportQueryRange, ReportQueryResult, ReportRangeValue } from '@/types/reportquery'
+import type { PaginatedList } from '@/types/paginatedlist'
+import type { ReportQueryConfig, ReportQueryRange, ReportRangeValue } from '@/types/reportquery'
 
 /**
  * Creates the state of one query report and loads its first page.
@@ -55,7 +56,7 @@ export const useQueryReport = <T extends object>(
   /** Loads the current page. */
   const load = async (): Promise<void> => {
     const params = buildQueryParams(config, view.ranges.value, { filters: filters.value, ranges: ranges.value, page: page.value }, true)
-    const result = await store.fetchReport<ReportQueryResult<T>>(`${config.path}?${params}`)
+    const result = await store.fetchReport<PaginatedList<T>>(`${config.path}?${params}`)
     if (result === null) {
       return
     }

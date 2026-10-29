@@ -11,7 +11,7 @@
  * lookup (see `SERVICE_MANAGED` in the fixtures).
  */
 import { expect, test } from './support/test'
-import { CANCEL_REASON, NEW_SERVICE_PASSWORD, SERVICE_INVOICE, SERVICE_MANAGED, SERVICE_PENDING } from './support/fixtures.mjs'
+import { CANCEL_REASON, NEW_SERVICE_PASSWORD, SERVICE_INVOICE, SERVICE_MANAGED, SERVICE_PENDING, SERVICE_SUSPENDED } from './support/fixtures.mjs'
 import { resetStub, signIn, stubRequests, waitForHydration } from './support/helpers'
 
 test.beforeEach(async ({ context, request, baseURL }) => {
@@ -29,6 +29,17 @@ test('the overview shows the service, its server and the invoices raised against
   await expect(page.getByTestId('service-setup-required')).toHaveCount(0)
   await expect(page.getByTestId('service-cancel-pending')).toHaveCount(0)
   await expect(page.getByTestId(`service-invoice-${SERVICE_INVOICE.id}`)).toBeVisible()
+  await expect(page.getByTestId('service-usage').getByTestId('usage-bar')).toHaveCount(2)
+  await expect(page.getByTestId('service-suspension-reason')).toHaveCount(0)
+})
+
+test('a suspended service says why it is suspended and shows no usage bar without reported figures', async ({ page }) => {
+  await page.goto(`/client/services/${SERVICE_SUSPENDED.id}`)
+  await waitForHydration(page)
+
+  await expect(page.getByTestId('service-header')).toContainText(SERVICE_SUSPENDED.productName)
+  await expect(page.getByTestId('service-suspension-reason')).toBeVisible()
+  await expect(page.getByTestId('service-usage')).toHaveCount(0)
 })
 
 test('the list leads to the service and the back link leads to the list', async ({ page }) => {

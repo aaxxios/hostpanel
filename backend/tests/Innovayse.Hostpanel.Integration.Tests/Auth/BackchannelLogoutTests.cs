@@ -1,18 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
 /// <summary>
-/// <c>POST /auth/backchannel-logout</c> — the platform portal's sign-out fan-out. Only the
+/// <c>POST /auth/backchannel-logout</c>, the sign-on provider's sign-out fan-out. Only the
 /// session store (an external port) is faked; the key check, validation, handler and identity
 /// lookup are the real ones.
 /// </summary>
@@ -49,7 +46,7 @@ public sealed class BackchannelLogoutTests(IntegrationTestFactory factory) : ICl
     /// <summary>Registers a local account and returns its email and subject.</summary>
     /// <param name="client">A client against the host.</param>
     /// <returns>The address and the subject the identity provider names it by.</returns>
-    private async Task<(string Email, string Subject)> RegisterAsync(HttpClient client)
+    private async Task<RegisteredSubject> RegisterAsync(HttpClient client)
     {
         var email = $"logout-{Guid.NewGuid():N}@example.com";
         var registered = await client.PostAsJsonAsync("/api/auth/register",
@@ -59,7 +56,7 @@ public sealed class BackchannelLogoutTests(IntegrationTestFactory factory) : ICl
         using var scope = factory.Services.CreateScope();
         var identity = scope.ServiceProvider.GetRequiredService<IIdentityProvider>();
         var account = await identity.FindByEmailAsync(email, CancellationToken.None);
-        return (email, account!.Subject);
+        return new(email, account!.Subject);
     }
 
     /// <summary>Sends the fan-out call, with the key header when one is given.</summary>

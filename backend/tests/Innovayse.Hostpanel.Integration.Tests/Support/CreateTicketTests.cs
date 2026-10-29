@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -13,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// closed to a caller with no credential.
 /// </summary>
 /// <remarks>
-/// Merged from the deleted <c>SupportEndpointTests</c> and <c>MyTicketsEndpointTests</c>.
 /// <c>CLIENT_PROFILE_NOT_FOUND</c> (the caller has no client record) is not reproduced here: every
 /// caller with a Client-policy token this suite can mint already has one, because registration
 /// creates it via Wolverine.
@@ -73,5 +70,23 @@ public sealed class CreateTicketTests(IntegrationTestFactory factory) : IClassFi
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A ticket in a department that does not exist is refused 404 with <c>DEPARTMENT_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task UnknownDepartmentIsRefusedNotFoundAsync()
+    {
+        var (owner, _) = await SupportTestSeeds.RegisterClientAsync(factory, "create-ticket-unknown-department");
+
+        var response = await owner.PostAsJsonAsync("/api/me/tickets", new
+        {
+            subject = "Test Ticket",
+            message = "This is a test ticket body.",
+            departmentId = SupportTestSeeds.NoSuchId,
+            priority = nameof(TicketPriority.Medium),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SupportTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.DEPARTMENT_NOT_FOUND);
     }
 }

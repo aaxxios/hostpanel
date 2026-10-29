@@ -1,20 +1,17 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>ImportTldPricing</c> use case —
+/// Integration tests for the admin <c>ImportTldPricing</c> use case:
 /// <c>POST /api/admin/tld-configs/import/{module}</c>, which resolves registrar providers
 /// through a fake <see cref="IRegistrarProviderFactory"/> instead of a real registrar's HTTP
 /// client.
@@ -32,7 +29,7 @@ public sealed class ImportTldPricingTests(IntegrationTestFactory factory) : ICla
     {
         var host = factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IRegistrarProviderFactory>(_ => registrars)));
+                services.AddSingleton<IRegistrarProviderFactory>(registrars)));
 
         var token = await factory.GetAdminTokenAsync();
         var client = host.CreateClient();

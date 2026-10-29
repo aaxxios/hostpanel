@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetEmailForwarding;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Enabled">Whether email forwarding should be enabled.</param>
-public record SetEmailForwardingCommand(int? DomainId, bool Enabled);
+public sealed record SetEmailForwardingCommand(int? DomainId, bool Enabled);

@@ -1,12 +1,10 @@
 using System.Reflection;
-using FluentAssertions;
 using Innovayse.Hostpanel.API.Authorization;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Shared.Authorization;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
@@ -34,14 +32,14 @@ public sealed class ClientPortalPermissionTests
 
     /// <summary>Every action method of every controller in the API assembly.</summary>
     /// <returns>The controller and action method of each HTTP-bound public method.</returns>
-    private static IReadOnlyList<(Type Controller, MethodInfo Action)> AllActions()
+    private static IReadOnlyList<ControllerAction> AllActions()
     {
         return Layers.AuthoredTypesOf(Layers.Api)
             .Where(type => type.IsClass && !type.IsAbstract && typeof(BaseApiController).IsAssignableFrom(type))
             .SelectMany(controller => controller
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Where(method => method.GetCustomAttributes<HttpMethodAttribute>(true).Any())
-                .Select(method => (controller, method)))
+                .Select(method => new ControllerAction(controller, method)))
             .ToList();
     }
 
@@ -60,7 +58,7 @@ public sealed class ClientPortalPermissionTests
     /// <param name="controller">The declaring controller.</param>
     /// <param name="action">The action method.</param>
     /// <returns>The permission-requiring declarations and the every-user markers found.</returns>
-    private static (IReadOnlyList<RequiresClientPermissionAttribute> Required, int OpenToEveryUser) DeclarationsOf(
+    private static PermissionDeclarations DeclarationsOf(
         Type controller, MethodInfo action)
     {
         var required = action.GetCustomAttributes<RequiresClientPermissionAttribute>(true)
@@ -69,7 +67,7 @@ public sealed class ClientPortalPermissionTests
         var open = action.GetCustomAttributes<AvailableToEveryClientUserAttribute>(true)
             .Concat(controller.GetCustomAttributes<AvailableToEveryClientUserAttribute>(true))
             .Count();
-        return (required, open);
+        return new(required, open);
     }
 
     /// <summary>The scan finds the portal; a rule over zero actions would pass for the wrong reason.</summary>

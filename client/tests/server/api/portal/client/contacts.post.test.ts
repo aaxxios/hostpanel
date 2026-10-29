@@ -1,5 +1,5 @@
 /**
- * Tests for `POST /api/portal/client/contacts`: it calls the backend `POST /clients/me/contacts` with the session bearer, forwards the reader language and returns the backend's answer untouched.
+ * Tests for `POST /api/portal/client/contacts`: it calls the backend `POST /clients/me/contacts` with the session bearer, forwards the reader language and returns the backend's answer (the new contact's id) untouched.
  *
  * @module tests/server/api/portal/client/contacts.post.test
  */
@@ -26,11 +26,11 @@ afterEach(async () => {
 
 describe('POST /api/portal/client/contacts', () => {
   it('calls the backend endpoint and returns its answer', async () => {
-    backend.respondWith(() => ({ body: { ok: true } }))
+    backend.respondWith(() => ({ status: 201, body: 17 }))
 
     const result = await route.default(makeEvent({ body: { value: 'x' }, cookies: await signedIn('jwt') }))
 
-    expect(result).toEqual({ ok: true })
+    expect(result).toBe(17)
     expect(backend.requests[0]?.method).toBe('POST')
     expect(backend.requests[0]?.url).toBe('/api/clients/me/contacts')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')

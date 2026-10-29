@@ -5,14 +5,14 @@
  */
 import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
-import { unpaidInvoice } from './fixtures/invoices'
-import type { Invoice, InvoiceItemUpdate } from '../src/types/invoice'
+import { unpaidInvoiceDetail } from './fixtures/invoices'
+import type { InvoiceDetail, InvoiceItemUpdate } from '../src/types/invoice'
 import { stubApi } from './support/stubApi'
 
 test('saving the edited lines sends the edits and the screen shows the stored result', async ({ page }) => {
   // The invoice as the "database" holds it; the items call applies the edits to it.
-  const stored: Invoice = {
-    ...unpaidInvoice,
+  const stored: InvoiceDetail = {
+    ...unpaidInvoiceDetail,
     items: [
       { id: 1, description: 'Hosting', unitPrice: 120, quantity: 1, amount: 120 },
       { id: 2, description: 'Setup', unitPrice: 30, quantity: 1, amount: 30 },
@@ -48,7 +48,7 @@ test('saving the edited lines sends the edits and the screen shows the stored re
   await page.getByTestId('billing-invoice-item-description-0').fill('Managed hosting')
   await page.getByTestId('billing-invoice-items-save').click()
 
-  await expect(page.getByTestId('billing-invoice-saved')).toBeVisible()
+  await expect(page.getByTestId('billing-invoice-items-feedback')).toHaveText('Changes saved successfully.')
   expect(api.callsTo(HttpMethod.Put, `/api/billing/${stored.id}/items`)[0]?.body).toEqual({
     items: [
       { id: 1, description: 'Managed hosting', unitPrice: 120, quantity: 1, isDeleted: false },

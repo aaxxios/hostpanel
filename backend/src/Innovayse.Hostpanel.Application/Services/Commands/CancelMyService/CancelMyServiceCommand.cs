@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Services.Enums;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
+
 /// <summary>
 /// Command for a signed-in client to request cancellation of one of their own services.
 /// </summary>
@@ -12,7 +14,7 @@ namespace Innovayse.Hostpanel.Application.Services.Commands.CancelMyService;
 /// caller and is what any future staff-side route would dispatch.
 /// </remarks>
 /// <param name="ServiceId">Primary key of the service, which must belong to the caller.</param>
-/// <param name="Type">Cancellation type: <c>Immediate</c> or <c>EndOfBillingPeriod</c>.</param>
+/// <param name="Type">When the cancellation takes effect.</param>
 /// <param name="Reason">Optional client-supplied reason.</param>
-public sealed record CancelMyServiceCommand(int ServiceId, string Type, string? Reason)
+public sealed record CancelMyServiceCommand(int ServiceId, CancellationType Type, string? Reason)
     : ICallerScopedServiceMessage;

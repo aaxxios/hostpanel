@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Domains.Enums;
+
 namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateDomain;
 
 /// <summary>Command to update all editable domain fields.</summary>
@@ -14,9 +16,12 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateDomain;
 /// <param name="ExpiresAt">ISO 8601 expiry date string.</param>
 /// <param name="NextDueDate">ISO 8601 next renewal due date string.</param>
 /// <param name="RegistrationPeriod">Registration period in years.</param>
-/// <param name="Status">New lifecycle status name (e.g. "Active", "Expired").</param>
+/// <param name="Status">
+/// New lifecycle status, sent as its name (e.g. "Active", "Expired"). Nullable so a missing member is
+/// refused by the validator instead of silently becoming the first enum value.
+/// </param>
 /// <param name="Nameservers">Optional list of nameserver hostnames to set.</param>
-public record UpdateDomainCommand(
+public sealed record UpdateDomainCommand(
     int? DomainId,
     decimal FirstPaymentAmount,
     decimal RecurringAmount,
@@ -27,5 +32,5 @@ public record UpdateDomainCommand(
     string ExpiresAt,
     string NextDueDate,
     int RegistrationPeriod,
-    string Status,
+    DomainStatus? Status,
     List<string> Nameservers);

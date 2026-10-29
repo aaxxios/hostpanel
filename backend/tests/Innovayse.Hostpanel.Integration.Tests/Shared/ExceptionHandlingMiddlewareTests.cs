@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Domain;
@@ -13,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 using ApplicationErrorMessages = Innovayse.Hostpanel.Application.Resources.ErrorMessages;
 using SharedValidationMessages = Innovayse.Hostpanel.Shared.Resources.ValidationMessages;
 
@@ -37,7 +35,7 @@ public sealed class ExceptionHandlingMiddlewareTests
     }
 
     /// <summary>
-    /// Builds the resolver a <see cref="DomainException"/> is mapped through, without a web host —
+    /// Builds the resolver a <see cref="DomainException"/> is mapped through, without a web host:
     /// the same <see cref="ErrorMessageResolver"/> the API registers, over the real
     /// <c>ErrorMessages.resx</c> set.
     /// </summary>
@@ -93,8 +91,8 @@ public sealed class ExceptionHandlingMiddlewareTests
     }
 
     /// <summary>
-    /// <see cref="ConcurrencyConflictException"/> -- <c>IUnitOfWork.SaveChangesAsync</c>'s
-    /// translation of EF's own optimistic-concurrency exception -- answers 409, not the 500 an
+    /// <see cref="ConcurrencyConflictException"/>, <c>IHostpanelDbContext.SaveChangesAsync</c>'s
+    /// translation of EF's own optimistic-concurrency exception, answers 409, not the 500 an
     /// unclassified fault would, and not the 400 a handler's own <c>InvalidOperationException</c>
     /// arm would: the request was well-formed and nothing is broken, but the row the caller read
     /// no longer matches what is stored.
@@ -123,7 +121,7 @@ public sealed class ExceptionHandlingMiddlewareTests
         body.RootElement.GetProperty("type").GetString().Should().Be(SharedErrorCodes.Conflict);
     }
 
-    /// <summary>A client cancellation is not answered at all -- there is no one left to write a body to.</summary>
+    /// <summary>A client cancellation is not answered at all: there is no one left to write a body to.</summary>
     [Fact]
     public async Task ClientCancellation_WritesNothingAsync()
     {
@@ -151,8 +149,8 @@ public sealed class ExceptionHandlingMiddlewareTests
     /// A <see cref="DomainException"/> thrown straight out of an aggregate (uncaught by the handler
     /// that called it) is mapped the same way a handler's own <c>Result</c> refusal is: the status
     /// and title come from <c>StatusMapping</c> by the exception's own code, and <c>detail</c> is
-    /// resolved by that code from <c>ErrorMessages.resx</c> in the request's culture -- never the
-    /// exception's English message, which only reaches the log (A6 Task 8).
+    /// resolved by that code from <c>ErrorMessages.resx</c> in the request's culture, never the
+    /// exception's English message, which only reaches the log.
     /// </summary>
     [Fact]
     public async Task DomainException_MapsByCodeWithLocalizedDetailAsync()

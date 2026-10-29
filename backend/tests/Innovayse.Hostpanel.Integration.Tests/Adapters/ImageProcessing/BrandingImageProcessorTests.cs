@@ -1,13 +1,10 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Admin.Common;
 using Innovayse.Hostpanel.Application.Admin.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.ImageProcessing;
 using Innovayse.Hostpanel.Infrastructure.Storage.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.ImageProcessing;
 
@@ -18,8 +15,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Adapters.ImageProcessing;
 /// The inputs are drawn in memory with SkiaSharp itself, so no fixture files are needed. What is
 /// worth checking is the contract the panel relies on: every output is a PNG this class encoded,
 /// at the size the favicon set promises, and every refusal is a <c>BRANDING_IMAGE_*</c> code on the
-/// <see cref="Innovayse.Hostpanel.Shared.Models.Result"/> -- reached before pixels are decoded where
-/// that matters -- with the precise reason in the log and nowhere else.
+/// <see cref="Innovayse.Hostpanel.Shared.Models.Result"/>, reached before pixels are decoded where
+/// that matters, with the precise reason in the log and nowhere else.
 /// </remarks>
 public sealed class BrandingImageProcessorTests
 {
@@ -44,7 +41,7 @@ public sealed class BrandingImageProcessorTests
     private static async Task<IReadOnlyList<BrandingRendition>> RenderAcceptedAsync(
         byte[] content, string fileName, BrandingKind kind, BrandingOptions? options = null)
     {
-        var result = await Create(options: options).RenderAsync(new BrandingSource(content, fileName), kind, default);
+        var result = await Create(options: options).RenderAsync(new BrandingSource(new MemoryStream(content), fileName), kind, default);
 
         result.IsSuccess.Should().BeTrue();
         return result.Value!;
@@ -234,7 +231,7 @@ public sealed class BrandingImageProcessorTests
         var svg = "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>"u8.ToArray();
         var logger = new CapturingLogger<BrandingImageProcessor>();
 
-        var result = await Create(logger).RenderAsync(new BrandingSource(svg, "logo.svg"), BrandingKind.Logo, default);
+        var result = await Create(logger).RenderAsync(new BrandingSource(new MemoryStream(svg), "logo.svg"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_INVALID);
@@ -247,7 +244,7 @@ public sealed class BrandingImageProcessorTests
     public async Task UnrecognisedBytes_AreRefusedAsync()
     {
         var result = await Create().RenderAsync(
-            new BrandingSource("not an image at all"u8.ToArray(), "x.png"), BrandingKind.Logo, default);
+            new BrandingSource(new MemoryStream("not an image at all"u8.ToArray()), "x.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_INVALID);
@@ -265,7 +262,7 @@ public sealed class BrandingImageProcessorTests
         byte[] tiff = [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         var logger = new CapturingLogger<BrandingImageProcessor>();
 
-        var result = await Create(logger).RenderAsync(new BrandingSource(tiff, "scan.png"), BrandingKind.Logo, default);
+        var result = await Create(logger).RenderAsync(new BrandingSource(new MemoryStream(tiff), "scan.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_INVALID);
@@ -277,7 +274,7 @@ public sealed class BrandingImageProcessorTests
     [Fact]
     public async Task EmptyUpload_IsRefusedAsync()
     {
-        var result = await Create().RenderAsync(new BrandingSource([], "x.png"), BrandingKind.Logo, default);
+        var result = await Create().RenderAsync(new BrandingSource(new MemoryStream(), "x.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_INVALID);
@@ -289,7 +286,7 @@ public sealed class BrandingImageProcessorTests
     public async Task OversizedEdge_IsRefusedFromTheHeaderAsync()
     {
         var result = await Create(options: new BrandingOptions { MaxSourceEdge = 100 }).RenderAsync(
-            new BrandingSource(MakeImage(200, 50), "big.png"), BrandingKind.Logo, default);
+            new BrandingSource(new MemoryStream(MakeImage(200, 50)), "big.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_TOO_LARGE);
@@ -301,10 +298,27 @@ public sealed class BrandingImageProcessorTests
     public async Task OversizedArea_IsRefusedEvenWhenBothEdgesFitAsync()
     {
         var result = await Create(options: new BrandingOptions { MaxSourceEdge = 1000, MaxSourcePixels = 10_000 })
-            .RenderAsync(new BrandingSource(MakeImage(200, 200), "big.png"), BrandingKind.Logo, default);
+            .RenderAsync(new BrandingSource(new MemoryStream(MakeImage(200, 200)), "big.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_TOO_LARGE);
+    }
+
+    /// <summary>
+    /// A client that keeps sending is cut off one byte past the ceiling: the upload is refused as too
+    /// large without being buffered whole.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task EndlessUpload_IsReadOnlyToTheCeilingAsync()
+    {
+        var stream = new EndlessStream();
+
+        var result = await Create(options: new BrandingOptions { MaxBytes = 1000 }).RenderAsync(
+            new BrandingSource(stream, "endless.png"), BrandingKind.Logo, default);
+
+        result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_TOO_LARGE);
+        stream.BytesRead.Should().Be(1001);
     }
 
     /// <summary>An upload over the byte ceiling is refused before anything is decoded.</summary>
@@ -313,7 +327,7 @@ public sealed class BrandingImageProcessorTests
     public async Task OversizedUpload_IsRefusedByByteCountAsync()
     {
         var result = await Create(options: new BrandingOptions { MaxBytes = 10 }).RenderAsync(
-            new BrandingSource(MakeImage(64, 64), "x.png"), BrandingKind.Logo, default);
+            new BrandingSource(new MemoryStream(MakeImage(64, 64)), "x.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_TOO_LARGE);
@@ -327,7 +341,7 @@ public sealed class BrandingImageProcessorTests
         var png = MakeImage(256, 256);
         var truncated = png.Take(png.Length / 2).ToArray();
 
-        var result = await Create().RenderAsync(new BrandingSource(truncated, "cut.png"), BrandingKind.Logo, default);
+        var result = await Create().RenderAsync(new BrandingSource(new MemoryStream(truncated), "cut.png"), BrandingKind.Logo, default);
 
         result.IsFailure.Should().BeTrue();
         result.ErrorCode.Should().Be(HostpanelErrorCodes.BRANDING_IMAGE_INVALID);

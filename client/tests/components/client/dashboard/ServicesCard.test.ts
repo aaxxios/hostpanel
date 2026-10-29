@@ -8,7 +8,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { makeClientService } from '~/tests/helpers/clientServiceFixture'
 import { mountClient } from '~/tests/helpers/mountClient'
+import { ServiceStatus } from '~/types/servicestatus'
 
 /** The mocked open-control-panel action, re-created for every test. */
 const openControlPanel = vi.fn()
@@ -26,10 +28,10 @@ const { default: ServicesCard } = await import('~/components/client/dashboard/Se
 const { useClientStore } = await import('~/stores/client')
 
 /** A provisioned active service on a known host. */
-const ACTIVE = { id: 1, name: 'Starter', domain: 'a.test', username: 'ada', status: 'Active', serverhostname: 'srv.test' }
+const ACTIVE = makeClientService({ id: 1, productName: 'Starter', domain: 'a.test', username: 'ada', server: { name: 'srv', hostname: 'srv.test', ipAddress: null } })
 
 /** A paid service that is not provisioned yet. */
-const PENDING = { id: 2, name: 'Pro', domain: '', username: '', status: 'Pending', serverhostname: '' }
+const PENDING = makeClientService({ id: 2, productName: 'Pro', domain: null, username: null, status: ServiceStatus.Pending, server: null })
 
 beforeEach(() => {
   openControlPanel.mockReset()
@@ -57,7 +59,7 @@ describe('ClientDashboardServicesCard', () => {
 
   it('links a provisioned service to its page and an unprovisioned one to setup', async () => {
     const wrapper = mountClient(ServicesCard)
-    useClientStore().services = [ACTIVE, PENDING] as never
+    useClientStore().services = [ACTIVE, PENDING]
     await nextTick()
 
     expect(wrapper.find('[data-testid="dashboard-service-1"]').attributes('href')).toBe('/client/services/1')
@@ -66,7 +68,7 @@ describe('ClientDashboardServicesCard', () => {
 
   it('shows the setup badge instead of a status for an unprovisioned service', async () => {
     const wrapper = mountClient(ServicesCard)
-    useClientStore().services = [PENDING] as never
+    useClientStore().services = [PENDING]
     await nextTick()
 
     const row = wrapper.find('[data-testid="dashboard-service-2"]')
@@ -84,7 +86,7 @@ describe('ClientDashboardServicesCard', () => {
 
   it('offers the control panel only for an active service on a known host', async () => {
     const wrapper = mountClient(ServicesCard)
-    useClientStore().services = [ACTIVE, { ...PENDING, id: 3, username: 'x', status: 'Suspended', serverhostname: 'srv.test' }] as never
+    useClientStore().services = [ACTIVE, { ...PENDING, id: 3, username: 'x', status: ServiceStatus.Suspended, server: { name: 'srv', hostname: 'srv.test', ipAddress: null } }]
     await nextTick()
 
     expect(wrapper.find('[data-testid="dashboard-service-cpanel-1"]').exists()).toBe(true)
@@ -94,7 +96,7 @@ describe('ClientDashboardServicesCard', () => {
   it('asks the store to open the control panel of the clicked service with its host', async () => {
     openControlPanel.mockResolvedValue(undefined)
     const wrapper = mountClient(ServicesCard)
-    useClientStore().services = [ACTIVE] as never
+    useClientStore().services = [ACTIVE]
     await nextTick()
 
     await wrapper.find('[data-testid="dashboard-service-cpanel-1"]').trigger('click')

@@ -1,3 +1,7 @@
+/**
+ * Admin dashboard statistics store.
+ */
+
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useDashboardApi } from '@/composables/apis/useDashboardApi'

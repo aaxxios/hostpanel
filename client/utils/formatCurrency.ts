@@ -1,55 +1,35 @@
 /**
  * Rendering a money amount without inventing the currency it is in.
  *
- * `/client/services/16` shows `24000` for a billing amount, and the dashboard shows `20000`
- * for invoice #8. Both are the same bug seen twice: no grouping, no decimals, no symbol.
+ * ## Where the currency comes from
  *
- * ## Where the currency actually comes from — checked, not assumed
+ * - **The client profile.** `ClientDto.Currency` in the C# API is a nullable ISO 4217 **code**
+ *   (`backend/src/Innovayse.Hostpanel.Application/Clients/Common/ClientDto.cs`);
+ *   `server/api/portal/client/me.get.ts` forwards it and `types/clientuser.ts` types it as
+ *   `string | null`. It reaches this file as `store.user?.currency`, passed as
+ *   {@link CurrencyInfo.code}.
+ * - **Not `GET /api/portal/public/currencies`.** It proxies `/api/reference/currencies`, which
+ *   returns `CurrencyList.All`, the static ISO 4217 reference table `{ code, name, symbol }`,
+ *   not the operator's configured billing currencies.
  *
- * Three candidates were followed to their source. Only one of them was ever real:
+ * ## `formatMoney` is the sibling for the common case
  *
- * - **The client profile — this is the answer.** `ClientDto.Currency` in the C# API is a
- *   nullable ISO 4217 **code** (`backend/src/Innovayse.Application/Clients/Common/ClientDto.cs`).
- *   `server/api/portal/client/me.get.ts` used to discard it, hardcoding `currency: undefined,
- *   currencyprefix: '', currencysuffix: ''` in both its sso and local branches — which is why
- *   amounts rendered with no symbol in production: not a legacy quirk, a literal in the BFF. It
- *   now forwards the code, and `types/clientuser.ts` types `currency` as `string | null` rather
- *   than the *number* it claimed, which the backend has never sent.
- * - **The invoice — no.** `types/clientinvoice.ts` declared `currencycode` / `currencyprefix` /
- *   `currencysuffix` and pages rendered them, but `InvoiceDto` carries no currency field of any
- *   kind and the BFF routes are bare passthroughs, so all three were always `undefined`. Those
- *   readers now take the code off the account instead.
- * - **A portal setting — no.** `GET /api/portal/public/currencies` looks like the operator's
- *   configured billing currencies. It is not: it proxies `/api/reference/currencies`, which
- *   returns `CurrencyList.All`, the static ISO 4217 reference table `{ code, name, symbol }`.
- *   `composables/useCurrency.ts` looked up `c.id` and read `c.prefix` — no row has either — so
- *   its `prefixFor()` returned `''` for every input it was ever given. It had no callers and
- *   has been deleted; `types/portalcurrency.ts` now describes the shape actually served.
+ * `stores/currency.ts` loads the operator's configured currencies, each with its own
+ * `prefix`/`suffix`/`decimals`, from `GET /api/currencies`. A call site that knows which
+ * configured currency an amount is in (a cart item, an invoice, a product price) calls
+ * `utils/formatMoney.ts`'s `formatMoney(amount, currency)` instead of this function, because it
+ * renders with the operator's own decimal count rather than `Intl`'s per-ISO-code guess. This
+ * function covers the cases where only a bare ISO code, or nothing at all, is known.
  *
- * **So the authoritative currency is `Client.Currency`, and it now reaches this file** as
- * `store.user?.currency`, passed as {@link CurrencyInfo.code}.
- *
- * ## `formatMoney` is the sibling, for the common case now
- *
- * Multi-currency pricing (`docs/superpowers/specs/2026-09-13-multi-currency-pricing-design.md`)
- * added `stores/currency.ts`, which loads the operator's configured currencies — each with its
- * own `prefix`/`suffix`/`decimals` — from `GET /api/currencies`. Most call sites now know
- * exactly which configured currency an amount is in (a cart item, an invoice, a product price)
- * and should call `utils/formatMoney.ts`'s `formatMoney(amount, currency)` instead of this
- * function, because it renders with the operator's own decimal count rather than `Intl`'s
- * per-ISO-code guess. This function remains for the cases described above, where only a bare
- * ISO code (or nothing at all) is known.
- *
-
  * ## What this does instead of guessing
  *
  * Nothing in the frontend knows whether `24000` is drams, roubles or dollars. Printing `֏`
  * because the visitor happens to be reading Armenian would put a currency on a bill that
- * nobody verified — and a wrong symbol on a bill is worse than none, because it is believed.
+ * nobody verified, and a wrong symbol on a bill is worse than none, because it is believed.
  *
  * `Intl.NumberFormat` gives grouping and decimals with no symbol at all, so an amount with no
  * known currency still reads as money: `24,000.00`, or `24 000,00` for a Russian or Armenian
- * reader. When the API *does* send a currency — an ISO code, or a bare prefix/suffix pair —
+ * reader. When the API *does* send a currency (an ISO code, or a bare prefix/suffix pair)
  * it is used, because then it came from the operator's configuration rather than from a guess
  * made here.
  *
@@ -72,7 +52,7 @@ const ISO_4217 = /^[A-Za-z]{3}$/
 /**
  * Everything the API might have told us about the currency an amount is in.
  *
- * Every field is optional and every field is routinely absent — see the module note. Passing
+ * Every field is optional and every field is routinely absent: see the module note. Passing
  * an empty object is the normal case today, not a degenerate one.
  */
 export interface CurrencyInfo {
@@ -140,10 +120,10 @@ const toNumber = (amount: string | number | null | undefined): number | null => 
  *
  * Three outcomes, in order of how much the API told us:
  *
- * - An ISO 4217 `code` — `Intl` places the symbol and picks the minor-unit count itself, so
+ * - An ISO 4217 `code`: `Intl` places the symbol and picks the minor-unit count itself, so
  *   `AMD` renders with no decimals and `USD` with two, in the right position for the locale.
- * - A `prefix` and/or `suffix` and no code — the operator's own symbols wrap a grouped number.
- * - Neither — a grouped number with two decimals and **no symbol**. This is the honest answer
+ * - A `prefix` and/or `suffix` and no code: the operator's own symbols wrap a grouped number.
+ * - Neither: a grouped number with two decimals and **no symbol**. This is the honest answer
  *   and currently the production one; see the module note for why guessing is worse.
  *
  * @param amount - The amount, as a number or the decimal string the API sends.
@@ -169,7 +149,7 @@ export const formatCurrency = (
     }
     catch {
       // `Intl` accepts any three-letter code and only throws on a malformed one, which the
-      // regex above already rejects — so this is belt and braces against an ICU build that is
+      // regex above already rejects, so this is belt and braces against an ICU build that is
       // stricter. Falling through loses the symbol; throwing would lose the amount.
     }
   }

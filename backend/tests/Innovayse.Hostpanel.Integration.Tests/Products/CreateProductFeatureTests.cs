@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Products;
 
 /// <summary>
@@ -11,11 +9,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Products;
 /// refusals, and the authorization boundary.
 /// </summary>
 /// <remarks>
-/// Split from the deleted <c>ProductFeaturesEndpointTests</c>, converted from an
-/// <c>IProductFeatureRepository</c>-backed handler to an <c>IHostpanelDbContext</c> handler
-/// returning <c>Result</c>. Pins the <c>PRODUCT_NOT_FOUND</c> refusal (404, unchanged code, now
-/// reused here) and the duplicate-label rule under its own code,
-/// <c>PRODUCT_FEATURE_LABEL_DUPLICATE</c> (A7 Task 6).
+/// Pins the <c>PRODUCT_NOT_FOUND</c> refusal (404) and the duplicate-label rule under its own code,
+/// <c>PRODUCT_FEATURE_LABEL_DUPLICATE</c>.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateProductFeatureTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

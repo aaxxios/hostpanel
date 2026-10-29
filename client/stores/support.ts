@@ -3,7 +3,7 @@
  * form.
  *
  * The store owns the loading flag and the refusal sentence of each submission, so a page only
- * renders them and branches on the returned {@link SubmitOutcome} — it never wraps an API call
+ * renders them and branches on the returned {@link SubmitOutcome}: it never wraps an API call
  * in `try/catch`. Same pattern as `signIn` in `stores/auth.ts`.
  *
  * URLs and transport belong to {@link useSupportApi}.

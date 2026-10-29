@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Domains;
+
 /// <summary>
 /// Represents an email forwarding rule that routes mail from a source alias
 /// on the domain to an external destination address.
@@ -20,7 +21,7 @@ public sealed class EmailForwardingRule : BaseEntity
     /// <summary>Gets whether this forwarding rule is currently active.</summary>
     public bool IsActive { get; private set; } = true;
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private EmailForwardingRule() { }
 
     /// <summary>

@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core mapping for <see cref="ProductPrice"/>.</summary>
 public sealed class ProductPriceConfiguration : IEntityTypeConfiguration<ProductPrice>
 {
@@ -20,7 +22,7 @@ public sealed class ProductPriceConfiguration : IEntityTypeConfiguration<Product
         builder.Property(x => x.CurrencyCode).IsRequired().HasMaxLength(IsoCodeLength);
         builder.Property(x => x.Cycle).IsRequired().HasConversion<string>().HasMaxLength(CycleLength);
         builder.Property(x => x.Amount).HasColumnType("numeric(18,4)").IsRequired();
-        // One price per product, currency and cycle — SetPrice replaces, it never adds a second.
+        // One price per product, currency and cycle: SetPrice replaces, it never adds a second.
         builder.HasIndex(x => new { x.ProductId, x.CurrencyCode, x.Cycle }).IsUnique();
     }
 }

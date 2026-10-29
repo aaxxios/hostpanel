@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="Announcement"/>.</summary>
 public sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
 {

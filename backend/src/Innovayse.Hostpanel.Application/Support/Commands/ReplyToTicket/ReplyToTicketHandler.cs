@@ -15,13 +15,18 @@ public sealed class ReplyToTicketHandler
     /// <summary>The signed-in caller; the reply author comes from here, never from the request body.</summary>
     private readonly ICurrentUserService _currentUser;
 
+    /// <summary>The clock that dates the reply.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="currentUser">The signed-in caller; the reply author comes from here.</param>
-    public ReplyToTicketHandler(IHostpanelDbContext context, ICurrentUserService currentUser)
+    /// <param name="clock">The clock that dates the reply.</param>
+    public ReplyToTicketHandler(IHostpanelDbContext context, ICurrentUserService currentUser, IClock clock)
     {
         _context = context;
         _currentUser = currentUser;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -46,7 +51,7 @@ public sealed class ReplyToTicketHandler
 
         // Display name from the token's subject; fall back to the email, then the subject id, so a
         // reply is never recorded against nobody.
-        var authorName = _currentUser.UserName;
+        var authorName = await _currentUser.GetUserNameAsync(ct);
         if (string.IsNullOrWhiteSpace(authorName))
         {
             authorName = _currentUser.Email;
@@ -57,7 +62,7 @@ public sealed class ReplyToTicketHandler
             authorName = _currentUser.RequireUserId();
         }
 
-        ticket.AddReply(cmd.Message, authorName, cmd.IsStaffReply);
+        ticket.AddReply(cmd.Message, authorName, cmd.IsStaffReply, _clock.UtcNow);
         await _context.SaveChangesAsync(ct);
         return Result.Success();
     }

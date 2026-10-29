@@ -16,7 +16,7 @@ public sealed class CPanelOptions
     public const string SectionName = "CPanel";
 
     /// <summary>
-    /// Absolute URL of the WHM API, scheme and port included and no trailing slash -- WHM listens
+    /// Absolute URL of the WHM API, scheme and port included and no trailing slash: WHM listens
     /// on 2087 for TLS, e.g. <c>https://server.example.com:2087</c>. Empty means no single-server
     /// cPanel target is configured.
     /// </summary>
@@ -35,7 +35,7 @@ public sealed class CPanelOptions
     public string ServerIp { get; set; } = string.Empty;
 
     /// <summary>
-    /// Whether the whole section was left unset -- a deployment with no single-server cPanel
+    /// Whether the whole section was left unset: a deployment with no single-server cPanel
     /// target.
     /// </summary>
     public bool IsAbsent =>
@@ -50,7 +50,7 @@ public sealed class CPanelOptions
         ApiUrl.Length > 0 && Username.Length > 0 && ApiToken.Length > 0;
 
     /// <summary>
-    /// Whether this section is in a state the process may start with -- entirely unset, or
+    /// Whether this section is in a state the process may start with: entirely unset, or
     /// complete. Half-filled is neither.
     /// </summary>
     public bool IsUsable => IsAbsent || IsConfigured;

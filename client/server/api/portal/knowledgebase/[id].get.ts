@@ -3,14 +3,12 @@
  *
  * Returns one published knowledgebase article, body included.
  *
- * Calls `GET /api/knowledgebase/{id}` -- the route the backend actually declares. This used to
- * call `/knowledgebase/articles/{id}`, a path that was never declared, so every article page
- * 404'd.
+ * Calls `GET /api/knowledgebase/{id}`, the route the backend declares.
  *
  * A missing id and an unpublished draft both come back as **400** with code `INVALID_OPERATION`,
  * not 404: `GetPublishedKbArticleHandler` throws a bare `InvalidOperationException` for either,
  * deliberately answering the two identically so a visitor cannot map the unpublished backlog by
- * guessing ids. That is passed straight through -- the article page renders the failure rather
+ * guessing ids. That is passed straight through: the article page renders the failure rather
  * than an empty article.
  */
 

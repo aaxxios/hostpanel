@@ -1,21 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>SetMyDomainAutoRenew</c> use case —
+/// Integration tests for the client-facing <c>SetMyDomainAutoRenew</c> use case:
 /// <c>PUT /api/me/domains/{id}/auto-renew</c>. The admin equivalent is <c>SetAutoRenew</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SetMyDomainAutoRenewTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// Auto-renew refuses a stranger and applies for the owner -- the handler dispatches through
+    /// Auto-renew refuses a stranger and applies for the owner: the handler dispatches through
     /// <c>IDomainOwnership</c>'s <see cref="Innovayse.Hostpanel.Shared.Models.Result"/>.
     /// </summary>
     [Fact]

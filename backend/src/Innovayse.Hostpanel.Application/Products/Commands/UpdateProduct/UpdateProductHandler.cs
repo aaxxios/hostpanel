@@ -1,12 +1,12 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Products.Common;
-using Innovayse.Hostpanel.Application.Products.Constants;
 using Innovayse.Hostpanel.Application.Products.Extensions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Products.Commands.UpdateProduct;
 
 /// <summary>Updates an existing product's details and prices.</summary>
@@ -48,9 +48,9 @@ public sealed class UpdateProductHandler
             return Result.FailureCode(HostpanelErrorCodes.PRODUCT_NOT_FOUND);
         }
 
-        var prices = await ProductPriceDtos.ResolveAsync(
-            cmd.Prices, cmd.MonthlyPrice, cmd.AnnualPrice, _payerCurrency, ct);
-        prices.ApplyTo(product);
+        var prices = await _payerCurrency.ResolveProductPricesAsync(
+            cmd.Prices, cmd.MonthlyPrice, cmd.AnnualPrice, ct);
+        product.ReplacePrices(prices.CurrencyPrices, prices.ReplaceAllCurrencies);
 
         // The legacy single-currency columns are kept one release so a rollback and the admin
         // services grid still read real numbers: they mirror the base-currency prices as stored

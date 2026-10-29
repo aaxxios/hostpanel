@@ -188,9 +188,8 @@ const chatProvider = computed(() => getPortalSetting(PortalSettingKey.ChatProvid
 /**
  * Whether to offer the live chat action.
  *
- * Both spellings are accepted. The provider is Innochat, which is what an operator configuring
- * this today would reasonably write, but the setting has shipped seeded with the legacy value since the
- * first release and existing installs have that value stored. Refusing it would have switched
+ * Every {@link ChatProvider} value is accepted, the one the setting has been seeded with since
+ * the first release included: existing installs have it stored, and refusing it would switch
  * the widget off for every one of them on upgrade.
  */
 const liveChatEnabled = computed(() =>

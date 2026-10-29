@@ -1,14 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Errors;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Testimonials;
 
 /// <summary>
-/// Integration tests for the <c>UpdateTestimonialOrder</c> use case — <c>PUT /api/admin/testimonials/order</c>.
+/// Integration tests for the <c>UpdateTestimonialOrder</c> use case: <c>PUT /api/admin/testimonials/order</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateTestimonialOrderTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -33,9 +31,9 @@ public sealed class UpdateTestimonialOrderTests(IntegrationTestFactory factory) 
         ids.IndexOf(second).Should().BeLessThan(ids.IndexOf(first));
     }
 
-    /// <summary>An id that names no record is skipped without failing the rest.</summary>
+    /// <summary>An id that names no record refuses the whole request and moves nothing.</summary>
     [Fact]
-    public async Task Reorder_UnknownId_IsSkipped()
+    public async Task Reorder_UnknownId_RefusesNotFoundAndMovesNothing()
     {
         var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
         var id = await StorefrontContentTestSeeds.CreateAsync(client, "/api/admin/testimonials", StorefrontContentTestSeeds.TestimonialBody(sortOrder: 70));
@@ -45,9 +43,10 @@ public sealed class UpdateTestimonialOrderTests(IntegrationTestFactory factory) 
             items = new[] { new { id = 2147483000, sortOrder = 1 }, new { id, sortOrder = 5 } },
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await StorefrontContentTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.TESTIMONIAL_NOT_FOUND);
         var fetched = await client.GetFromJsonAsync<JsonElement>($"/api/admin/testimonials/{id}");
-        fetched.GetProperty("sortOrder").GetInt32().Should().Be(5);
+        fetched.GetProperty("sortOrder").GetInt32().Should().Be(70);
     }
 
     /// <summary>A negative sort order is refused as a validation failure.</summary>

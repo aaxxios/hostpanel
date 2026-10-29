@@ -11,8 +11,8 @@ public static class TransactionReportFilterExtensions
 {
     /// <summary>Applies the Transactions report's optional filters to a transaction query.</summary>
     /// <param name="transactions">The base transaction query.</param>
-    /// <param name="dateFrom">Earliest transaction date to include, inclusive.</param>
-    /// <param name="dateTo">Latest transaction date to include, inclusive.</param>
+    /// <param name="dateFrom">Earliest transaction day to include, inclusive (UTC).</param>
+    /// <param name="dateTo">Latest transaction day to include, inclusive (UTC): everything before the next day's midnight.</param>
     /// <param name="paymentMethod">
     /// Payment method to keep, matched exactly; ignored (every method kept) when
     /// <see langword="null"/> or blank.
@@ -30,12 +30,14 @@ public static class TransactionReportFilterExtensions
 
         if (dateFrom.HasValue)
         {
-            query = query.Where(t => t.Date >= dateFrom.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            var from = dateFrom.Value.StartOfDayUtc();
+            query = query.Where(t => t.Date >= from);
         }
 
         if (dateTo.HasValue)
         {
-            query = query.Where(t => t.Date <= dateTo.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            var toExclusive = dateTo.Value.EndOfDayExclusiveUtc();
+            query = query.Where(t => t.Date < toExclusive);
         }
 
         if (!string.IsNullOrWhiteSpace(paymentMethod))

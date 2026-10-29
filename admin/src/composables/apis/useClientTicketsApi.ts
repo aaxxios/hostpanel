@@ -8,7 +8,7 @@
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { ClientTicketStats } from '@/types/client'
 import type { Department } from '@/types/department'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { CreateTicketPayload, Ticket, TicketListItem, UpdateTicketPayload } from '@/types/ticket'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
@@ -30,8 +30,8 @@ export const useClientTicketsApi = () => {
    * @param search - Optional subject search text.
    * @returns One page of tickets.
    */
-  const list = (clientId: number | string, page: number, pageSize: number, search?: string): Promise<PagedResult<TicketListItem>> =>
-    request<PagedResult<TicketListItem>>(`${ApiPath.TicketsClient}/${clientId}${buildQuery({ page, pageSize, search })}`)
+  const list = (clientId: number | string, page: number, pageSize: number, search?: string): Promise<PaginatedList<TicketListItem>> =>
+    request<PaginatedList<TicketListItem>>(`${ApiPath.TicketsClient}/${clientId}${buildQuery({ page, pageSize, search })}`)
 
   /**
    * Loads the ticket statistics of a client.

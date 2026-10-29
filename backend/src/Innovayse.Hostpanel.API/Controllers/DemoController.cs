@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Demo.Common;
 using Innovayse.Hostpanel.Application.Demo.Queries.GetDemo;
 using Innovayse.Hostpanel.Shared.Controllers;
 using Innovayse.Hostpanel.Shared.Models;
@@ -13,6 +14,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// admin controller so the anonymous path can never widen by someone adding a field elsewhere.
 /// </summary>
 [Route("api/public/demo")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class DemoController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>

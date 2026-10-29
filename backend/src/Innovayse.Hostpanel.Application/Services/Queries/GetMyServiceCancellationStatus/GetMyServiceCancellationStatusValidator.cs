@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Queries.GetMyServiceCancellationStatus;
+
 /// <summary>Validates <see cref="GetMyServiceCancellationStatusQuery"/> before the handler executes.</summary>
 public sealed class GetMyServiceCancellationStatusValidator : LocalizedValidator<GetMyServiceCancellationStatusQuery>
 {

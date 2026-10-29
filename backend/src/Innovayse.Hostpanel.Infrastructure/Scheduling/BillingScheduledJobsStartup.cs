@@ -5,134 +5,60 @@ using Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.ReconcileGatewayPaymentsCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.SendRenewalRemindersCron;
 using Innovayse.Hostpanel.Application.Billing.Commands.SuspendOverdueServicesCron;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Provisioning.Commands.AutoTerminateSuspendedCron;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Wolverine;
 
 namespace Innovayse.Hostpanel.Infrastructure.Scheduling;
 
 /// <summary>
-/// Hosted service that schedules the daily billing jobs on application startup: renewal invoices (05:00 UTC),
-/// billable items processing and renewal reminders (06:00), overdue checks (07:00), overdue suspensions (09:00), plus the server sync,
-/// auto-terminate and gateway reconcile jobs.
+/// Hosted service that starts the billing jobs on application startup: renewal invoices, billable
+/// items processing, renewal reminders, overdue checks, overdue suspensions, plus the server sync,
+/// auto-terminate and gateway reconcile jobs. Their hours and intervals are the
+/// <c>ScheduledJobsOptions</c> values the job handlers read too.
 /// </summary>
+/// <remarks>
+/// <see cref="RecurringJobs.StartAsync{TCommand}"/> schedules each job for its next regular run, or
+/// right now when the job missed its last one (the application was down or restarting during the run
+/// hour). The handlers schedule every later run themselves.
+/// </remarks>
 public sealed class BillingScheduledJobsStartup : IHostedService
 {
-    /// <summary>The scope factory this class uses.</summary>
+    /// <summary>Opens the scope each startup run resolves its services in.</summary>
     private readonly IServiceScopeFactory _scopeFactory;
 
-    /// <summary>The logger this class uses.</summary>
-    private readonly ILogger<BillingScheduledJobsStartup> _logger;
-
     /// <summary>Initializes a new instance of the <see cref="BillingScheduledJobsStartup"/> class.</summary>
-    /// <param name="scopeFactory">The scope factory this class uses.</param>
-    /// <param name="logger">The logger this class uses.</param>
-    public BillingScheduledJobsStartup(IServiceScopeFactory scopeFactory, ILogger<BillingScheduledJobsStartup> logger)
+    /// <param name="scopeFactory">Opens the scope each startup run resolves its services in.</param>
+    public BillingScheduledJobsStartup(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
-        _logger = logger;
     }
 
-    /// <summary>Hour (UTC) at which <see cref="ProcessBillableItemsCronCommand"/> should execute.</summary>
-    private const int BillableItemsCronHour = 6;
-
-    /// <summary>Hour (UTC) at which <see cref="CheckOverdueInvoicesCronCommand"/> should execute.</summary>
-    private const int OverdueCronHour = 7;
-
-    /// <summary>Hour (UTC) at which <see cref="ProcessRenewalsCronCommand"/> should execute.</summary>
-    private const int RenewalsCronHour = 5;
-
-    /// <summary>Hour (UTC) at which <see cref="SendRenewalRemindersCronCommand"/> should execute.</summary>
-    private const int RenewalRemindersCronHour = 6;
-
-    /// <summary>Hour (UTC) at which <see cref="SuspendOverdueServicesCronCommand"/> should execute.</summary>
-    private const int SuspendOverdueCronHour = 9;
-
-    /// <summary>Hour (UTC) at which <see cref="AutoTerminateSuspendedCronCommand"/> should execute.</summary>
-    private const int AutoTerminateCronHour = 8;
-
-    /// <summary>Hour (UTC) at which <see cref="SyncServerAccountCountsCronCommand"/> should execute.</summary>
-    private const int ServerSyncCronHour = 6;
-
-    /// <summary>
-    /// Schedules the billable items cron job for its next daily occurrence.
-    /// </summary>
+    /// <summary>Starts every billing job.</summary>
     /// <param name="cancellationToken">Cancellation token provided by the host.</param>
-    /// <returns>A <see cref="Task"/> that completes once the message is enqueued.</returns>
+    /// <returns>A <see cref="Task"/> that completes once the first run of every job is scheduled.</returns>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var jobs = scope.ServiceProvider.GetRequiredService<RecurringJobs>();
+        var schedules = jobs.Schedules;
 
-        var billableItemsRun = NextDailyOccurrence(BillableItemsCronHour);
-        await bus.ScheduleAsync(new ProcessBillableItemsCronCommand(), billableItemsRun);
-        _logger.LogInformation(
-            "ProcessBillableItemsCronCommand scheduled for {ScheduledAt:u}.",
-            billableItemsRun);
-
-        var overdueRun = NextDailyOccurrence(OverdueCronHour);
-        await bus.ScheduleAsync(new CheckOverdueInvoicesCronCommand(), overdueRun);
-        _logger.LogInformation(
-            "CheckOverdueInvoicesCronCommand scheduled for {ScheduledAt:u}.",
-            overdueRun);
-
-        var renewalsRun = NextDailyOccurrence(RenewalsCronHour);
-        await bus.ScheduleAsync(new ProcessRenewalsCronCommand(), renewalsRun);
-        _logger.LogInformation(
-            "ProcessRenewalsCronCommand scheduled for {ScheduledAt:u}.",
-            renewalsRun);
-
-        var remindersRun = NextDailyOccurrence(RenewalRemindersCronHour);
-        await bus.ScheduleAsync(new SendRenewalRemindersCronCommand(), remindersRun);
-        _logger.LogInformation(
-            "SendRenewalRemindersCronCommand scheduled for {ScheduledAt:u}.",
-            remindersRun);
-
-        var suspendOverdueRun = NextDailyOccurrence(SuspendOverdueCronHour);
-        await bus.ScheduleAsync(new SuspendOverdueServicesCronCommand(), suspendOverdueRun);
-        _logger.LogInformation(
-            "SuspendOverdueServicesCronCommand scheduled for {ScheduledAt:u}.",
-            suspendOverdueRun);
-
-        var serverSyncRun = NextDailyOccurrence(ServerSyncCronHour);
-        await bus.ScheduleAsync(new SyncServerAccountCountsCronCommand(), serverSyncRun);
-        _logger.LogInformation(
-            "SyncServerAccountCountsCronCommand scheduled for {ScheduledAt:u}.",
-            serverSyncRun);
-
-        var autoTerminateRun = NextDailyOccurrence(AutoTerminateCronHour);
-        await bus.ScheduleAsync(new AutoTerminateSuspendedCronCommand(), autoTerminateRun);
-        _logger.LogInformation(
-            "AutoTerminateSuspendedCronCommand scheduled for {ScheduledAt:u}.",
-            autoTerminateRun);
-
-        var reconcileRun = DateTimeOffset.UtcNow.AddMinutes(
-            Innovayse.Hostpanel.Application.Billing.Commands.ReconcileGatewayPaymentsCron
-                .ReconcileGatewayPaymentsCronHandler.IntervalMinutes);
-        await bus.ScheduleAsync(new ReconcileGatewayPaymentsCronCommand(), reconcileRun);
-        _logger.LogInformation(
-            "ReconcileGatewayPaymentsCronCommand scheduled for {ScheduledAt:u}.", reconcileRun);
+        await jobs.StartAsync<ProcessBillableItemsCronCommand>(schedules.ProcessBillableItems, cancellationToken);
+        await jobs.StartAsync<CheckOverdueInvoicesCronCommand>(schedules.CheckOverdueInvoices, cancellationToken);
+        await jobs.StartAsync<ProcessRenewalsCronCommand>(schedules.ProcessRenewals, cancellationToken);
+        await jobs.StartAsync<SendRenewalRemindersCronCommand>(schedules.SendRenewalReminders, cancellationToken);
+        await jobs.StartAsync<SuspendOverdueServicesCronCommand>(schedules.SuspendOverdueServices, cancellationToken);
+        await jobs.StartAsync<SyncServerAccountCountsCronCommand>(schedules.SyncServerAccountCounts, cancellationToken);
+        await jobs.StartAsync<AutoTerminateSuspendedCronCommand>(schedules.AutoTerminateSuspended, cancellationToken);
+        await jobs.StartAsync<ReconcileGatewayPaymentsCronCommand>(schedules.ReconcileGatewayPayments, cancellationToken);
     }
 
     /// <summary>
-    /// No-op — scheduled messages persist in the outbox; no cleanup is required on shutdown.
+    /// No-op: nothing needs cleanup on shutdown. A run that was scheduled in memory is lost with the
+    /// process, and the next start catches the job up from its last recorded success.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token provided by the host.</param>
     /// <returns>A completed <see cref="Task"/>.</returns>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    /// <summary>
-    /// Calculates the next UTC <see cref="DateTimeOffset"/> at which the given hour occurs.
-    /// If the hour has already passed today, returns the same hour tomorrow.
-    /// </summary>
-    /// <param name="hour">Target hour in UTC (0–23).</param>
-    /// <returns>The next occurrence of the specified hour in UTC.</returns>
-    private static DateTimeOffset NextDailyOccurrence(int hour)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var candidate = new DateTimeOffset(now.Year, now.Month, now.Day, hour, 0, 0, TimeSpan.Zero);
-        return candidate > now ? candidate : candidate.AddDays(1);
-    }
 }

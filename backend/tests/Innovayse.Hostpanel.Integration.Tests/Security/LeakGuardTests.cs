@@ -1,6 +1,4 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,7 +47,7 @@ public sealed class LeakGuardTests(IntegrationTestFactory factory) : IClassFixtu
         response.Headers.Contains("Server").Should().BeFalse(because: "the web server must not name itself");
     }
 
-    /// <summary>Content-Type, Content-Disposition and ETag of our own download survive the sweep.</summary>
+    /// <summary>Content-Type, Content-Disposition and ETag of our own download survive the header filtering.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task AllowListedHeaders_SurviveAsync()

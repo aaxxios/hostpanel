@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Services.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -13,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Services;
 /// service, and a stranger is refused with the same <c>SERVICE_NOT_FOUND</c> a missing id would
 /// answer.
 /// </summary>
-/// <remarks>Moved from the deleted <c>MyServicesOwnershipEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CancelMyServiceTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -52,11 +48,11 @@ public sealed class CancelMyServiceTests(IntegrationTestFactory factory) : IClas
         var (owner, ownerClientId) = await ServicesTestSeeds.RegisterOwnerAsync(factory, "cancel-mine-conflict");
         var serviceId = await ServicesTestSeeds.SeedPendingServiceAsync(factory, ownerClientId);
         (await owner.PostAsJsonAsync(
-            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.Immediate), reason = "First" }))
+            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.EndOfBillingPeriod), reason = "First" }))
             .EnsureSuccessStatusCode();
 
         var response = await owner.PostAsJsonAsync(
-            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.Immediate), reason = "Second" });
+            $"/api/me/services/{serviceId}/cancel", new { type = nameof(CancellationType.EndOfBillingPeriod), reason = "Second" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await ServicesTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CANCELLATION_ALREADY_PENDING);

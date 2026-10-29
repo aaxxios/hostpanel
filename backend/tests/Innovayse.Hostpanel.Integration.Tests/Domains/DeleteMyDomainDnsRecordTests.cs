@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>DeleteMyDomainDnsRecord</c> use case —
+/// Integration tests for the client-facing <c>DeleteMyDomainDnsRecord</c> use case:
 /// <c>DELETE /api/me/domains/{id}/dns/{recordId}</c>. The admin equivalent is
 /// <c>DeleteDnsRecord</c>; the sibling client-facing use cases in the same lifecycle are
 /// <c>AddMyDomainDnsRecord</c> and <c>UpdateMyDomainDnsRecord</c>.
@@ -29,7 +26,7 @@ public sealed class DeleteMyDomainDnsRecordTests(IntegrationTestFactory factory)
 
         var domainAfterAdd = await owner.GetAsync($"/api/me/domains/{domainId}");
         using var domainBody = JsonDocument.Parse(await domainAfterAdd.Content.ReadAsStringAsync());
-        var recordId = domainBody.RootElement.GetProperty("dnsRecords")[0].GetProperty("id").GetInt32();
+        var recordId = domainBody.RootElement.GetProperty("management").GetProperty("dnsRecords")[0].GetProperty("id").GetInt32();
 
         var strangersDelete = await stranger.DeleteAsync($"/api/me/domains/{domainId}/dns/{recordId}");
         strangersDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);

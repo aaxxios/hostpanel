@@ -1,15 +1,29 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>GET /api/clients/{id}/summary</c>: the admin dashboard summary for one client.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetClientSummaryTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The summary groups its figures: invoices per status, transaction totals, record counts and the credit balance.</summary>
+    [Fact]
+    public async Task SummaryGroupsItsFigures()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var body = await admin.GetFromJsonAsync<JsonElement>($"/api/clients/{clientId}/summary");
+
+        body.GetProperty("invoices").GetProperty("unpaid").GetProperty("count").GetInt32().Should().Be(0);
+        body.GetProperty("transactions").GetProperty("netIncome").GetDecimal().Should().Be(0m);
+        body.GetProperty("counts").GetProperty("totalServicesCount").GetInt32().Should().Be(0);
+        body.GetProperty("creditBalance").GetDecimal().Should().Be(0m);
+        body.GetProperty("recentEmails").GetArrayLength().Should().Be(0);
+    }
+
     /// <summary>The summary for a real client answers 200.</summary>
     [Fact]
     public async Task SummaryReturnsOkForARealClient()

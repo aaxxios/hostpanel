@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
  * Notes tab of the invoice screen: the admin-only notes (shown read-only or edited and saved),
- * with the line items and the transaction ledgers below.
+ * with the line items and the transaction ledgers below. The outcome of a save (success, or the
+ * API's sentence) shows under the editor.
  */
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import InvoiceItemsSection from '@/components/billing/InvoiceItemsSection.vue'
 import InvoiceTransactionsSection from '@/components/billing/InvoiceTransactionsSection.vue'
@@ -11,23 +12,21 @@ import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { useBillingStore } from '@/stores/billing'
-import type { Invoice } from '@/types/invoice'
+import type { InvoiceDetail } from '@/types/invoice'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   /** The invoice whose notes are shown. */
-  invoice: Invoice
+  invoice: InvoiceDetail
   /** True to show the notes and the items without editing controls. */
   readonly?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted after the notes or the items were saved. */
-  updated: []
 }>()
 
 const store = useBillingStore()
@@ -38,18 +37,31 @@ const notes = ref('')
 /** True while the notes are being saved. */
 const saving = ref(false)
 
+/** The outcome line of the last save, shown under the editor. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /** Resets the editor to the notes the invoice carries. */
 const populate = (): void => {
   notes.value = props.invoice.notes ?? ''
 }
 
-/** Saves the notes and tells the parent to reload. */
+/**
+ * Saves the notes and shows the outcome.
+ *
+ * @returns Resolves when the request has settled.
+ */
 const save = async (): Promise<void> => {
+  feedback.clear()
   saving.value = true
   const ok = await store.updateNotes(props.invoice.id, notes.value)
   saving.value = false
   if (ok) {
-    emit('updated')
+    feedback.show(t('shared.changesSavedSuccessfully'), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
   }
 }
 
@@ -88,10 +100,11 @@ watch(() => props.invoice.notes, populate)
             {{ t('shared.saveChanges') }}
           </UiButton>
         </UiStack>
+        <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-invoice-notes-feedback" />
       </UiStack>
     </UiCard>
 
-    <InvoiceItemsSection :invoice="invoice" :readonly="readonly" @updated="emit('updated')" />
+    <InvoiceItemsSection :invoice="invoice" :readonly="readonly" />
     <InvoiceTransactionsSection :invoice="invoice" />
   </UiStack>
 </template>

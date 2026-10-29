@@ -1,9 +1,8 @@
 using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Wolverine;
-using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Billing.Commands.CompleteGatewayPayment.Enums;
 
 namespace Innovayse.Hostpanel.Application.Billing.Commands.CompleteMyGatewayPayment;
 /// <summary>
@@ -42,17 +41,17 @@ public sealed class CompleteMyGatewayPaymentHandler
     /// record.
     /// </returns>
     /// <exception cref="UnauthorizedAccessException">Thrown when the request carries no subject.</exception>
-    public async Task<Result<GatewayCompletionState>> HandleAsync(
+    public async Task<Result<GatewayCompletionDto>> HandleAsync(
         CompleteMyGatewayPaymentCommand cmd, CancellationToken ct)
     {
         var ownershipOutcome = await _ownership.RequireOwnedByCallerAsync(cmd.InvoiceId, ct);
         if (ownershipOutcome.IsFailure)
         {
-            return Result<GatewayCompletionState>.FailureCode(ownershipOutcome.ErrorCode!);
+            return Result<GatewayCompletionDto>.FailureCode(ownershipOutcome.ErrorCode!);
         }
 
         // The staff use case already answers with a code; its refusal passes through unchanged.
-        return await _bus.InvokeAsync<Result<GatewayCompletionState>>(
+        return await _bus.InvokeAsync<Result<GatewayCompletionDto>>(
             new CompleteGatewayPaymentCommand(cmd.InvoiceId), ct);
     }
 }

@@ -53,7 +53,7 @@
  * nova migration walkthrough.
  *
  * An ordered list, because the steps happen in that order and the numbering is
- * information rather than decoration — the visible digits are hidden from
+ * information rather than decoration: the visible digits are hidden from
  * assistive technology, which gets the ordering from the list itself.
  */
 import NovaCta from '~/templates/nova/sections/NovaCta.vue'

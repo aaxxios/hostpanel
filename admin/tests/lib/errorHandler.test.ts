@@ -79,6 +79,12 @@ describe('fieldErrors', () => {
     })
   })
 
+  it('keys a field of a nested object by its dotted camelCase path', () => {
+    const nested = { type: 'VALIDATION_ERROR', errors: { 'Endpoint.Hostname': ['Hostname is required.'] } }
+
+    expect(fieldErrors(new ApiError(400, nested))).toEqual({ 'endpoint.hostname': 'Hostname is required.' })
+  })
+
   it('is empty when the response named no fields or never arrived', () => {
     expect(fieldErrors(new ApiError(400, { type: 'X', detail: 'No.' }))).toEqual({})
     expect(fieldErrors(new ApiError(500, null))).toEqual({})

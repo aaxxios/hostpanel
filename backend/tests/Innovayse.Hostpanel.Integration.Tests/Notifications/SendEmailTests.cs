@@ -1,27 +1,33 @@
-using FluentAssertions;
+using System.Net.Http.Json;
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
+using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
 /// <summary>
-/// Integration tests for the <c>SendEmail</c> use case. There is no HTTP route for this command —
-/// every caller is an internal event handler, fire-and-forget — so each test dispatches
+/// Integration tests for the <c>SendEmail</c> use case. There is no HTTP route for this command:
+/// every caller is an internal event handler, fire-and-forget, so each test dispatches
 /// <see cref="SendEmailCommand"/> straight through <see cref="IMessageBus"/>, exactly as
 /// the notification handler tests do; those tests exercise the handlers that call it.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class SendEmailTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>The typed data every test sends; its templates print <c>{{ first_name }}</c>.</summary>
+    private static readonly UserInviteTemplateModel AdaInvite = new("https://panel.example/invite", "Acme Ltd", "Ada");
+
     /// <summary>
     /// Builds a host of its own with the SMTP relay replaced by <paramref name="emailSender"/>, so
     /// the fake this test reads back is the one the command actually wrote to.
@@ -30,7 +36,7 @@ public sealed class SendEmailTests(IntegrationTestFactory factory) : IClassFixtu
     /// <returns>The isolated host.</returns>
     private WebApplicationFactory<Program> HostWithFakeRelay(FakeEmailSender emailSender) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IEmailSender>(_ => emailSender)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(emailSender)));
 
     /// <summary>A known, active template renders and sends, and the attempt is logged as successful.</summary>
     [Fact]
@@ -42,11 +48,11 @@ public sealed class SendEmailTests(IntegrationTestFactory factory) : IClassFixtu
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var slug = $"send-email-{Guid.NewGuid():N}";
-        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{name}}");
+        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{first_name}}");
         var to = $"send-email-{Guid.NewGuid():N}@example.test";
 
         var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
-            new SendEmailCommand(to, slug, new { name = "Ada" }), CancellationToken.None);
+            new SendEmailCommand(to, null, slug, AdaInvite), CancellationToken.None);
 
         outcome.IsSuccess.Should().BeTrue();
         Assert.Single(emailSender.Sent, m => m.To == to);
@@ -64,7 +70,7 @@ public sealed class SendEmailTests(IntegrationTestFactory factory) : IClassFixtu
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
-            new SendEmailCommand($"nobody-{Guid.NewGuid():N}@example.test", $"missing-{Guid.NewGuid():N}", new { }),
+            new SendEmailCommand($"nobody-{Guid.NewGuid():N}@example.test", null, $"missing-{Guid.NewGuid():N}", AdaInvite),
             CancellationToken.None);
 
         outcome.IsFailure.Should().BeTrue();
@@ -82,13 +88,127 @@ public sealed class SendEmailTests(IntegrationTestFactory factory) : IClassFixtu
         using var scope = host.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var slug = $"send-email-inactive-{Guid.NewGuid():N}";
-        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{name}}", isActive: false);
+        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{first_name}}", isActive: false);
         var to = $"send-email-{Guid.NewGuid():N}@example.test";
 
         var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
-            new SendEmailCommand(to, slug, new { name = "Ada" }), CancellationToken.None);
+            new SendEmailCommand(to, null, slug, AdaInvite), CancellationToken.None);
 
         outcome.IsSuccess.Should().BeTrue();
         Assert.Empty(emailSender.Sent);
+    }
+
+    /// <summary>A recipient whose language is Russian gets the Russian version of the template, not the default one.</summary>
+    [Fact]
+    public async Task Send_RussianRecipient_SendsTheRussianVersion()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = HostWithFakeRelay(emailSender);
+        using var scope = host.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var slug = $"send-email-ru-{Guid.NewGuid():N}";
+        await SeedVersionsAsync(scope, slug, ("en", "Hello {{first_name}}"), ("ru", "Привет, {{first_name}}"));
+        var to = $"send-email-{Guid.NewGuid():N}@example.test";
+
+        var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
+            new SendEmailCommand(to, "ru", slug, AdaInvite), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        emailSender.Sent.Should().ContainSingle(m => m.To == to)
+            .Which.Subject.Should().Be("Привет, Ada");
+    }
+
+    /// <summary>A recipient whose language has no version yet gets the default language's version instead of nothing.</summary>
+    [Fact]
+    public async Task Send_MissingTranslation_FallsBackToTheDefaultLanguage()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = HostWithFakeRelay(emailSender);
+        using var scope = host.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var slug = $"send-email-fallback-{Guid.NewGuid():N}";
+        await SeedVersionsAsync(scope, slug, ("en", "Hello {{first_name}}"), ("ru", "Привет, {{first_name}}"));
+        var to = $"send-email-{Guid.NewGuid():N}@example.test";
+
+        var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
+            new SendEmailCommand(to, "hy", slug, AdaInvite), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        emailSender.Sent.Should().ContainSingle(m => m.To == to)
+            .Which.Subject.Should().Be("Hello Ada");
+    }
+
+    /// <summary>
+    /// A relay that refuses the message is logged as failed with the classified reason, and the
+    /// command still answers success because every caller fires it and forgets it.
+    /// </summary>
+    [Fact]
+    public async Task Send_RelayRefuses_LogsTheClassifiedFailure()
+    {
+        var emailSender = new FakeEmailSender { FailWith = EmailSendFailure.AuthenticationRejected };
+        var host = HostWithFakeRelay(emailSender);
+        using var scope = host.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var slug = $"send-email-refused-{Guid.NewGuid():N}";
+        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{first_name}}");
+        var to = $"send-email-{Guid.NewGuid():N}@example.test";
+
+        var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
+            new SendEmailCommand(to, null, slug, AdaInvite), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        var log = await context.EmailLogs.AsNoTracking().FirstAsync(l => l.To == to);
+        log.Success.Should().BeFalse();
+        log.Failure.Should().Be(EmailSendFailure.AuthenticationRejected);
+    }
+
+    /// <summary>Stores one active version per language of a fresh template slug.</summary>
+    /// <param name="scope">The test host scope whose data context to write through.</param>
+    /// <param name="slug">The template slug.</param>
+    /// <param name="versions">The language code and subject of each version.</param>
+    /// <returns>A task that completes once the versions are stored.</returns>
+    private static async Task SeedVersionsAsync(
+        IServiceScope scope, string slug, params (string Language, string Subject)[] versions)
+    {
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        foreach (var (language, subject) in versions)
+        {
+            context.EmailTemplates.Add(EmailTemplate.Create(slug, language, subject, "Body", null));
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A mail sent with a contact copy also reaches the contacts who switched that kind of email on,
+    /// and only them: a contact who switched it off, and the recipient's own address, get nothing extra.
+    /// </summary>
+    [Fact]
+    public async Task Send_WithContactCopy_AlsoMailsTheContactsWhoWantThatKind()
+    {
+        var emailSender = new FakeEmailSender();
+        var host = HostWithFakeRelay(emailSender);
+        using var scope = host.Services.CreateScope();
+        var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var slug = $"send-email-copy-{Guid.NewGuid():N}";
+        await NotificationsTestSeeds.EnsureTemplateAsync(factory, slug, "Hello {{first_name}}");
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var to = $"send-email-copy-{Guid.NewGuid():N}@example.test";
+        var wanting = $"wants-{Guid.NewGuid():N}@example.test";
+        var declining = $"declines-{Guid.NewGuid():N}@example.test";
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Wants", wanting, true))).EnsureSuccessStatusCode();
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Declines", declining, false))).EnsureSuccessStatusCode();
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Same", to.ToUpperInvariant(), true))).EnsureSuccessStatusCode();
+
+        var outcome = await bus.InvokeAsync<Innovayse.Hostpanel.Shared.Models.Result>(
+            new SendEmailCommand(to, null, slug, AdaInvite, new ContactCopy(clientId, ContactNotification.Invoice)), CancellationToken.None);
+
+        outcome.IsSuccess.Should().BeTrue();
+        emailSender.Sent.Select(m => m.To).Should().BeEquivalentTo(new[] { to, wanting });
+        (await context.EmailLogs.AsNoTracking().CountAsync(l => l.To == wanting)).Should().Be(1);
+        (await context.EmailLogs.AsNoTracking().CountAsync(l => l.To == declining)).Should().Be(0);
     }
 }

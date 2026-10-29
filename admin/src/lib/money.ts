@@ -43,8 +43,8 @@ const MONEY_FORMAT_LOCALE = 'en-US'
 
 /**
  * Multiplier applied to a USD-denominated figure to restate it in the given currency. The rates
- * are fixed values, exactly as they were in each report screen; naming the closed set of
- * currencies is what makes every lookup total, so a conversion can never produce `NaN`.
+ * are fixed values; naming the closed set of currencies is what makes every lookup total, so a
+ * conversion can never produce `NaN`.
  */
 export const REPORT_CURRENCY_RATES: Record<ReportCurrency, number> = {
   USD: 1,
@@ -86,12 +86,20 @@ export const currencyLabel = (code: CurrencyCode): string => `${code} (${CURRENC
 export const formatMoney = (amount: number): string => `$${amount.toFixed(2)}`
 
 /**
- * Formats a large dollar total with grouping and no decimals (dashboard tiles).
+ * Formats a large total in the currency the API names, with grouping and no decimals (dashboard tiles).
  *
- * @param amount - Numeric value.
- * @returns For example "$12,500".
+ * @param amount - Amount in the given currency.
+ * @param code - ISO 4217 currency code.
+ * @returns For example "$12,500"; the rounded number and the code when the code is unknown.
  */
-export const formatMoneyWhole = (amount: number): string => `$${amount.toLocaleString()}`
+export const formatCurrencyWhole = (amount: number, code: string): string => {
+  try {
+    return new Intl.NumberFormat(MONEY_FORMAT_LOCALE, { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(amount)
+  } catch {
+    // An unknown or malformed code makes Intl throw; show the plain number with the code.
+    return `${Math.round(amount).toLocaleString(MONEY_FORMAT_LOCALE)} ${code}`
+  }
+}
 
 /**
  * Formats a dollar amount followed by the currency code, as the billing sums read.

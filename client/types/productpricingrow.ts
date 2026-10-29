@@ -9,7 +9,7 @@ import type { PricingCycle } from '~/types/pricingcycle'
 /** One plan row: its tier name, its first offered price and the feature lines parsed from its description. */
 export interface ProductPricingRow {
   /** Catalogue product id of the plan. */
-  pid: number
+  id: number
   /** Plan name, e.g. "Professional". */
   tier: string
   /** URL slug of the plan, or an empty string when it has none. */

@@ -21,13 +21,21 @@ public sealed class UpdateDownloadCategoryHandler
     /// <summary>Handles the command.</summary>
     /// <param name="cmd">The category to update and its new details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Success, or <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the id names no category.</returns>
+    /// <returns>
+    /// Success, or <c>DOWNLOAD_CATEGORY_NOT_FOUND</c> when the id, or the parent category, names no category.
+    /// </returns>
     public async Task<Result> HandleAsync(UpdateDownloadCategoryCommand cmd, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
         var category = await _context.DownloadCategories.FirstOrDefaultAsync(c => c.Id == cmd.Id, ct);
         if (category is null)
+        {
+            return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
+        }
+
+        if (cmd.ParentCategoryId is { } parentId
+            && !await _context.DownloadCategories.AnyAsync(c => c.Id == parentId, ct))
         {
             return Result.FailureCode(HostpanelErrorCodes.DOWNLOAD_CATEGORY_NOT_FOUND);
         }

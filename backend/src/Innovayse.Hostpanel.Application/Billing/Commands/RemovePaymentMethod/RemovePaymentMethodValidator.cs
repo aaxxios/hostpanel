@@ -18,6 +18,6 @@ public sealed class RemovePaymentMethodValidator : LocalizedValidator<RemovePaym
     public RemovePaymentMethodValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.PaymentMethodId).NotEmpty();
+        RuleFor(x => x.PaymentMethodId).NotEmpty().WithMessage(L["PaymentMethodIdRequired"]);
     }
 }

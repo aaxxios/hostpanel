@@ -1,8 +1,10 @@
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
+
 namespace Innovayse.Hostpanel.Application.Billing.Common;
 
 /// <summary>A card or bank account the card gateway has on file for a customer.</summary>
-/// <param name="Id">The card gateway payment method ID (e.g. <c>pm_1AbC...</c>).</param>
-/// <param name="Type">The gateway's payment method type (<c>card</c> or <c>us_bank_account</c>).</param>
+/// <param name="Id">The card gateway payment method ID (a <c>pm_</c> prefixed id).</param>
+/// <param name="Type">The kind of method, mapped from the gateway's own type code by its adapter.</param>
 /// <param name="Brand">Card network (e.g. "visa"), or the bank name for a bank account.</param>
 /// <param name="Last4">The last four digits of the card or account number.</param>
 /// <param name="ExpiryMonth">Card expiry month, or <see langword="null"/> for a bank account.</param>
@@ -10,7 +12,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="IsDefault">Whether this is the customer's default payment method.</param>
 public sealed record CardPaymentMethodDto(
     string Id,
-    string Type,
+    SavedPaymentMethodType Type,
     string? Brand,
     string? Last4,
     int? ExpiryMonth,

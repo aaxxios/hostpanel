@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace Innovayse.Providers.Inecobank;
+
 /// <summary>
 /// Low-level HTTP client for the Inecobank (Armenian Card) merchant REST API.
-/// Sends form-urlencoded POSTs and parses the JSON responses leniently — the
+/// Sends form-urlencoded POSTs and parses the JSON responses leniently: the
 /// gateway returns errorCode sometimes as a number and sometimes as a string.
 /// </summary>
 public sealed class InecobankApiClient
@@ -17,8 +19,8 @@ public sealed class InecobankApiClient
 
     /// <summary>
     /// Synthetic <see cref="InecobankApiException.ErrorCode"/> used for failures detected on
-    /// this side of the HTTP call — a non-2xx response, or a response body that is not valid
-    /// JSON — rather than a business error the gateway itself reported. The merchant manual's
+    /// this side of the HTTP call, a non-2xx response, or a response body that is not valid
+    /// JSON, rather than a business error the gateway itself reported. The merchant manual's
     /// errorCode tables are all non-negative (0 = success), so a negative sentinel can never
     /// collide with a real gateway code, no matter which one the bank adds next.
     /// </summary>
@@ -106,7 +108,7 @@ public sealed class InecobankApiClient
     /// <param name="gatewayOrderId">The gateway-side order id.</param>
     /// <param name="language">Optional ISO 639-1 language for error messages.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The parsed status; never throws on business error codes — callers map them.</returns>
+    /// <returns>The parsed status; never throws on business error codes: callers map them.</returns>
     public async Task<InecobankOrderStatus> GetOrderStatusAsync(
         string gatewayOrderId, string? language, CancellationToken ct)
     {
@@ -127,7 +129,9 @@ public sealed class InecobankApiClient
             ErrorCode: ReadErrorCode(doc),
             OrderStatus: GetLenientInt(root, "orderStatus"),
             ErrorMessage: ReadErrorMessage(doc),
-            AuthRefNum: GetString(doc, "authRefNum"));
+            AuthRefNum: GetString(doc, "authRefNum"),
+            Amount: GetLenientLong(root, "amount"),
+            Currency: GetLenientString(root, "currency"));
     }
 
     /// <summary>Refunds a deposited order, fully or partially.</summary>
@@ -172,15 +176,17 @@ public sealed class InecobankApiClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The parsed JSON response document. Caller owns disposal.</returns>
     /// <exception cref="InecobankApiException">
-    /// Thrown with <see cref="TransportErrorCode"/> when the request fails outright, the
-    /// gateway answers with a non-2xx status, or the response body is not valid JSON — wrapping
-    /// the original <see cref="HttpRequestException"/> or <see cref="JsonException"/> as
-    /// <see cref="Exception.InnerException"/> so callers only ever need to catch this one type.
+    /// Thrown with <see cref="TransportErrorCode"/> when the request fails outright, times out, is
+    /// rejected by the resilience pipeline (timeout or open circuit), the gateway answers with a
+    /// non-2xx status, or the response body is not valid JSON: wrapping the original exception as
+    /// <see cref="Exception.InnerException"/> so callers only ever need to catch this one type. A
+    /// cancellation the caller requested through <paramref name="ct"/> is the one exception that
+    /// still propagates unchanged.
     /// </exception>
     private async Task<JsonDocument> PostAsync(
         string endpoint, Dictionary<string, string> fields, CancellationToken ct)
     {
-        var url = $"{_options.BaseUrl.TrimEnd('/')}/payment/rest/{endpoint}";
+        var url = $"{_options.BaseUrl.TrimEnd('/')}{InecobankEndpoints.BasePath}/{endpoint}";
         using var content = new FormUrlEncodedContent(fields);
 
         HttpResponseMessage? response = null;
@@ -190,7 +196,7 @@ public sealed class InecobankApiClient
             var json = await response.Content.ReadAsStringAsync(ct);
 
             // Deliberately no EnsureSuccessStatusCode(). This gateway reports ordinary business
-            // outcomes with a 500 and a JSON body that names the problem -- asking it for an
+            // outcomes with a 500 and a JSON body that names the problem: asking it for an
             // order id it has never seen answers `500 {"message":"Wrong order id","code":"9500"}`.
             // Treating the status as the verdict threw that body away and turned a perfectly
             // well-understood answer into an opaque transport failure, which is what made the
@@ -221,6 +227,20 @@ public sealed class InecobankApiClient
             throw new InecobankApiException(
                 TransportErrorCode, $"{endpoint}: request to the gateway failed.", ex);
         }
+        catch (ExecutionRejectedException ex)
+        {
+            // The resilience pipeline in front of the client gave up: its timeout elapsed, or its
+            // circuit is open after repeated failures. Neither says anything about the order.
+            throw new InecobankApiException(
+                TransportErrorCode, $"{endpoint}: the gateway call was rejected (timeout or open circuit).", ex);
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            // The HTTP client's own timeout cancels the call without the caller asking. A
+            // cancellation the caller requested is left alone and propagates as such.
+            throw new InecobankApiException(
+                TransportErrorCode, $"{endpoint}: the request to the gateway timed out.", ex);
+        }
         finally
         {
             response?.Dispose();
@@ -232,7 +252,7 @@ public sealed class InecobankApiClient
     /// </summary>
     /// <remarks>
     /// The merchant manual documents <c>errorCode</c>, and that is what a 200 response carries.
-    /// The failure bodies observed from the live gateway carry <c>code</c> instead -- e.g.
+    /// The failure bodies observed from the live gateway carry <c>code</c> instead: e.g.
     /// <c>{"message":"Wrong order id","code":"9500"}</c>. Reading only the documented name left
     /// every such response looking like a success with code 0.
     /// </remarks>
@@ -254,14 +274,21 @@ public sealed class InecobankApiClient
     /// <summary>Throws <see cref="InecobankApiException"/> when the response's errorCode is non-zero.</summary>
     /// <param name="doc">The parsed gateway response.</param>
     /// <param name="endpoint">The endpoint name, included in the exception message for context.</param>
-    /// <exception cref="InecobankApiException">Thrown when the response's errorCode is non-zero.</exception>
-    private static void ThrowOnError(JsonDocument doc, string endpoint)
+    /// <exception cref="InecobankApiException">
+    /// Thrown when the response's errorCode is non-zero. Its message names the endpoint and the
+    /// code only; the gateway's own text goes to the log, never into the exception.
+    /// </exception>
+    private void ThrowOnError(JsonDocument doc, string endpoint)
     {
         var code = ReadErrorCode(doc);
         if (code != 0)
         {
-            var message = ReadErrorMessage(doc) ?? $"Gateway error {code}";
-            throw new InecobankApiException(code, $"{endpoint}: {message}");
+            _logger.LogWarning(
+                "Inecobank {Endpoint} answered error {Code}: {GatewayMessage}",
+                endpoint,
+                code,
+                ReadErrorMessage(doc));
+            throw new InecobankApiException(code, $"{endpoint}: gateway error {code}.");
         }
     }
 
@@ -281,6 +308,47 @@ public sealed class InecobankApiClient
     /// <param name="root">The JSON element to read the property from.</param>
     /// <param name="property">The property name to read.</param>
     /// <returns>The parsed integer, or null when absent or not parseable as an integer.</returns>
+    private static long? GetLenientLong(JsonElement root, string property)
+    {
+        if (!root.TryGetProperty(property, out var el))
+        {
+            return null;
+        }
+
+        return el.ValueKind switch
+        {
+            JsonValueKind.Number when el.TryGetInt64(out var number) => number,
+            JsonValueKind.String when long.TryParse(el.GetString(), out var parsed) => parsed,
+            _ => null,
+        };
+    }
+
+    /// <summary>Reads a property the gateway returns as either a JSON string or a number, as text.</summary>
+    /// <param name="root">The JSON element to read the property from.</param>
+    /// <param name="property">The property name to read.</param>
+    /// <returns>The value as text, or null when absent or neither a string nor a number.</returns>
+    private static string? GetLenientString(JsonElement root, string property)
+    {
+        if (!root.TryGetProperty(property, out var el))
+        {
+            return null;
+        }
+
+        return el.ValueKind switch
+        {
+            JsonValueKind.String => el.GetString(),
+            JsonValueKind.Number => el.GetRawText(),
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Reads an integer property that the gateway inconsistently returns as either a JSON
+    /// number or a numeric string.
+    /// </summary>
+    /// <param name="root">The JSON element to read the property from.</param>
+    /// <param name="property">The property name to read.</param>
+    /// <returns>The parsed integer, or null when absent or not parseable as an integer.</returns>
     private static int? GetLenientInt(JsonElement root, string property)
     {
         if (!root.TryGetProperty(property, out var el))
@@ -290,7 +358,7 @@ public sealed class InecobankApiClient
 
         return el.ValueKind switch
         {
-            JsonValueKind.Number => el.GetInt32(),
+            JsonValueKind.Number when el.TryGetInt32(out var number) => number,
             JsonValueKind.String when int.TryParse(el.GetString(), out var parsed) => parsed,
             _ => null,
         };

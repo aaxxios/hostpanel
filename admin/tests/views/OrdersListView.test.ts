@@ -4,7 +4,9 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import UiSelect from '@/components/ui/UiSelect.vue'
 import OrdersListView from '@/views/OrdersListView.vue'
+import { OrderStatus } from '@/types/order'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
 import { json, problem } from '../helpers/fetch'
@@ -15,7 +17,7 @@ const pendingOrder = {
   orderNumber: 'ORD-0001',
   clientId: 5,
   clientName: 'Ada Lovelace',
-  status: 'Pending',
+  status: OrderStatus.Pending,
   paymentMethod: 'PayPal',
   total: 12.5,
   currency: 'EUR',
@@ -25,7 +27,7 @@ const pendingOrder = {
 }
 
 /** One active order, which offers no accept or cancel. */
-const activeOrder = { ...pendingOrder, id: 2, orderNumber: 'ORD-0002', status: 'Active' }
+const activeOrder = { ...pendingOrder, id: 2, orderNumber: 'ORD-0002', status: OrderStatus.Active }
 
 /**
  * Mounts the list and waits for its first load.
@@ -74,8 +76,8 @@ describe('OrdersListView', () => {
 
   it('accepts a pending order and reloads the list', async () => {
     const mock = stubRoutes({
-      'POST /api/orders/1/accept': () => json({}),
-      'GET /api/orders/1': () => json({ ...pendingOrder, status: 'Active', items: [] }),
+      'POST /api/orders/1/accept': () => json({ failedLines: [] }),
+      'GET /api/orders/1': () => json({ ...pendingOrder, status: OrderStatus.Active, items: [] }),
       'GET /api/orders?': () => json({ items: [pendingOrder], totalCount: 1 }),
     })
     const wrapper = await mountList()
@@ -86,6 +88,39 @@ describe('OrdersListView', () => {
     const requests = mock.mock.calls.map(([url, init]) => `${(init as RequestInit | undefined)?.method ?? 'GET'} ${url as string}`)
     expect(requests).toContain('POST /api/orders/1/accept')
     expect(requests.filter((line) => line.startsWith('GET /api/orders?')).length).toBe(2)
+    expect(wrapper.get('[data-testid="orders-action-feedback"]').text()).toContain('Order accepted.')
+  })
+
+  it('cancels a pending order only after the danger confirmation', async () => {
+    const mock = stubRoutes({
+      'POST /api/orders/1/cancel': () => json({}),
+      'GET /api/orders/1': () => json({ ...pendingOrder, status: OrderStatus.Cancelled, items: [] }),
+      'GET /api/orders?': () => json({ items: [pendingOrder], totalCount: 1 }),
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="orders-cancel-1"]').trigger('click')
+    await flushPromises()
+    expect(mock.mock.calls.some(([url]) => (url as string).endsWith('/cancel'))).toBe(false)
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([url]) => (url as string).endsWith('/api/orders/1/cancel'))).toBe(true)
+    expect(wrapper.get('[data-testid="orders-action-feedback"]').text()).toContain('Order cancelled.')
+    expect(wrapper.find('[data-testid="dialog-confirm"]').exists()).toBe(false)
+  })
+
+  it('keeps the order when the cancel confirmation is dismissed', async () => {
+    const mock = stubRoutes({ 'GET /api/orders?': () => json({ items: [pendingOrder], totalCount: 1 }) })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="orders-cancel-1"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([url]) => (url as string).endsWith('/cancel'))).toBe(false)
+    expect(wrapper.find('[data-testid="dialog-confirm"]').exists()).toBe(false)
   })
 
   it('shows the API sentence when a command is refused', async () => {
@@ -98,7 +133,7 @@ describe('OrdersListView', () => {
     await wrapper.get('[data-testid="orders-accept-1"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="orders-action-error"]').text()).toContain('Order cannot be accepted.')
+    expect(wrapper.get('[data-testid="orders-action-feedback"]').text()).toContain('Order cannot be accepted.')
   })
 
   it('shows the API sentence when the load is refused', async () => {
@@ -107,6 +142,37 @@ describe('OrdersListView', () => {
 
     expect(wrapper.get('[data-testid="orders-error"]').text()).toContain('Not allowed.')
     expect(wrapper.find('[data-testid="orders-table"]').exists()).toBe(false)
+  })
+
+  it('loads again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/orders': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json({ items: [pendingOrder], totalCount: 1 })
+      },
+    })
+    const wrapper = await mountList()
+
+    await wrapper.get('[data-testid="orders-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="orders-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="orders-row-1"]').text()).toContain('ORD-0001')
+  })
+
+  it('sends the chosen status filter and clears it again on all statuses', async () => {
+    const mock = stubRoutes({ 'GET /api/orders?': () => json({ items: [pendingOrder], totalCount: 1 }) })
+    const wrapper = await mountList()
+
+    wrapper.findComponent(UiSelect).vm.$emit('update:modelValue', OrderStatus.Fraud)
+    await flushPromises()
+    wrapper.findComponent(UiSelect).vm.$emit('update:modelValue', '')
+    await flushPromises()
+
+    const urls = mock.mock.calls.map(([url]) => url as string)
+    expect(urls).toContain('/api/orders?page=1&pageSize=20&status=Fraud')
+    expect(urls.at(-1)).toBe('/api/orders?page=1&pageSize=20')
   })
 
   it('shows the empty state when there are no orders', async () => {

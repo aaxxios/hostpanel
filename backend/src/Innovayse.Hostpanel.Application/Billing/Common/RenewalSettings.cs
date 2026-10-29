@@ -5,8 +5,9 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="ReminderDays">Reminder thresholds, largest first; empty means none.</param>
 /// <param name="AutoApplyCredit">Whether credit pays renewal invoices automatically.</param>
 /// <param name="SuspendAfterOverdueDays">Grace before suspending overdue services, in days.</param>
+/// <param name="TerminateAfterSuspendedDays">Days a service suspended for non-payment stays suspended before it is terminated.</param>
 public sealed record RenewalSettings(
-    int InvoiceDaysBefore, IReadOnlyList<int> ReminderDays, bool AutoApplyCredit, int SuspendAfterOverdueDays)
+    int InvoiceDaysBefore, IReadOnlyList<int> ReminderDays, bool AutoApplyCredit, int SuspendAfterOverdueDays, int TerminateAfterSuspendedDays)
 {
     /// <inheritdoc/>
     public bool Equals(RenewalSettings? other) =>
@@ -14,8 +15,9 @@ public sealed record RenewalSettings(
         && InvoiceDaysBefore == other.InvoiceDaysBefore
         && ReminderDays.SequenceEqual(other.ReminderDays)
         && AutoApplyCredit == other.AutoApplyCredit
-        && SuspendAfterOverdueDays == other.SuspendAfterOverdueDays;
+        && SuspendAfterOverdueDays == other.SuspendAfterOverdueDays
+        && TerminateAfterSuspendedDays == other.TerminateAfterSuspendedDays;
 
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(InvoiceDaysBefore, AutoApplyCredit, SuspendAfterOverdueDays);
+    public override int GetHashCode() => HashCode.Combine(InvoiceDaysBefore, AutoApplyCredit, SuspendAfterOverdueDays, TerminateAfterSuspendedDays);
 }

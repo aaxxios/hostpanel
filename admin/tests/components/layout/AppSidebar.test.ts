@@ -1,10 +1,13 @@
 /**
  * Mount tests for AppSidebar: the top-level entries, sub-menus that open for the current section
- * or on click, the active marker, the navigate event and the sign-out button.
+ * or on click, the active marker (also on the target of a navigation still downloading), the
+ * navigate event and the sign-out button.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
+import type { RouteLocationNormalized } from 'vue-router'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
+import { useNavigationStore } from '@/stores/navigation'
 import { stubRoutes } from '../../helpers/routes'
 import { mountView } from '../../helpers/mount'
 
@@ -59,6 +62,16 @@ describe('AppSidebar', () => {
     await wrapper.get('[data-testid="nav-billing"]').trigger('click')
 
     expect(wrapper.get('[data-testid="nav-billing"]').attributes('aria-expanded')).toBe('true')
+  })
+
+  it('marks the target of a navigation still downloading its screen', async () => {
+    const wrapper = await mountSidebar('/dashboard')
+
+    useNavigationStore().pending = { path: '/clients/users', matched: [] } as unknown as RouteLocationNormalized
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="nav-clients"]').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="nav-clients-users"]').classes()).toContain('text-primary-400')
   })
 
   it('emits navigate when a link is clicked', async () => {

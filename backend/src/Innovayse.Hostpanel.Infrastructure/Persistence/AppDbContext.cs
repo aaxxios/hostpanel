@@ -13,6 +13,7 @@ using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Partners;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Projects;
+using Innovayse.Hostpanel.Domain.Scheduling;
 using Innovayse.Hostpanel.Domain.Servers;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Settings;
@@ -22,23 +23,44 @@ using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Testimonials;
 using Innovayse.Hostpanel.Infrastructure.Auth;
+using Innovayse.Hostpanel.Infrastructure.Security;
+using Innovayse.Hostpanel.Shared.Infrastructure;
 using Innovayse.Hostpanel.SharedKernel.Domain;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence;
+
 /// <summary>
-/// Root EF Core DbContext for the Innovayse backend.
+/// Root EF Core DbContext for the Hostpanel backend.
 /// Extends <see cref="IdentityDbContext{TUser}"/> to include ASP.NET Core Identity tables.
 /// All entity configurations are discovered automatically via <see cref="OnModelCreating"/>.
 /// </summary>
-public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbContext
+public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbContext, IDataProtectionKeyContext
 {
+    /// <summary>The service the model's protected columns are encrypted with.</summary>
+    private readonly IEncryptionService _encryption;
+
     /// <summary>Initializes a new instance of the <see cref="AppDbContext"/> class.</summary>
-    /// <param name="options">The options this class uses.</param>
-    public AppDbContext(DbContextOptions<AppDbContext> options)
+    /// <param name="options">The provider and connection the context runs on, configured at registration.</param>
+    /// <param name="encryption">
+    /// The service that encrypts the <see cref="ProtectedColumns"/>. Required: a context cannot
+    /// exist without it, so no path (design time, tests, a second host) can build a model that
+    /// silently stores credentials in plain text.
+    /// </param>
+    /// <remarks>
+    /// EF caches the built model per context type, so the converter in it is bound to the service
+    /// of the first context built in the process. The key never changes while a process runs, so
+    /// every context agrees with it.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="encryption"/> is null.</exception>
+    public AppDbContext(DbContextOptions<AppDbContext> options, IEncryptionService encryption)
         : base(options)
     {
+        ArgumentNullException.ThrowIfNull(encryption);
+        _encryption = encryption;
     }
 
     /// <summary>Gets the activity log entries table.</summary>
@@ -47,7 +69,7 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>
     /// Gets the roles held by each subject. Separate from Identity's own role tables
     /// because it is keyed by whatever the configured identity provider calls a person,
-    /// which in SSO mode is not a row in <c>AspNetUsers</c>.
+    /// which in single sign-on mode is not a row in <c>AspNetUsers</c>.
     ///
     /// <para>
     /// Named for the subject rather than the user because <c>IdentityDbContext</c> already
@@ -76,7 +98,7 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>Gets the per-currency product prices table.</summary>
     public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
 
-    /// <summary>Gets the currencies table — one base row plus every rated currency.</summary>
+    /// <summary>Gets the currencies table: one base row plus every rated currency.</summary>
     public DbSet<Domain.Billing.Currency> Currencies => Set<Domain.Billing.Currency>();
 
     /// <summary>Gets the client services table.</summary>
@@ -205,6 +227,9 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>Gets the homepage slides table.</summary>
     public DbSet<Slide> Slides => Set<Slide>();
 
+    /// <summary>Gets the recurring jobs' run records (lease and last run), shared by every instance.</summary>
+    public DbSet<JobRun> JobRuns => Set<JobRun>();
+
     /// <summary>Gets the migration jobs table.</summary>
     public DbSet<MigrationJob> MigrationJobs => Set<MigrationJob>();
 
@@ -247,19 +272,98 @@ public sealed class AppDbContext : IdentityDbContext<AppUser>, IHostpanelDbConte
     /// <summary>Gets the per-locale translations of the storefront frequently asked questions.</summary>
     public DbSet<FaqTranslation> FaqTranslations => Set<FaqTranslation>();
 
+    /// <summary>
+    /// Gets the Data Protection key ring, shared by every instance so a token protected by one
+    /// instance is read by any other and outlives a redeploy. Named by this property like every
+    /// other table; the framework entity's own columns (<c>Id</c>, <c>FriendlyName</c>, <c>Xml</c>)
+    /// are already PascalCase.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
+    /// <summary>
+    /// Saves every tracked change in one transaction, translating an optimistic-concurrency
+    /// conflict to the persistence-agnostic <see cref="ConcurrencyConflictException"/>.
+    /// </summary>
+    /// <param name="acceptAllChangesOnSuccess">Whether the change tracker accepts the changes after a successful save.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of rows written.</returns>
+    /// <exception cref="ConcurrencyConflictException">Another writer modified one of the saved aggregates concurrently.</exception>
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // The Application layer must not reference EF Core, so the DbContext is the one place that
+            // knows the cause was a concurrency conflict. ExceptionHandlingMiddleware answers it 409.
+            throw new ConcurrencyConflictException(
+                "Another writer modified one of the saved aggregates concurrently.", ex);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct) => Database.BeginTransactionAsync(ct);
+
+    /// <inheritdoc/>
+    public void DetachAll()
+    {
+        foreach (var entry in ChangeTracker.Entries().ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void DiscardPendingChanges()
+    {
+        foreach (var entry in ChangeTracker.Entries().ToList())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    entry.State = EntityState.Detached;
+                    break;
+                case EntityState.Modified:
+                case EntityState.Deleted:
+                    entry.CurrentValues.SetValues(entry.OriginalValues);
+                    entry.State = EntityState.Unchanged;
+                    break;
+                default:
+                    // Unchanged entries are already saved; detached ones are not tracked at all.
+                    break;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task ReloadAsync(object entity, CancellationToken ct) => Entry(entity).ReloadAsync(ct);
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
+        // Credentials are encrypted here, from one list, rather than in each configuration: a
+        // configuration cannot reach the service, and one that skipped the converter stored the
+        // value in plain text without a sign.
+        var converter = new EncryptedStringConverter(_encryption);
+        foreach (var column in ProtectedColumns.All)
+        {
+            modelBuilder.Entity(column.Entity).Property(column.Property)
+                .HasMaxLength(ProtectedColumnWidth.For(column.MaxPlainLength))
+                .HasConversion(converter);
+        }
+
         // The counter behind order numbers; read through INumberSequence so two concurrent orders
         // can never be handed the same number.
         modelBuilder.HasSequence<long>(NumberSequence.OrderSequenceName);
 
-        // Every entity now carries DomainEvents (the kernel's BaseEntity); EF must never try to map
-        // it. One convention here rather than an Ignore in each of the 50 configurations — the
-        // seven that already ignore it stay harmless.
+        // Every entity carries DomainEvents (the kernel's BaseEntity); EF must never try to map
+        // it. One convention here rather than an Ignore in each configuration; a configuration
+        // that also ignores it is harmless.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))

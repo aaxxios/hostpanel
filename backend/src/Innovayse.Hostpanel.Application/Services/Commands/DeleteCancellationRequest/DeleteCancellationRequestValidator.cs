@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.DeleteCancellationRequest;
+
 /// <summary>Validates <see cref="DeleteCancellationRequestCommand"/> before the handler executes.</summary>
 public sealed class DeleteCancellationRequestValidator : LocalizedValidator<DeleteCancellationRequestCommand>
 {

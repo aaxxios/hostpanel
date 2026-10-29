@@ -1,7 +1,7 @@
 /**
  * Plugin manager flow: installed plugins are listed, uploading an archive installs it as
  * multipart data and shows the restart banner, restarting posts the command, and removing a
- * plugin deletes it from the list.
+ * plugin asks first and then deletes it from the list.
  */
 import { HttpMethod } from '../src/types/http'
 import { expect, test } from '@playwright/test'
@@ -67,6 +67,7 @@ test('removing a plugin deletes it from the list', async ({ page }) => {
 
   await page.goto('/plugins')
   await page.getByTestId(`plugin-remove-${cwpPlugin.id}`).click()
+  await page.getByTestId('dialog-confirm').click()
 
   await expect(page.getByTestId('plugins-empty')).toBeVisible()
   expect(api.callsTo(HttpMethod.Delete, `/api/admin/plugins/${cwpPlugin.id}`)).toHaveLength(1)
@@ -86,5 +87,5 @@ test('a refused install shows the API sentence', async ({ page }) => {
   await page.getByTestId('plugin-zip-input').setInputFiles({ name: 'bad.zip', mimeType: 'application/zip', buffer: tinyPng })
   await page.getByTestId('plugin-install').click()
 
-  await expect(page.getByTestId('plugins-error')).toContainText(sentence)
+  await expect(page.getByTestId('plugins-feedback')).toContainText(sentence)
 })

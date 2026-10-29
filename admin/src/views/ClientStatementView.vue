@@ -10,12 +10,14 @@ import ReportPage from '@/components/reports/ReportPage.vue'
 import ReportTable from '@/components/reports/ReportTable.vue'
 import UiClientSelect from '@/components/ui/UiClientSelect.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
+import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useReport } from '@/composables/useReport'
 import { useReportClients } from '@/composables/useReportClients'
-import { formatReportAmount } from '@/lib/money'
+import { formatCurrencyCode } from '@/lib/money'
 import { reportPath } from '@/lib/reportsQuery'
-import type { ReportClientStatement } from '@/types/reportclientstatement'
+import { ReportStatementLineType } from '@/types/reportclientstatement'
+import type { ReportClientStatement, ReportStatementLine } from '@/types/reportclientstatement'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
 import { UiAlign } from '@/utils/ui/table'
@@ -56,16 +58,34 @@ const columns = computed<ReportColumn[]>(() => [
   { key: 'type', label: t('shared.type'), format: ReportCellFormat.Status },
   { key: 'date', label: t('shared.date') },
   { key: 'description', label: t('shared.description') },
-  { key: 'debit', label: t('reports.clientStatement.debit'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'credit', label: t('reports.directDebit.credit'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'balance', label: t('shared.balance'), align: UiAlign.Right, format: ReportCellFormat.Money },
+  { key: 'currency', label: t('shared.currency') },
+  { key: 'debit', label: t('reports.clientStatement.debit'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'credit', label: t('reports.directDebit.credit'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
+  { key: 'balance', label: t('shared.balance'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
 ])
+
+/**
+ * Text of a statement line's description cell.
+ *
+ * @param line - The line.
+ * @returns The transaction description as sent, or the sentence for an invoice or a history payment.
+ */
+const describeLine = (line: ReportStatementLine): string => {
+  if (line.type === ReportStatementLineType.PaidHistory) {
+    return t('reports.clientStatement.paidHistory', { id: line.invoiceId })
+  }
+  if (line.invoiceId === null) {
+    return line.description ?? ''
+  }
+  return t('reports.clientStatement.invoicePayment', { id: line.invoiceId })
+}
 </script>
 
 <template>
   <ReportPage
     :title="t('reports.clientStatement.clientAccountRegisterBalance')"
     :description="t('reports.clientStatement.thisReportProvidesAStatement')"
+    :retry="generate"
   >
     <template #filters>
       <ReportFilterBar printable @generate="generate" @print="print">
@@ -81,16 +101,25 @@ const columns = computed<ReportColumn[]>(() => [
     </template>
 
     <template v-if="data">
-      <UiText tone="secondary" size="md" class="text-right" data-testid="report-previous-balance">
-        {{ t('reports.clientStatement.previousBalance') }} {{ formatReportAmount(data.previousBalance) }}
-      </UiText>
+      <UiStack gap="xs" data-testid="report-previous-balance">
+        <UiText v-for="balance in data.balances" :key="balance.currency" tone="secondary" size="md" class="text-right">
+          {{ t('reports.clientStatement.previousBalance') }} {{ formatCurrencyCode(balance.previousBalance, balance.currency) }}
+        </UiText>
+      </UiStack>
       <ReportTable
         :columns="columns"
         :rows="data.lines"
         :empty-text="t('reports.clientStatement.noEntriesForThisPeriod')"
-        :totals="{ balance: data.endingBalance }"
-        :totals-label="t('reports.clientStatement.endingBalance')"
-      />
+      >
+        <template #cell-description="{ row }">
+          {{ describeLine(row) }}
+        </template>
+      </ReportTable>
+      <UiStack gap="xs" data-testid="report-ending-balance">
+        <UiText v-for="balance in data.balances" :key="balance.currency" tone="secondary" size="md" class="text-right">
+          {{ t('reports.clientStatement.endingBalance') }} {{ formatCurrencyCode(balance.endingBalance, balance.currency) }}
+        </UiText>
+      </UiStack>
     </template>
   </ReportPage>
 </template>

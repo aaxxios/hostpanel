@@ -49,10 +49,8 @@
   "addBillableItem": "Add Billable Item",
   "client": "Client",
   "productService": "Product/Service",
-  "hoursQty": "Hours/Qty",
   "hours": "Hours",
   "qty": "Qty",
-  "invoiceAction": "Invoice Action",
   "selectDate": "Select date...",
   "subject": "Subject",
   "stage": "Stage",
@@ -125,7 +123,6 @@
   "domainEmails": "Domain Emails",
   "affiliateEmails": "Affiliate Emails",
   "settings": "Settings",
-  "lateFees": "Late Fees",
   "overdueNotices": "Overdue Notices",
   "taxExempt": "Tax Exempt",
   "separateInvoices": "Separate Invoices",
@@ -182,8 +179,6 @@
   "year": "Year",
   "unknown": "Unknown",
   "notAvailable": "N/A",
-  "clientFallback": "Client #{id}",
-  "productFallback": "Product #{id}",
   "years": "{n} year | {n} years",
   "month": "Month",
   "noData": "No data.",
@@ -227,5 +222,7 @@
     "internalPath": "/order/product",
     "tagManagerId": "GTM-XXXXXXX",
     "colorHex": "#06b6d4"
-  }
+  },
+  "recordDeleted": "Record deleted.",
+  "recordCreated": "Record created."
 }

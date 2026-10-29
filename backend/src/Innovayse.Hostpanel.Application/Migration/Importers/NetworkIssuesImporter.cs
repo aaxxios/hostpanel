@@ -7,66 +7,48 @@ using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
-/// Imports network issue records. Split out of <c>MigrationPullWorker</c> (A6 Task 6). Like
-/// announcements, a network issue is never deduplicated -- every record the source plugin holds
+/// Imports network issue records. Like
+/// announcements, a network issue is never deduplicated: every record the source plugin holds
 /// is created here, exactly as the worker always did.
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported issue is saved through.</param>
-/// <param name="pager">Pages through the source plugin's <c>network_issues</c> dataset.</param>
-/// <param name="logWriter">Writes one migration log row per record.</param>
-/// <param name="logger">Logs a failed record.</param>
-public sealed class NetworkIssuesImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    ILogger<NetworkIssuesImporter> logger) : IMigrationEntityImporter
+public sealed class NetworkIssuesImporter : IMigrationEntityImporter
 {
-    /// <inheritdoc/>
-    public async Task ImportAsync(MigrationJob job, CancellationToken ct)
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's <c>network_issues</c> dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Dates an issue the source record left undated.</summary>
+    private readonly IClock _clock;
+
+    /// <summary>Initializes a new instance of the <see cref="NetworkIssuesImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="runner">Pages through the source plugin's <c>network_issues</c> dataset and records each record's outcome.</param>
+    /// <param name="clock">Dates an issue the source record left undated.</param>
+    public NetworkIssuesImporter(IHostpanelDbContext context, MigrationRecordRunner runner, IClock clock)
     {
-        int imported = 0, skipped = 0;
-
-        await foreach (var page in pager.PagesAsync<NetworkIssueRecord>(job, "network_issues", ct))
-        {
-            foreach (var rec in page)
-            {
-                try
-                {
-                    var result = await ImportNetworkIssueAsync(rec, ct);
-                    if (result == ImportOutcome.Imported)
-                    {
-                        imported++;
-                    }
-                    else if (result == ImportOutcome.Skipped)
-                    {
-                        skipped++;
-                    }
-
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.NetworkIssues, rec.Title, result, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped network issue '{Title}' during migration", rec.Title);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.NetworkIssues, rec.Title, ImportOutcome.Failed, ex.Message, ct);
-                }
-            }
-
-            job.UpdateProgress(MigrationEntityType.NetworkIssues, imported, skipped);
-            await uow.SaveChangesAsync(ct);
-        }
+        _context = context;
+        _runner = runner;
+        _clock = clock;
     }
+
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.NetworkIssues;
+
+    /// <inheritdoc/>
+    public Task ImportAsync(MigrationJob job, CancellationToken ct) =>
+        _runner.RunAsync(new MigrationRecordRun<NetworkIssueRecord>(job, EntityType, "network_issues", ImportNetworkIssueAsync), ct);
 
     /// <summary>Imports one plugin-side network issue record.</summary>
     /// <param name="rec">The network issue record read from the source plugin.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Always <see cref="ImportOutcome.Imported"/> -- a network issue is never deduplicated.</returns>
-    private async Task<ImportOutcome> ImportNetworkIssueAsync(NetworkIssueRecord rec, CancellationToken ct)
+    /// <returns>Always <see cref="RecordImportResult.Imported"/>: a network issue is never deduplicated.</returns>
+    private async Task<RecordImportResult> ImportNetworkIssueAsync(NetworkIssueRecord rec, CancellationToken ct)
     {
         var type = rec.Type?.ToLowerInvariant() switch
         {
@@ -87,17 +69,16 @@ public sealed class NetworkIssuesImporter(
             type,
             server: null,
             priority,
-            rec.StartDate ?? DateTimeOffset.UtcNow,
+            rec.StartDate ?? _clock.UtcNow,
             string.IsNullOrWhiteSpace(rec.Description) ? "(no description)" : rec.Description);
 
         if (rec.Status?.ToLowerInvariant() == SourceNetworkIssueValues.Resolved)
         {
-            issue.Resolve();
+            issue.Resolve(rec.EndDate ?? _clock.UtcNow);
         }
 
-        // Was INetworkIssueRepository.Add.
-        context.NetworkIssues.Add(issue);
-        await uow.SaveChangesAsync(ct);
-        return ImportOutcome.Imported;
+        _context.NetworkIssues.Add(issue);
+        await _context.SaveChangesAsync(ct);
+        return RecordImportResult.Imported;
     }
 }

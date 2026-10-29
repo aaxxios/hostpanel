@@ -11,6 +11,11 @@ public sealed class ServerLocationConfiguration : IEntityTypeConfiguration<Serve
     public void Configure(EntityTypeBuilder<ServerLocation> builder)
     {
         builder.HasKey(x => x.Id);
+
+        // Two operators reordering the same list at once cannot overwrite each other: the second save of a
+        // changed row fails with a concurrency conflict (409) instead of silently winning.
+        builder.UseXminConcurrencyToken();
+
         builder.Property(x => x.CountryCode).IsRequired().HasMaxLength(ServerLocation.CountryCodeLength);
         builder.Property(x => x.SortOrder).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();

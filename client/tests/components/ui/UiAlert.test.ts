@@ -1,5 +1,5 @@
 /**
- * Unit tests for UiAlert: the meaning variants, the title, the body and the action slot.
+ * Unit tests for UiAlert: the live-region role, the meaning variants, the title, the body and the action slot.
  */
 import { describe, expect, it } from 'vitest'
 import { mountWithKit } from '~/tests/helpers/mountWithKit'
@@ -12,6 +12,23 @@ describe('UiAlert', () => {
 
     expect(wrapper.attributes('role')).toBe('alert')
     expect(wrapper.text()).toContain('Something happened')
+  })
+
+  it.each([
+    [UiAlertVariant.Warning, 'alert'],
+    [UiAlertVariant.Error, 'alert'],
+    [UiAlertVariant.Info, 'status'],
+    [UiAlertVariant.Success, 'status'],
+  ])('announces the %s variant with role %s', (variant, expected) => {
+    const wrapper = mountWithKit(UiAlert, { props: { variant } })
+
+    expect(wrapper.attributes('role')).toBe(expected)
+  })
+
+  it('carries no live-region role when it is static content', () => {
+    const wrapper = mountWithKit(UiAlert, { props: { variant: UiAlertVariant.Error, live: false } })
+
+    expect(wrapper.attributes('role')).toBeUndefined()
   })
 
   it('defaults to the warning look', () => {

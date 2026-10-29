@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
@@ -16,11 +16,9 @@ using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Demo;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Demo;
 
@@ -112,7 +110,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         {
             using var suppression = scope.ServiceProvider.GetRequiredService<IDomainEventGate>().Suppress();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var stray = Client.Create($"stray-{Guid.NewGuid():N}", "Stray", "Visitor", $"{Guid.NewGuid():N}@example.test");
+            var stray = Client.Create($"stray-{Guid.NewGuid():N}", "Stray", "Visitor", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
             db.Clients.Add(stray);
             await db.SaveChangesAsync();
         }
@@ -280,7 +278,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
 
         // The client area lists mail by the account's sign-in address, so the demo client's history is not empty.
         (await db.EmailLogs.CountAsync(l => l.To == DemoTestHost.ClientEmail)).Should().BeGreaterThan(0);
-        (await db.SubjectRoles.Select(r => r.Role).Distinct().ToListAsync()).Should().Contain(["Admin", "Reseller", "Client"]);
+        (await db.SubjectRoles.Select(r => r.Role).Distinct().ToListAsync()).Should().Contain([Role.Admin, Role.Reseller, Role.Client]);
 
         var settings = await db.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
         settings[PortalSettingKeys.SiteName].Should().Be("Hostpanel Demo");
@@ -426,7 +424,7 @@ public sealed class DemoDataManagerTests(IntegrationTestFactory factory)
         await db.SaveChangesAsync();
         var before = (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.ServerLocations.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync());
 
-        await new DemoStorefrontSeeder(db).SeedContentAsync(CancellationToken.None);
+        await new DemoStorefrontSeeder(db, DemoAnchor.Today(DateTimeOffset.UtcNow)).SeedContentAsync(CancellationToken.None);
 
         (await db.Testimonials.CountAsync(), await db.Partners.CountAsync(), await db.ServerLocations.CountAsync(), await db.Projects.CountAsync(), await db.Faqs.CountAsync())
             .Should().Be(before);

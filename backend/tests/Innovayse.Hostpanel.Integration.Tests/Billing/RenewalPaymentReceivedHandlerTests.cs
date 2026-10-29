@@ -1,22 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
 /// <summary>
 /// <c>RenewalPaymentReceivedHandler</c> on the shared host, events live: recording the full payment
-/// of a renewal invoice through the admin route is enough, on its own, to extend the service -- the
+/// of a renewal invoice through the admin route is enough, on its own, to extend the service: the
 /// fast path from <c>PaymentReceivedEvent</c> to <c>ApplyPaidRenewalsCommand</c>, with no sweep run.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -33,30 +30,26 @@ public sealed class RenewalPaymentReceivedHandlerTests(IntegrationTestFactory fa
         using (var scope = factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
-            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+            var client = Client.Create($"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
             context.Clients.Add(client);
             var group = ProductGroup.Create($"renewal-fast-path-{Guid.NewGuid():N}", null);
             context.ProductGroups.Add(group);
             await context.SaveChangesAsync(CancellationToken.None);
 
-            var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m);
+            var product = Product.Create(group.Id, "Starter", null, null, null, null, ProductType.SharedHosting, 5m, 50m, DateTimeOffset.UtcNow);
             context.Products.Add(product);
             await context.SaveChangesAsync(CancellationToken.None);
 
             var start = DateTimeOffset.UtcNow.AddDays(5);
-            var service = ClientService.Create(client.Id, product.Id, BillingCycleNames.Monthly);
-            service.Activate("panel-ref");
-            service.Update(
-                domain: null, dedicatedIp: null, username: null, password: null, billingCycle: BillingCycleNames.Monthly,
-                recurringAmount: 5m, paymentMethod: null, nextRenewalAt: start, subscriptionId: null,
-                overrideAutoSuspend: false, suspendUntil: null, autoTerminateEndOfCycle: false,
-                autoTerminateReason: null, adminNotes: null, provisioningRef: service.ProvisioningRef,
-                firstPaymentAmount: 5m, promotionCode: null, terminatedAt: null,
-                serverId: null, quantity: 1, productId: null);
-            context.ClientServices.Add(service);
+            var service = ClientService.Create(client.Id, product.Id, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+            await ServicesTestSeeds.AddActivatedAsync(context, service, "panel-ref", DateTimeOffset.UtcNow);
+            service.ChangeBillingTerms(new ServiceBillingTerms(
+                BillingCycle: BillingCycle.Monthly, Quantity: 1, FirstPaymentAmount: 5m,
+                RecurringAmount: 5m, NextRenewalAt: start, PaymentMethod: null,
+                PromotionCode: null, SubscriptionId: null));
             await context.SaveChangesAsync(CancellationToken.None);
 
-            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD");
+            var invoice = Invoice.Create(client.Id, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
             invoice.AddServiceRenewal("Starter renewal", 5m, service.Id, start, start.AddMonths(1));
             context.Invoices.Add(invoice);
             await context.SaveChangesAsync(CancellationToken.None);

@@ -90,7 +90,7 @@ public sealed class TwoFactorCodeGuard : ITwoFactorCodeGuard
                 return false;
             }
 
-            _cache.Set(key, timeStep, StepMemory);
+            _cache.Set(key, timeStep, Pinned(StepMemory));
             return true;
         }
     }
@@ -110,17 +110,22 @@ public sealed class TwoFactorCodeGuard : ITwoFactorCodeGuard
         // The window is judged by the injected clock; the cache expiry below only frees the memory.
         var window = TimeSpan.FromMinutes(_options.WindowMinutes);
         var started = new FailureCount { WindowEndsAt = now + window };
-        _cache.Set(key, started, window);
+        _cache.Set(key, started, Pinned(window));
         return started;
     }
 
-    /// <summary>The wrong codes counted for one account inside its window.</summary>
-    private sealed class FailureCount
+    /// <summary>
+    /// Builds entry options the cache never evicts under memory pressure, so a counter is only ever
+    /// dropped when its own window ends; an evicted counter would reopen the cap and the replay guard.
+    /// </summary>
+    /// <param name="lifetime">How long the entry lives.</param>
+    /// <returns>The entry options.</returns>
+    private static MemoryCacheEntryOptions Pinned(TimeSpan lifetime)
     {
-        /// <summary>Gets or sets the number of attempts counted so far.</summary>
-        public int Count { get; set; }
-
-        /// <summary>Gets the instant the window closes; the next attempt after it starts a new count.</summary>
-        public DateTimeOffset WindowEndsAt { get; init; }
+        return new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = lifetime,
+            Priority = CacheItemPriority.NeverRemove,
+        };
     }
 }

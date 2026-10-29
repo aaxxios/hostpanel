@@ -2,12 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
+using Innovayse.Hostpanel.Domain.Services;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -42,12 +42,12 @@ internal static class DomainsTestSeeds
 
     /// <summary>
     /// Registers a brand-new client user and returns an authenticated <see cref="HttpClient"/>
-    /// alongside the email it registered with.
+    /// alongside the email it registered with and its identity subject.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short label folded into the unique email, for readable test failures.</param>
-    /// <returns>The authenticated client and the email it registered with.</returns>
-    public static async Task<(HttpClient Client, string Email)> RegisterClientAsync(
+    /// <returns>The authenticated client, the email it registered with and its identity subject.</returns>
+    public static async Task<SignedInAccount> RegisterClientAsync(
         IntegrationTestFactory factory, string label)
     {
         var httpClient = factory.CreateClient();
@@ -60,10 +60,11 @@ internal static class DomainsTestSeeds
             lastName = "Tester"
         });
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var userId = (await registerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetString()!;
 
         var token = await factory.GetClientTokenAsync(email, TestPassword);
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        return (httpClient, email);
+        return new SignedInAccount(httpClient, email, userId);
     }
 
     /// <summary>
@@ -95,21 +96,21 @@ internal static class DomainsTestSeeds
 
     /// <summary>
     /// Registers a new client user, waits for its <c>Client</c> row, and returns both the
-    /// authenticated client and its numeric id -- the "owner" of every ownership test.
+    /// authenticated client and its numeric id: the "owner" of every ownership test.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short label folded into the unique email, for readable test failures.</param>
     /// <returns>The authenticated client and its numeric client id.</returns>
-    public static async Task<(HttpClient Client, int ClientId)> RegisterOwnerAsync(
+    public static async Task<SignedInClient> RegisterOwnerAsync(
         IntegrationTestFactory factory, string label)
     {
-        var (client, _) = await RegisterClientAsync(factory, label);
+        var (client, email, userId) = await RegisterClientAsync(factory, label);
         var clientId = await WaitForClientIdAsync(client);
-        return (client, clientId);
+        return new SignedInClient(client, clientId, userId, email);
     }
 
     /// <summary>
-    /// Registers a second client user who owns nothing -- the "somebody else" of every ownership
+    /// Registers a second client user who owns nothing: the "somebody else" of every ownership
     /// test. Its own <c>Client</c> row need not exist yet: a caller with no client record refuses
     /// exactly like a caller whose client record does not own the domain.
     /// </summary>
@@ -118,8 +119,8 @@ internal static class DomainsTestSeeds
     /// <returns>An authenticated client for the stranger.</returns>
     public static async Task<HttpClient> RegisterStrangerAsync(IntegrationTestFactory factory, string label)
     {
-        var (client, _) = await RegisterClientAsync(factory, label);
-        return client;
+        var account = await RegisterClientAsync(factory, label);
+        return account.Client;
     }
 
     /// <summary>Registers a domain for the given client through the admin route.</summary>
@@ -147,14 +148,14 @@ internal static class DomainsTestSeeds
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short label folded into the owner and stranger's unique emails.</param>
     /// <returns>The admin client, the owner and its domain id, and the stranger.</returns>
-    public static async Task<(HttpClient Admin, HttpClient Owner, int DomainId, HttpClient Stranger)>
+    public static async Task<OwnedDomainScenario>
         SeedOwnerWithDomainAsync(IntegrationTestFactory factory, string label)
     {
         var admin = await AdminClientAsync(factory);
         var (owner, ownerClientId) = await RegisterOwnerAsync(factory, $"{label}-owner");
         var domainId = await RegisterDomainAsync(admin, ownerClientId);
         var stranger = await RegisterStrangerAsync(factory, $"{label}-stranger");
-        return (admin, owner, domainId, stranger);
+        return new OwnedDomainScenario(admin, owner, domainId, stranger);
     }
 
     /// <summary>Parses a problem+json body and reads its <c>type</c> (error code) field.</summary>
@@ -172,7 +173,7 @@ internal static class DomainsTestSeeds
     public static async Task<int> SeedClientAsync(IHostpanelDbContext context)
     {
         var client = Client.Create(
-            $"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test");
+            $"subject-{Guid.NewGuid():N}", "Ada", "Lovelace", $"{Guid.NewGuid():N}@example.test", DateTimeOffset.UtcNow);
         context.Clients.Add(client);
         await context.SaveChangesAsync(CancellationToken.None);
         return client.Id;
@@ -185,17 +186,44 @@ internal static class DomainsTestSeeds
     {
         var clientId = await SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddYears(1),
-            autoRenew: false, whoisPrivacy: false);
-        domain.Activate("REF-STUB");
-        context.Domains.Add(domain);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
+        await AddActivatedAsync(context, domain, "REF-STUB", domain.ExpiresAt, DateTimeOffset.UtcNow);
         await context.SaveChangesAsync(CancellationToken.None);
         return domain.Id;
     }
 
+    /// <summary>
+    /// Adds a new domain, saves it, then activates it, the order registration follows: the
+    /// activation's <c>DomainRegisteredEvent</c> names the domain by its id, which only a saved
+    /// domain has. The activation itself is left unsaved, so the caller can change more on the
+    /// domain and save once.
+    /// </summary>
+    /// <param name="context">The data context to seed through; the domain stays tracked by it.</param>
+    /// <param name="domain">The new domain, pending registration.</param>
+    /// <param name="registrarRef">The registrar's reference for the domain.</param>
+    /// <param name="expiresAt">The expiry the registrar answered with.</param>
+    /// <param name="occurredAt">When the registration completed.</param>
+    /// <returns>A task that completes once the domain is saved and activated.</returns>
+    public static async Task AddActivatedAsync(
+        IHostpanelDbContext context,
+        RegisteredDomain domain,
+        string registrarRef,
+        DateTimeOffset expiresAt,
+        DateTimeOffset occurredAt)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(domain);
+
+        context.Domains.Add(domain);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        domain.Activate(registrarRef, expiresAt, occurredAt);
+    }
+
     /// <summary>Builds the create body for a fresh TLD configuration under a unique extension.</summary>
     /// <returns>The extension used and the anonymous body to post.</returns>
-    public static (string Tld, object Body) NewTldBody()
+    public static NewTldPayload NewTldBody()
     {
         var tld = $"tld-{Guid.NewGuid():N}"[..12];
         var body = new
@@ -214,7 +242,7 @@ internal static class DomainsTestSeeds
             sellTransfer = new Dictionary<string, decimal> { ["1"] = 10m },
             sellRenew = new Dictionary<string, decimal> { ["1"] = 10m },
         };
-        return (tld, body);
+        return new NewTldPayload(tld, body);
     }
 
     /// <summary>Reads the <c>type</c> field of a refusal answered by <c>BaseApiController</c>.</summary>
@@ -224,6 +252,19 @@ internal static class DomainsTestSeeds
     {
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("type").GetString();
+    }
+
+    /// <summary>Seeds a hosting service, and the product it is for, owned by a client.</summary>
+    /// <param name="context">The data context to seed through.</param>
+    /// <param name="clientId">The client who owns the service.</param>
+    /// <returns>The saved service's id.</returns>
+    public static async Task<int> SeedServiceAsync(IHostpanelDbContext context, int clientId)
+    {
+        var productId = await SeedHostingProductAsync(context);
+        var service = ClientService.Create(clientId, productId, BillingCycle.Monthly, DateTimeOffset.UtcNow);
+        context.ClientServices.Add(service);
+        await context.SaveChangesAsync(CancellationToken.None);
+        return service.Id;
     }
 
     /// <summary>Seeds an active product a <c>ClientService</c> can be created against.</summary>
@@ -236,7 +277,7 @@ internal static class DomainsTestSeeds
         await context.SaveChangesAsync(CancellationToken.None);
 
         var product = Product.Create(
-            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         context.Products.Add(product);
         await context.SaveChangesAsync(CancellationToken.None);
         return product.Id;

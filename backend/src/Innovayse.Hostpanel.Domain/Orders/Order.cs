@@ -4,9 +4,12 @@ using System.Text;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Orders.Events;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Orders;
+
 /// <summary>
 /// Represents a purchase order placed by a client at checkout.
 /// An order aggregates one or more <see cref="OrderItem"/> entries and links
@@ -15,10 +18,13 @@ namespace Innovayse.Hostpanel.Domain.Orders;
 /// </summary>
 public sealed class Order : BaseEntity, IAggregateRoot
 {
+    /// <summary>Longest order number the order number column holds.</summary>
+    public const int OrderNumberMaxLength = 20;
+
     /// <summary>
     /// Number of random bytes behind a payment token. 32 bytes is the usual floor for a bearer
     /// credential that is guessable in no way other than brute force, and encodes to 43
-    /// base64url characters — well inside the column width configured for it.
+    /// base64url characters: well inside the column width configured for it.
     /// </summary>
     private const int PaymentTokenBytes = 32;
 
@@ -54,7 +60,7 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// </summary>
     /// <remarks>
     /// Checkout is open to guests, so the payment endpoints for an order cannot require a
-    /// credential — the payer may not have one. They are authorised by knowledge of this token
+    /// credential: the payer may not have one. They are authorised by knowledge of this token
     /// instead, which is handed to whoever placed the order and to nobody else. Without it the
     /// only thing identifying an order is its primary key, which is sequential and therefore
     /// guessable: anyone could start a gateway session on a stranger's order and, because a
@@ -62,7 +68,7 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// real payer from ever paying.
     /// <para>
     /// Never expose this on a DTO that is read back by anyone other than the payer, and never
-    /// log it — it is a bearer credential for that order's payment.
+    /// log it: it is a bearer credential for that order's payment.
     /// </para>
     /// </remarks>
     public string PaymentToken { get; private set; } = string.Empty;
@@ -73,7 +79,13 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// <summary>Gets the read-only collection of order items.</summary>
     public IReadOnlyList<OrderItem> Items => _items.AsReadOnly();
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>
+    /// Gets whether the order may be deleted: only one that never went anywhere (Pending) or was
+    /// called off (Cancelled). An accepted or fraud-flagged order is the record of what happened.
+    /// </summary>
+    public bool CanBeDeleted => Status is OrderStatus.Pending or OrderStatus.Cancelled;
+
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Order() { }
 
     /// <summary>
@@ -84,9 +96,10 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// <param name="paymentMethod">Payment gateway module name.</param>
     /// <param name="ipAddress">Client's IP address at checkout.</param>
     /// <param name="currency">ISO 4217 alpha code the order's amounts are in (the client's billing currency).</param>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <returns>A new pending <see cref="Order"/>.</returns>
     /// <exception cref="ArgumentException">The currency is not a three-letter code.</exception>
-    public static Order Create(string orderNumber, int clientId, string paymentMethod, string? ipAddress, string currency)
+    public static Order Create(string orderNumber, int clientId, string paymentMethod, string? ipAddress, string currency, DateTimeOffset now)
     {
         var order = new Order
         {
@@ -96,10 +109,9 @@ public sealed class Order : BaseEntity, IAggregateRoot
             PaymentMethod = paymentMethod,
             IpAddress = ipAddress,
             Status = OrderStatus.Pending,
-            CreatedAt = DateTimeOffset.UtcNow,
             PaymentToken = NewPaymentToken(),
         };
-        order.AddDomainEvent(new OrderCreatedEvent(0, clientId));
+        order.AddDomainEvent(new OrderCreatedEvent(0, clientId, now));
         return order;
     }
 
@@ -112,23 +124,23 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// </summary>
     /// <param name="productId">FK to the product.</param>
     /// <param name="productName">Product name at order time.</param>
-    /// <param name="billingCycle">Billing cycle: "monthly" or "annual".</param>
+    /// <param name="billingCycle">The billing cycle.</param>
     /// <param name="firstPaymentAmount">First payment amount.</param>
     /// <param name="recurringAmount">Recurring charge amount.</param>
     /// <param name="domain">Optional domain name for hosting products.</param>
     /// <param name="hostname">Optional hostname for VPS/server products.</param>
-    /// <param name="domainAction">Domain action: "register" or "transfer". Null for hosting.</param>
+    /// <param name="domainAction">The domain action. Null for hosting.</param>
     /// <param name="eppCode">EPP code for domain transfers.</param>
     /// <param name="years">Domain registration period in years.</param>
     public void AddItem(
         int productId,
         string productName,
-        string billingCycle,
+        BillingCycle billingCycle,
         decimal firstPaymentAmount,
         decimal recurringAmount,
         string? domain,
         string? hostname,
-        string? domainAction = null,
+        DomainAction? domainAction = null,
         string? eppCode = null,
         int? years = null)
     {
@@ -142,8 +154,9 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// Accepts the order, transitioning from Pending to Active.
     /// Raises <see cref="OrderAcceptedEvent"/>.
     /// </summary>
+    /// <param name="now">The current moment (UTC), read by the caller; stamped on the domain event.</param>
     /// <exception cref="DomainRuleException">Thrown when the order is not in Pending status.</exception>
-    public void Accept()
+    public void Accept(DateTimeOffset now)
     {
         if (Status is not OrderStatus.Pending)
         {
@@ -159,7 +172,7 @@ public sealed class Order : BaseEntity, IAggregateRoot
             item.MarkActive();
         }
 
-        AddDomainEvent(new OrderAcceptedEvent(Id, ClientId));
+        AddDomainEvent(new OrderAcceptedEvent(Id, ClientId, now));
     }
 
     /// <summary>
@@ -227,7 +240,7 @@ public sealed class Order : BaseEntity, IAggregateRoot
     /// </summary>
     /// <remarks>
     /// The comparison is fixed-time. An ordinary string comparison returns as soon as two
-    /// characters differ, and the time it took is visible to whoever sent the guess — enough,
+    /// characters differ, and the time it took is visible to whoever sent the guess: enough,
     /// over many attempts, to recover the token one character at a time. Length is compared
     /// first because a fixed-time comparison is only defined over equal-length inputs; the
     /// length of a token is not a secret, its contents are.

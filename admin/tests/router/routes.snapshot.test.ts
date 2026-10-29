@@ -1,12 +1,13 @@
 /**
  * Route table snapshot: every route's path, name, meta, redirect kind and the file basename of its
  * lazy component must equal the table recorded before the layout move (`routes.snapshot.json`).
- * A moved view keeps its file name, so the snapshot stays identical across the move.
+ * A moved view keeps its file name, so the snapshot stays identical across the move. Every routed
+ * component is a plain lazy loader, the only lazy form vue-router supports.
  */
 import { describe, expect, it } from 'vitest'
 import type { RouteRecordRaw } from 'vue-router'
 import router from '@/router'
-import { originalLoader, viewLoader } from '@/lib/lazyView'
+import { isLazyLoader, originalLoader } from '@/lib/lazyRoute'
 import expected from './routes.snapshot.json'
 
 /** One snapshotted route. */
@@ -28,7 +29,7 @@ interface RouteSnapshot {
 /**
  * Extracts the `.vue` file basename from a lazy loader's source text.
  *
- * @param loader - The `() => import('…')` function of a route.
+ * @param loader - The dynamic `import()` function of a route.
  * @returns The basename, or undefined when the source names no `.vue` file.
  */
 const basenameOf = (loader: () => unknown): string | undefined => {
@@ -54,12 +55,9 @@ const describeRoutes = (routes: readonly RouteRecordRaw[]): RouteSnapshot[] => {
     if (route.redirect !== undefined) {
       entry.redirect = typeof route.redirect === 'function' ? 'function' : String(route.redirect)
     }
-    if ('component' in route && route.component) {
-      // A layout is a plain loader; a view is an async component whose loader the registry keeps.
-      const loader = typeof route.component === 'function' ? originalLoader(route.component as () => Promise<unknown>) : viewLoader(route.component)
-      if (loader !== undefined) {
-        entry.component = basenameOf(loader as () => unknown)
-      }
+    if ('component' in route && isLazyLoader(route.component)) {
+      // Every view and layout is a retrying loader; the file name is in the import it wraps.
+      entry.component = basenameOf(originalLoader(route.component))
     }
     if (route.children) {
       entry.children = describeRoutes(route.children)
@@ -68,8 +66,28 @@ const describeRoutes = (routes: readonly RouteRecordRaw[]): RouteSnapshot[] => {
   })
 }
 
+/**
+ * Lists every component of a route table, nested routes included.
+ *
+ * @param routes - Raw route records.
+ * @returns The `component` of each record that has one.
+ */
+const componentsOf = (routes: readonly RouteRecordRaw[]): unknown[] =>
+  routes.flatMap((route) => [
+    ...('component' in route && route.component !== undefined ? [route.component] : []),
+    ...componentsOf(route.children ?? []),
+  ])
+
 describe('route table', () => {
   it('matches the snapshot recorded before the layout move', () => {
     expect(describeRoutes(router.options.routes)).toEqual(expected)
+  })
+
+  it('gives every routed component as a plain lazy loader, never as an async component', () => {
+    const components = componentsOf(router.options.routes)
+
+    expect(components.length).toBeGreaterThan(0)
+    // vue-router warns about (and does not await) a route component made with defineAsyncComponent.
+    expect(components.filter((component) => !isLazyLoader(component))).toEqual([])
   })
 })

@@ -40,6 +40,7 @@ const load = (locale: string): Record<string, unknown> =>
  *
  * @param value Message tree or leaf.
  * @param prefix Dotted path accumulated so far.
+ * @returns Every leaf key, dotted.
  */
 const flatten = (value: unknown, prefix = ''): string[] => {
   if (typeof value !== 'object' || value === null) {

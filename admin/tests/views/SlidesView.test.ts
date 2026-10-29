@@ -115,6 +115,38 @@ describe('SlidesView', () => {
     await vi.waitFor(() => {
       expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
     })
+    expect(wrapper.get('[data-testid="slides-action-error"]').text()).toBe('Record deleted.')
+  })
+
+  it('does not delete when the confirmation is dismissed', async () => {
+    const mock = stubRouteTable({ 'GET /admin/slides': () => json(slides) })
+    const { wrapper } = await mountScreen(SlidesView)
+
+    await wrapper.get('[data-testid="slide-delete-1"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+
+    expect(requestsOf(mock)).not.toContain('DELETE /admin/slides/1')
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('loads again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /admin/slides': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json(slides)
+      },
+    })
+    const { wrapper } = await mountScreen(SlidesView)
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="slides-error"]').text()).toBe('Not allowed.')
+    })
+    await wrapper.get('[data-testid="slides-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="slide-delete-1"]').exists()).toBe(true)
+    })
   })
 
   it('shows the API sentence when a delete is refused', async () => {

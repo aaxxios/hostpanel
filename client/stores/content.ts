@@ -1,10 +1,10 @@
 /**
  * Pinia store for published editorial content: announcements and the knowledgebase.
  *
- * A server-rendered page wraps a load action in `useAsyncData(key, () => content.loadX(), ...)`
+ * A server-rendered page wraps a load action in `useAsyncData(key, () => content.loadX())`
  * and renders store state, which `@pinia/nuxt` carries from the server render to the browser.
  * The store owns the loading flags and the failure sentence, so a page holds no `catch` and
- * never builds a URL -- transport belongs to {@link useContentApi}.
+ * never builds a URL: transport belongs to {@link useContentApi}.
  *
  * @module stores/content
  */
@@ -12,20 +12,26 @@
 import { defineStore } from 'pinia'
 import { useContentApi } from '~/composables/apis/useContentApi'
 import { apiErrorMessage } from '~/lib/errorHandler'
-import type { Announcement } from '~/types/announcement'
-import type { AnnouncementSummary } from '~/types/announcementsummary'
 import type { KbArticle } from '~/types/kbarticle'
+import type { KbArticleSummary } from '~/types/kbarticlesummary'
 import type { KbArticleQuery } from '~/types/kbarticlequery'
 import type { KbCategory } from '~/types/kbcategory'
+import type { PaginatedList } from '~/types/paginatedlist'
+import type { PublishedAnnouncement } from '~/types/publishedannouncement'
+import { kbCategorySlug } from '~/utils/kbCategory'
+import { failureStatus } from '~/utils/pageLoadError'
 
-/** How many articles the knowledgebase landing page lists as popular. */
-const POPULAR_ARTICLE_COUNT = 10
+/** How many articles the knowledgebase landing page lists under the categories. */
+const LANDING_ARTICLE_COUNT = 10
 
 /** How many articles a category page and a search result list at most. */
 const CATEGORY_ARTICLE_LIMIT = 100
 
 /** How many articles a search returns at most. */
 const SEARCH_ARTICLE_LIMIT = 50
+
+/** The page a failed article read falls back to. */
+const EMPTY_ARTICLE_PAGE: PaginatedList<KbArticleSummary> = { items: [], pageNumber: 1, pageSize: 0, totalCount: 0, totalPages: 0 }
 
 /**
  * Central store for announcements and the knowledgebase.
@@ -36,25 +42,28 @@ export const useContentStore = defineStore('content', () => {
   const api = useContentApi()
 
   /** The announcements, newest first; empty until {@link loadAnnouncements}. */
-  const announcements = ref<Announcement[]>([])
+  const announcements = ref<PublishedAnnouncement[]>([])
+
+  /** Announcements already read in full, keyed by announcement id. */
+  const announcementsById = ref<Record<string, PublishedAnnouncement>>({})
 
   /** The latest published announcements for the dashboard card; empty until {@link loadRecentNews}. */
-  const recentNews = ref<AnnouncementSummary[]>([])
+  const recentNews = ref<PublishedAnnouncement[]>([])
 
   /** The knowledgebase categories; empty until {@link loadKbCategories}. */
   const kbCategories = ref<KbCategory[]>([])
 
-  /** The most viewed articles, most viewed first; empty until {@link loadPopularArticles}. */
-  const popularArticles = ref<KbArticle[]>([])
+  /** The first page of published articles the landing page lists, in the backend order; empty until {@link loadLandingArticles}. */
+  const landingArticles = ref<KbArticleSummary[]>([])
 
-  /** Articles already read per category, keyed by category id. */
-  const articlesByCategory = ref<Record<string, KbArticle[]>>({})
+  /** Articles already read per category, keyed by category name. */
+  const articlesByCategory = ref<Record<string, KbArticleSummary[]>>({})
 
   /** Articles already read in full, keyed by article id. */
   const articlesById = ref<Record<string, KbArticle>>({})
 
   /** The articles the last search found; empty before a search. */
-  const searchResults = ref<KbArticle[]>([])
+  const searchResults = ref<KbArticleSummary[]>([])
 
   /** Number of content reads in flight. */
   const inFlight = ref(0)
@@ -68,6 +77,9 @@ export const useContentStore = defineStore('content', () => {
   /** The sentence for the last failed read; empty when there is none to show. */
   const error = ref('')
 
+  /** The HTTP status of the last failed read (502 when it got no answer); null when the last read did not fail. */
+  const errorStatus = ref<number | null>(null)
+
   /**
    * Runs one content read with the loading flag and the failure sentence handled once.
    *
@@ -79,10 +91,12 @@ export const useContentStore = defineStore('content', () => {
   const guarded = async <T>(read: () => Promise<T>, fallback: T): Promise<T> => {
     inFlight.value += 1
     error.value = ''
+    errorStatus.value = null
     try {
       return await read()
     } catch (e: unknown) {
       error.value = apiErrorMessage(e)
+      errorStatus.value = failureStatus(e)
       return fallback
     } finally {
       inFlight.value -= 1
@@ -94,28 +108,41 @@ export const useContentStore = defineStore('content', () => {
    *
    * @returns The announcements; empty after a failure.
    */
-  const loadAnnouncements = async (): Promise<Announcement[]> => {
-    const list = await guarded(() => api.fetchAnnouncements(), { items: [] as Announcement[] })
-    announcements.value = list.items ?? []
+  const loadAnnouncements = async (): Promise<PublishedAnnouncement[]> => {
+    announcements.value = await guarded(async () => (await api.fetchAnnouncements()).items, [] as PublishedAnnouncement[])
     return announcements.value
   }
 
   /**
-   * Looks up one announcement the list read already holds.
+   * Reads one published announcement in full and keeps it.
    *
    * @param id - Announcement id, as it appears in the route.
-   * @returns The announcement, or null when it is not in the list.
+   * @returns The announcement; null after a failure ({@link error} holds the sentence), which
+   * includes an unknown or unpublished id.
    */
-  const announcementFor = (id: string): Announcement | null =>
-    announcements.value.find(a => String(a.id) === id) ?? null
+  const loadAnnouncement = async (id: string): Promise<PublishedAnnouncement | null> => {
+    const announcement = await guarded(() => api.fetchAnnouncement(id), null as PublishedAnnouncement | null)
+    if (announcement) {
+      announcementsById.value = { ...announcementsById.value, [id]: announcement }
+    }
+    return announcement
+  }
+
+  /**
+   * Looks up an announcement {@link loadAnnouncement} already read.
+   *
+   * @param id - Announcement id, as it appears in the route.
+   * @returns The announcement, or null when it was not read.
+   */
+  const announcementFor = (id: string): PublishedAnnouncement | null => announcementsById.value[id] ?? null
 
   /**
    * Reads the latest published announcements for the dashboard card.
    *
-   * @returns The summaries; empty after a failure.
+   * @returns The announcements; empty after a failure.
    */
-  const loadRecentNews = async (): Promise<AnnouncementSummary[]> => {
-    recentNews.value = await guarded(() => api.fetchRecentAnnouncements(), [] as AnnouncementSummary[])
+  const loadRecentNews = async (): Promise<PublishedAnnouncement[]> => {
+    recentNews.value = await guarded(async () => (await api.fetchRecentAnnouncements()).items, [] as PublishedAnnouncement[])
     return recentNews.value
   }
 
@@ -130,15 +157,15 @@ export const useContentStore = defineStore('content', () => {
   }
 
   /**
-   * Reads the most viewed articles.
+   * Reads the first page of published articles the landing page lists.
    *
-   * @returns The articles, most viewed first; empty after a failure.
+   * @returns The articles in the backend's order; empty after a failure.
    */
-  const loadPopularArticles = async (): Promise<KbArticle[]> => {
-    const query: KbArticleQuery = { limitnum: POPULAR_ARTICLE_COUNT }
-    const list = await guarded(() => api.fetchKbArticles(query), { items: [] as KbArticle[] })
-    popularArticles.value = [...(list.items ?? [])].sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
-    return popularArticles.value
+  const loadLandingArticles = async (): Promise<KbArticleSummary[]> => {
+    const query: KbArticleQuery = { pageSize: LANDING_ARTICLE_COUNT }
+    const list = await guarded(() => api.fetchKbArticles(query), EMPTY_ARTICLE_PAGE)
+    landingArticles.value = list.items
+    return landingArticles.value
   }
 
   /**
@@ -147,10 +174,10 @@ export const useContentStore = defineStore('content', () => {
    * @param categoryId - Category id, as it appears in the route.
    * @returns The articles; empty after a failure.
    */
-  const loadCategoryArticles = async (categoryId: string): Promise<KbArticle[]> => {
-    const query: KbArticleQuery = { categoryid: categoryId, limitnum: CATEGORY_ARTICLE_LIMIT }
-    const list = await guarded(() => api.fetchKbArticles(query), { items: [] as KbArticle[] })
-    articlesByCategory.value = { ...articlesByCategory.value, [categoryId]: list.items ?? [] }
+  const loadCategoryArticles = async (categoryId: string): Promise<KbArticleSummary[]> => {
+    const query: KbArticleQuery = { category: categoryId, pageSize: CATEGORY_ARTICLE_LIMIT }
+    const list = await guarded(() => api.fetchKbArticles(query), EMPTY_ARTICLE_PAGE)
+    articlesByCategory.value = { ...articlesByCategory.value, [categoryId]: list.items }
     return articlesByCategory.value[categoryId] ?? []
   }
 
@@ -160,16 +187,19 @@ export const useContentStore = defineStore('content', () => {
    * @param categoryId - Category id.
    * @returns The articles; empty when none were read.
    */
-  const articlesFor = (categoryId: string): KbArticle[] => articlesByCategory.value[categoryId] ?? []
+  const articlesFor = (categoryId: string): KbArticleSummary[] => articlesByCategory.value[categoryId] ?? []
 
   /**
-   * Looks up a category's name among the categories already read.
+   * Finds the category a route slug names among the categories already read. The slug is
+   * compared case-insensitively against {@link kbCategorySlug} of each name.
    *
-   * @param categoryId - Category id, as it appears in the route.
-   * @returns The name, or null when the category is unknown.
+   * @param slug - Category slug from the route.
+   * @returns The category, or null when no category has that slug.
    */
-  const categoryName = (categoryId: string): string | null =>
-    kbCategories.value.find(c => String(c.id) === categoryId)?.name ?? null
+  const categoryBySlug = (slug: string): KbCategory | null => {
+    const wanted = slug.trim().toLowerCase()
+    return kbCategories.value.find(c => kbCategorySlug(c.name) === wanted) ?? null
+  }
 
   /**
    * Reads one article in full and keeps it.
@@ -199,12 +229,12 @@ export const useContentStore = defineStore('content', () => {
    * @param term - What to search for.
    * @returns The matching articles; empty after a failure.
    */
-  const searchArticles = async (term: string): Promise<KbArticle[]> => {
+  const searchArticles = async (term: string): Promise<KbArticleSummary[]> => {
     searching.value = true
     try {
-      const query: KbArticleQuery = { search: term, limitnum: SEARCH_ARTICLE_LIMIT }
-      const list = await guarded(() => api.fetchKbArticles(query), { items: [] as KbArticle[] })
-      searchResults.value = list.items ?? []
+      const query: KbArticleQuery = { search: term, pageSize: SEARCH_ARTICLE_LIMIT }
+      const list = await guarded(() => api.fetchKbArticles(query), EMPTY_ARTICLE_PAGE)
+      searchResults.value = list.items
       return searchResults.value
     } finally {
       searching.value = false
@@ -218,23 +248,26 @@ export const useContentStore = defineStore('content', () => {
 
   return {
     announcements,
+    announcementsById,
     recentNews,
     kbCategories,
-    popularArticles,
+    landingArticles,
     articlesByCategory,
     articlesById,
     searchResults,
     loading,
     searching,
     error,
+    errorStatus,
     loadAnnouncements,
+    loadAnnouncement,
     announcementFor,
     loadRecentNews,
     loadKbCategories,
-    loadPopularArticles,
+    loadLandingArticles,
     loadCategoryArticles,
     articlesFor,
-    categoryName,
+    categoryBySlug,
     loadArticle,
     articleFor,
     searchArticles,

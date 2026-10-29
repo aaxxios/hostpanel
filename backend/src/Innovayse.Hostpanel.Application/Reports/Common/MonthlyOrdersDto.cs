@@ -1,0 +1,16 @@
+namespace Innovayse.Hostpanel.Application.Reports.Common;
+
+/// <summary>Full Monthly Orders report result.</summary>
+/// <param name="Month">Calendar month the report covers, 1-12.</param>
+/// <param name="Year">Calendar year the report covers.</param>
+/// <param name="Groups">Orders grouped by product group.</param>
+/// <param name="TotalUnitsSold">Units sold across every group.</param>
+/// <param name="TotalValue">Order value across every group.</param>
+/// <param name="Currency">ISO 4217 code of the base currency every value is converted to.</param>
+public sealed record MonthlyOrdersDto(
+    int Month,
+    int Year,
+    IReadOnlyList<MonthlyOrderGroupDto> Groups,
+    int TotalUnitsSold,
+    decimal TotalValue,
+    string Currency);

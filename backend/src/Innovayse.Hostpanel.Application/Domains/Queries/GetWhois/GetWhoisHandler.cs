@@ -1,6 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Application.Domains.Queries.GetWhois;
@@ -8,14 +8,14 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.GetWhois;
 /// <summary>Performs a WHOIS lookup via the registrar provider and returns a <see cref="WhoisDto"/>.</summary>
 public sealed class GetWhoisHandler
 {
-    /// <summary>The registrar provider the WHOIS lookup is placed against.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the WHOIS lookup is placed against.</param>
-    public GetWhoisHandler(IRegistrarProvider registrar)
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
+    public GetWhoisHandler(RegistrarProviderResolver registrars)
     {
-        _registrar = registrar;
+        _registrars = registrars;
     }
 
     /// <summary>
@@ -29,7 +29,8 @@ public sealed class GetWhoisHandler
     /// </returns>
     public async Task<Result<WhoisDto>> HandleAsync(GetWhoisQuery query, CancellationToken ct)
     {
-        var whois = await _registrar.GetWhoisAsync(query.DomainName, ct);
+        var registrar = await _registrars.ResolveForTldAsync(query.DomainName, ct);
+        var whois = await registrar.Provider.GetWhoisAsync(query.DomainName, ct);
         if (whois is null)
         {
             return Result.Failure<WhoisDto>(

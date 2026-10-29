@@ -1,14 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>PUT /api/clients/{id}/users/{userId}/permissions</c>: changing a linked user's permissions.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateUserPermissionsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -62,5 +58,21 @@ public sealed class UpdateUserPermissionsTests(IntegrationTestFactory factory) :
             $"/api/clients/{clientId}/users/{ClientsTestSeeds.NoSuchUserId}/permissions", new { permissions = 1 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>Changing a user's permissions leaves one activity line naming the client and the acting admin.</summary>
+    [Fact]
+    public async Task UpdateIsAuditedWithTheActingAdmin()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var (userId, _) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "update-perm-audit");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/users", new { memberUserId = userId, permissions = 0 }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await admin.PutAsJsonAsync($"/api/clients/{clientId}/users/{userId}/permissions", new { permissions = 1 }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Modified User Permissions");
     }
 }

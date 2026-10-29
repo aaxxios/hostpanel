@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Auth.Enums;
+
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 
 /// <summary>
@@ -12,16 +14,27 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 public interface ISubjectRoleStore
 {
     /// <summary>The roles this subject holds, empty if none.</summary>
-    Task<IReadOnlyList<string>> GetRolesAsync(string subject, CancellationToken ct);
+    /// <param name="subject">The subject, as the configured identity provider names them.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>The held roles.</returns>
+    Task<IReadOnlyList<Role>> GetRolesAsync(string subject, CancellationToken ct);
 
     /// <summary>
-    /// Grants a role. Granting one already held is not an error — the production
-    /// migration replays grants, and a re-run has to be harmless.
+    /// Grants a role. Granting one already held is not an error, because a migration pull
+    /// replays grants, and a re-run has to be harmless.
     /// </summary>
-    Task AddAsync(string subject, string role, CancellationToken ct);
+    /// <param name="subject">The subject, as the configured identity provider names them.</param>
+    /// <param name="role">The role asked about or changed.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>A task that completes once the grant is saved.</returns>
+    Task AddAsync(string subject, Role role, CancellationToken ct);
 
     /// <summary>Revokes a role. Revoking one not held is not an error.</summary>
-    Task RemoveAsync(string subject, string role, CancellationToken ct);
+    /// <param name="subject">The subject, as the configured identity provider names them.</param>
+    /// <param name="role">The role asked about or changed.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>A task that completes once the grant is gone.</returns>
+    Task RemoveAsync(string subject, Role role, CancellationToken ct);
 
     /// <summary>
     /// Whether any subject currently holds this role.
@@ -29,10 +42,31 @@ public interface ISubjectRoleStore
     /// <para>
     /// Backs the first-run bootstrap check: a fresh deployment offers the first person to
     /// sign in a chance to become Admin, and stops offering it the moment anyone holds
-    /// that role. Asking "does <c>Admin</c> have a holder" is the subject-keyed
-    /// replacement for the old "does any local user row exist" check, which stopped
-    /// meaning anything once a deployment could have no local user rows at all.
+    /// that role. The question is keyed by subject rather than by local user rows because a
+    /// deployment whose people live in an external sign-on provider has no local user rows.
     /// </para>
     /// </summary>
-    Task<bool> AnyHasRoleAsync(string role, CancellationToken ct);
+    /// <param name="role">The role asked about or changed.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>Whether at least one subject holds the role.</returns>
+    Task<bool> AnyHasRoleAsync(Role role, CancellationToken ct);
+
+    /// <summary>
+    /// The subjects that hold a role. Backs the guard that keeps an installation from losing its
+    /// last administrator; the caller decides which of them are still live accounts.
+    /// </summary>
+    /// <param name="role">The role asked about or changed.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>The holders' subjects, each once.</returns>
+    Task<IReadOnlyList<string>> GetHoldersAsync(Role role, CancellationToken ct);
+
+    /// <summary>
+    /// Whether one subject holds a role, counting every store the deployment authorizes on, the
+    /// same union <see cref="GetHoldersAsync"/> answers for the whole role.
+    /// </summary>
+    /// <param name="subject">The subject, as the configured identity provider names them.</param>
+    /// <param name="role">The role asked about or changed.</param>
+    /// <param name="ct">Cancels the operation.</param>
+    /// <returns>Whether the subject holds the role.</returns>
+    Task<bool> HoldsAsync(string subject, Role role, CancellationToken ct);
 }

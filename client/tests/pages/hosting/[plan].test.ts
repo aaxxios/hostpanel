@@ -12,6 +12,7 @@ import CatalogHostingPlanDetails from '~/components/catalog/HostingPlanDetails.v
 import { useCartStore } from '~/stores/cart'
 import type { BillingCurrency } from '~/types/currency'
 import type { PortalProduct } from '~/types/portalproduct'
+import { PricingCycle } from '~/types/pricingcycle'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { fetchProducts: vi.fn() }
@@ -39,10 +40,10 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** The hosting plans the catalogue answers with. */
 const plans: PortalProduct[] = [
-  { id: 2, pid: 2, groupId: 1, name: 'Starter', description: 'Small sites<br />✔ 5 GB SSD<br />✔ Free SSL', pricing: { monthly: 5, annual: 50 } },
-  { id: 3, pid: 3, groupId: 1, name: 'Free Trial', description: 'Try it', pricing: { monthly: 0, annual: 0 } },
-  { id: 5, pid: 5, groupId: 1, name: 'Freelancer', description: 'For freelancers', pricing: { monthly: 9, annual: 90 } },
-  { id: 4, pid: 4, groupId: 1, name: 'Custom', description: 'Ask us', pricing: { monthly: null, annual: null } },
+  { id: 2, groupId: 1, name: 'Starter', description: 'Small sites<br />✔ 5 GB SSD<br />✔ Free SSL', pricing: { monthly: 5, annual: 50 } },
+  { id: 3, groupId: 1, name: 'Free Trial', description: 'Try it', pricing: { monthly: 0, annual: 0 } },
+  { id: 5, groupId: 1, name: 'Freelancer', description: 'For freelancers', pricing: { monthly: 9, annual: 90 } },
+  { id: 4, groupId: 1, name: 'Custom', description: 'Ask us', pricing: { monthly: null, annual: null } },
 ]
 
 /** The `useHead` stand-in, so a test reads the links the page publishes. */
@@ -123,7 +124,15 @@ describe('hosting plan page', () => {
 
     await wrapper.find('[data-testid="hosting-plan-order"]').trigger('click')
 
-    expect(useCartStore().items[0]).toMatchObject({ pid: 3, billingcycle: 'free', amount: 0, cycleLabel: 'hosting.cycles.free' })
+    expect(useCartStore().items[0]).toMatchObject({ pid: 3, billingcycle: PricingCycle.Monthly, amount: 0, cycleLabel: 'hosting.cycles.free' })
+    expect(wrapper.find('[data-testid="hosting-plan-order"]').text()).toContain('hosting.inCart')
+  })
+
+  it('offers a free plan only its monthly no-charge choice, never an annual one', async () => {
+    const wrapper = await mountPlan('free-trial')
+
+    expect(wrapper.find('[data-testid="hosting-plan-cycle-monthly"]').text()).toContain('hosting.cycles.free')
+    expect(wrapper.find('[data-testid="hosting-plan-cycle-annual"]').exists()).toBe(false)
   })
 
   it('does not treat a priced plan as free because its name starts with free', async () => {
@@ -131,7 +140,7 @@ describe('hosting plan page', () => {
 
     await wrapper.find('[data-testid="hosting-plan-order"]').trigger('click')
 
-    expect(useCartStore().items[0]).toMatchObject({ pid: 5, billingcycle: 'monthly', amount: 9 })
+    expect(useCartStore().items[0]).toMatchObject({ pid: 5, billingcycle: PricingCycle.Monthly, amount: 9 })
   })
 
   it('shows "custom" and adds nothing for a plan with no price that is not free', async () => {

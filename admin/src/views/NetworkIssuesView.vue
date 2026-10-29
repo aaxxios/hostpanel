@@ -1,21 +1,23 @@
 <script setup lang="ts">
 /**
  * Network issues list: a paged list of network issues grouped by status tab, with create, edit
- * and delete actions.
+ * and delete actions. A refused load offers a retry; a delete is confirmed in a danger prompt and its
+ * outcome (success, or the API's sentence) shows above the table.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SupportRowActions from '@/components/support/SupportRowActions.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -34,6 +36,9 @@ import { UiButtonVariant } from '@/utils/ui/button'
 import { UiTableDensity } from '@/utils/ui/injection'
 import type { UiTabItem } from '@/utils/ui/tabs'
 import { AppRoute, editPath } from '@/lib/routes'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
@@ -78,6 +83,12 @@ const deleteTarget = ref<number | null>(null)
 /** Whether a delete request is in flight. */
 const deleting = ref(false)
 
+/** The outcome line of the last delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /** Number of pages for the record count. */
 const totalPages = computed<number>(() => pageCount(store.totalCount, store.pageSize))
 
@@ -107,19 +118,32 @@ const goToPage = (page: number): void => {
 }
 
 /**
- * Deletes the issue the dialog asked about, then reloads the list.
+ * Deletes the issue the dialog asked about, shows the outcome and reloads the list on success.
+ *
+ * @returns Resolves when the delete (and the reload) has settled.
  */
 const handleDelete = async (): Promise<void> => {
   if (deleteTarget.value === null) {
     return
   }
+  feedback.clear()
   deleting.value = true
   const removed = await store.remove(deleteTarget.value)
-  if (removed) {
-    deleteTarget.value = null
-    await store.fetchAll()
-  }
   deleting.value = false
+  deleteTarget.value = null
+  if (removed) {
+    feedback.show(t('shared.recordDeleted'), false)
+    await store.fetchAll()
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!deleting.value) {
+    deleteTarget.value = null
+  }
 }
 
 onMounted(() => {
@@ -159,9 +183,17 @@ onMounted(() => {
       </UiText>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="network-issues-error">{{ store.error }}</UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="network-issues-feedback" />
 
-    <UiCard class="overflow-x-auto">
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="network-issues-error"
+      @retry="store.fetchAll()"
+    />
+
+    <UiCard v-else class="overflow-x-auto">
       <UiTable
         :density="UiTableDensity.Comfortable"
         :loading="store.loading && store.issues.length === 0"
@@ -224,16 +256,16 @@ onMounted(() => {
     />
 
     <UiDialog
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :open="deleteTarget !== null"
       :title="t('support.networkIssues.deleteNetworkIssue')"
       :message="t('support.networkIssues.areYouSureYouWant')"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deleting"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="handleDelete"
-      @close="deleteTarget = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

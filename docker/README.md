@@ -12,12 +12,13 @@ docker/
 │                                 hostpanel-mailhog; host ports and resource caps for the infrastructure
 ├── docker-compose.prod.yml       the applications by ${IMAGE_TAG} (registry images; a build: block lets a host
 │                                 build the same image in place) and the bundled hostpanel-nginx
-├── docker-compose.platform.yml   joins the external innovayse_network; parks rabbitmq, redis and nginx
+├── docker-compose.platform.yml   joins the shared external network; parks rabbitmq, redis and nginx
 ├── docker-compose.demo.yml       demo overlay: project hostpanel-demo, own db/broker/redis/mailhog, demo-mode API env
 ├── .env.example                  every variable of the stack, each named once; copy to .env (gitignored)
 ├── nginx/
 │   ├── Dockerfile · templates/  the bundled edge proxy (prod, standalone install only)
-│   └── admin.conf                the admin SPA's nginx (admin/Dockerfile, prod stage)
+│   ├── admin.conf                the admin SPA's nginx (admin/Dockerfile, prod stage)
+│   └── snippets/                 security headers, admin policy and the shared /uploads/ location (included by name)
 └── scripts/manage.sh             local start/stop/logs/db helper over the shared + dev stack
 ```
 
@@ -82,7 +83,8 @@ pipeline. A value has one name and one home:
   `NUXT_PUBLIC_SITE_URL`, the SSO callback and the API's first CORS origin all derive from `CLIENT_BASE_URL`
   (the demo derives them from `DEMO_CLIENT_BASE_URL`). `DOMAIN` is only the edge's `server_name`.
 - **Versions** of the third-party images are `POSTGRES_IMAGE`, `RABBITMQ_IMAGE`, `REDIS_IMAGE`,
-  `MAILHOG_IMAGE`, `NGINX_IMAGE` and `CADDY_IMAGE`, full references such as `postgres:17-alpine`.
+  `MAILHOG_IMAGE`, `NGINX_IMAGE` and `CADDY_IMAGE`, full references pinned to an exact version and a digest
+  (`postgres:17.11-alpine3.24@sha256:...`). `NGINX_IMAGE` must be the unprivileged nginx build.
 - **Application images** (`prod`) are `${IMAGE_REGISTRY}/{api,client,admin}:${IMAGE_TAG}`; the deploy jobs
   set `IMAGE_REGISTRY` to the project's own registry path. **For manual compose use on a host or laptop, `IMAGE_REGISTRY` must be in the host `docker/.env`** (compose refuses to start without it; `.env.example` carries a placeholder). The public Docker Hub images stay
   `innovayse/hostpanel:{api,client,admin}-<version>` (`DOCKERHUB_NAMESPACE`).
@@ -95,6 +97,38 @@ pipeline. A value has one name and one home:
   and `__GeneralEmail` (dev, prod and hub stacks). They name the mailboxes of the departments created on a
   fresh install and matter only on the first start; after that the departments are edited in the admin
   panel. `.env.example` carries `example.com` placeholders: a real deployment sets its own.
+- **Order numbering**: `Orders__NumberPrefix` (text, default `ORD-`), `Orders__NumberDigits` (zero-padded digits,
+  default 4) and `Orders__InvoicePaymentTermDays` (days, 0 to 365, default 7) are optional API settings that no stack
+  passes; set them on the API service in a compose override to change them. A prefix and digits that do not fit an
+  order number, or a term out of range, refuse startup.
+- **Allowed origins**: `Cors__AllowedOrigins__N` is the one list the API's CORS policy and the payment gateway
+  return URL check both read. An empty entry (an optional slot such as the dev stack's `PANEL_DEV_ORIGIN`) is
+  skipped; any other entry must be an absolute origin such as `https://host.example.com`, or startup is refused.
+- **Rate limits**: optional API settings under `RateLimit`, each tier a `PermitLimit` per `WindowSeconds`:
+  `RateLimit__Global__*` (default 1200 per 60 s, applies to every request), `RateLimit__Auth__*` (15),
+  `RateLimit__Upstream__*` (60), `RateLimit__Strict__*` (5) and `RateLimit__SshKeys__*` (20), plus
+  `RateLimit__ConcurrentPermitLimit` (5) and `RateLimit__TrustedProxyCount` (0). A tier above the global limit,
+  or a value that is not positive, refuses startup. A refused request gets a 429 with the standard error body.
+- **Trusted proxies**: the API reads the caller's address from `X-Forwarded-For` only when the request comes from
+  a proxy listed in `RateLimit__KnownProxies__N` (addresses) or `RateLimit__KnownNetworks__N` (CIDR ranges). The
+  client container is one of those proxies: it calls the API for every visitor and forwards the visitor's address.
+  List the Docker network the client and edge containers share (for example `172.18.0.0/16`), or every guest is
+  rate limited as a single caller and every order records the client container's address. An entry that is not a
+  valid address or CIDR range refuses startup. The edge proxy replaces `X-Forwarded-For` with the connecting
+  address, so a visitor cannot spoof it. Outside Development the local session cookie is always `Secure`.
+  The shipped stacks set this up themselves: dev, prod and hub create their network with `STACK_NETWORK_SUBNET`
+  and pass it as `RateLimit__KnownNetworks__0` with `RateLimit__TrustedProxyCount` from `RATE_LIMIT_TRUSTED_PROXY_COUNT`
+  (`1`: the bundled edge proxy, or the client container, is the one hop). With `docker-compose.platform.yml` the network
+  already exists, so `STACK_NETWORK_SUBNET` must be that network's subnet; the demo trusts `DEMO_NETWORK_SUBNET` and
+  `DEMO_EDGE_NETWORK_SUBNET`. An extra proxy in front of the stack (an external TLS terminator, a CDN, a load
+  balancer) is one more hop: add one to `RATE_LIMIT_TRUSTED_PROXY_COUNT` and list its address on the API service in a
+  compose override (`RateLimit__KnownProxies__0`, or a `RateLimit__KnownNetworks__N` range), or the bundled edge sees
+  only that proxy and every visitor shares one rate-limit partition.
+- **Sign-in lockout** (local mode): `SignInLockout__MaxFailedAttempts` (5) wrong passwords in a row lock an account
+  for `SignInLockout__LockoutMinutes` (15); a locked sign-in answers 423. Values out of range refuse startup. With demo mode on, the
+  published demo accounts are never locked.
+- **Health**: the API answers `GET /health`; the container healthchecks and the installer use it.
+- **API docs**: Swagger is served at `/swagger` in Development and Testing only.
 - **Demo**: `DEMO_PUBLISH_ADDRESS` (the address its published ports bind to; required, so it can never be empty and bind every interface) and `DEMO_SMTP_ENCRYPTION`,
   next to the existing `DEMO_*` keys. `DEMO_CONTACT_EMAIL` and `DEMO_CONTACT_PHONE` are optional (`Demo__ContactEmail` /
   `Demo__ContactPhone`): the contact the demo storefront shows in its footer and contact page, written on every seed and
@@ -132,9 +166,41 @@ A key added to `.env.example` needs its GitLab variable before the next deploy, 
 
 ## Rules
 
-- No `${VAR:-x}` defaults and no `env_file:`; every required value (secrets, ports, sizes, resource caps, addresses) is `${VAR:?VAR must be set}`.
+- No `${VAR:-x}` defaults (only `${VAR:-}` for a value that is meant to be empty: an optional feature left off) and no `env_file:`; every required value (secrets, ports, sizes, resource caps, addresses) is `${VAR:?VAR must be set}`.
 - Services talk to each other by container name (`hostpanel-api:${API_PORT}`, `hostpanel-db`), never localhost.
 - Parked services (rabbitmq, redis, nginx under the platform overlay) carry no `container_name`.
+
+## Hardening
+
+- **Unprivileged containers.** The API runs as the image's `APP_UID`, the client as `node`, the admin and the
+  bundled nginx as the `nginx` user (the `nginxinc/nginx-unprivileged` build). The admin and nginx still
+  listen on port 80: the compose files set `net.ipv4.ip_unprivileged_port_start=0` for those two containers,
+  which lets a non-root process bind it, so no proxy address changes. Every application container also
+  sets `no-new-privileges` and drops all capabilities (caddy keeps `NET_BIND_SERVICE`).
+- **Health.** Every image has a `HEALTHCHECK` and the compose files declare the same probes; a service starts
+  after the API reports healthy and the edge after all three.
+- **Volumes.** Uploaded branding (`/app/wwwroot/uploads/branding`) and uploaded plugins
+  (`/app/plugins-installed`, `Plugins:InstallPath`) are named volumes in every stack
+  (`hostpanel_hostpanel_branding`, `hostpanel_hostpanel_plugins`; `hostpanel-demo_*` for the demo). A volume
+  created by an earlier root image keeps its owner: hand it over once with
+  `docker compose -f <file> run --rm --no-deps --user 0 --cap-add CHOWN --entrypoint sh hostpanel-api -c 'chown -R "$APP_UID" /app/wwwroot/uploads /app/plugins-installed'`
+  (`install.sh` does this on every run).
+- **Secrets.** `.env.example` ships `CHANGE_ME` placeholders, never working secrets. Outside Development the
+  API refuses to start while `JWT_SECRET`, `ENCRYPTION_KEY`, the database password or a configured
+  `HOSTPANEL_BACKCHANNEL_LOGOUT_KEY` is a placeholder, a published example value or too short. `install.sh`
+  generates every secret.
+- **Private package feed.** Builds of `AUTH_MODE=sso` read the feed credentials from the BuildKit secret
+  `nuget_credentials`, never from a build argument: `docker build --secret id=nuget_credentials,env=NAME ...`
+  (compose reads `NUGET_INNOVAYSE_CREDENTIALS` for it). An empty or absent secret builds without the feed.
+- **Response headers.** HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and
+  `Permissions-Policy` come from `nginx/snippets/security-headers.conf` (nginx) and the `security_headers`
+  snippet of the Caddyfile. nginx drops inherited `add_header` lines in a location that has its own, so every
+  location includes the snippet by name. The admin image sends its own policy (`snippets/admin-csp.conf`:
+  same-origin scripts and connections). The client portal's policy is written in the edge config; it allows
+  the payment provider's script, frames and API and the optional tag manager, and
+  `EDGE_CLIENT_CSP_SOURCES` adds a deployment's own origins (a chat server). Uploaded files are served with
+  `default-src 'none'; sandbox`. `/uploads/` is one snippet (`snippets/uploads-location.conf`) shared by both
+  hosts.
 
 ## Demo
 
@@ -144,30 +210,25 @@ piece a name of its own (`hostpanel-demo-db`, `-rabbitmq`, `-redis`, `-mailhog`,
 `-admin`; volumes `hostpanel-demo_*`), so it can share a server with production without touching
 its data. Services reach each other by those container names, over a demo-private network
 (`hostpanel-demo_default`): the db, broker, redis and mailhog are on it alone. Only the api, client and admin
-also join `hostpanel_demo_edge`, a dedicated external network that is **not** `innovayse_network`, as compose
+also join `hostpanel_demo_edge`, a dedicated external network that is **not** the production network, as compose
 services named `hostpanel-demo-api`, `-client` and `-admin` (the production ones are parked in this overlay).
 Keep those names unique: compose adds the service name as an alias on every network it joins, so never rename
 them back to `hostpanel-api`.
 
-**The demo cannot see production.** No demo container is on `innovayse_network`, so `hostpanel-db`,
-`hostpanel-api`, `main-client`, `sso-api` and every other production container neither resolve by name nor
-answer by IP from inside the demo. The only production-side container on `hostpanel_demo_edge` is the edge
-proxy `innovayse-edge` (it is on both networks and routes by Host header), which is how the public demo URLs
-reach the demo. Create the network once per host, before the first demo `up` and before the proxy is
-(re)started with the new `edge-proxy/docker-compose.yml`:
+**The demo cannot see production.** No demo container is on the production network, so `hostpanel-db`,
+`hostpanel-api` and every other production container neither resolve by name nor answer by IP from inside the
+demo. The only container that may sit on both networks is your reverse proxy, which routes by Host header and
+is how the public demo URLs reach the demo. Create the network once per host, before the first demo `up`:
 
 ```bash
 docker network create --subnet 172.29.0.0/16 hostpanel_demo_edge   # `deploy:demo` does this when it is missing
-docker network connect hostpanel_demo_edge innovayse-edge   # attach an already-running proxy, no restart
+docker network connect hostpanel_demo_edge <your-proxy-container>   # attach an already-running proxy, no restart
 ```
 
-The subnet is **fixed at 172.29.0.0/16** (checked free on the server). The edge proxy routes by `Host` header,
-so without a guard a demo container could send `Host: host.innovayse.com` to it and reach production.
-`edge-proxy/nginx.conf` therefore carries `deny 172.29.0.0/16;` in the http context: every host answers 403
-to that subnet, and only the two demo server blocks opt back in with `allow all;`. Real traffic arrives over
-the WireGuard tunnel from a different range. Change the subnet in three places together: the `deploy:demo`
-network creation, that `deny` line, and this paragraph. An existing network cannot change subnet in place:
-disconnect the edge, remove the network, recreate it, reconnect the edge, then redeploy the demo.
+Pick a subnet that is free on the host and, in the proxy, refuse that subnet for every production virtual
+host, so a demo container cannot send a production Host header through the proxy. Only the demo virtual hosts
+allow it. An existing network cannot change subnet in place: disconnect the proxy, remove the network,
+recreate it, reconnect the proxy, then redeploy the demo.
 
 Outbound traffic: the demo needs nothing external (fake payment, registrar and provisioning adapters, mail to
 mailhog), and the db, broker, redis and mailhog sit on a bridge with no production peer. The api, client and

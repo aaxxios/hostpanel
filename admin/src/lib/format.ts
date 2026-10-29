@@ -43,10 +43,8 @@ export const toDateInputValue = (iso: string | null | undefined): string => {
  *
  * Exists because `noUncheckedIndexedAccess` types the result of `String.split` as
  * `(string | undefined)[]`, which every caller would otherwise have to widen by hand.
- * A missing part yields `NaN`, exactly as `parseInt(undefined as never)` did before —
- * callers here always pass a string that has already been validated as a full date, so
- * the `NaN` branch is unreachable in practice and is preserved only to keep behaviour
- * identical for a malformed input.
+ * A missing part yields `NaN`. Callers here always pass a string that has already been
+ * validated as a full date, so that branch is unreachable in practice.
  *
  * @param iso - Date string in `YYYY-MM-DD` form.
  * @returns The three parts as numbers; `NaN` for any part the string did not contain.
@@ -60,10 +58,10 @@ export const splitIsoDate = (iso: string): { year: number; month: number; day: n
  * Renders a `Date` as its UTC `YYYY-MM-DD` day, the form every date `<input>` and every
  * date-keyed lookup in the admin uses.
  *
- * `Date.toISOString()` always contains a `T`, so the first split part is always present —
- * but `noUncheckedIndexedAccess` cannot know that, and spelling the fallback out at each of
- * the ~18 call sites would bury the intent. Callers must pass a valid `Date`; an invalid one
- * makes `toISOString()` throw here exactly as it did inline.
+ * `Date.toISOString()` always contains a `T`, so the first split part is always present,
+ * but `noUncheckedIndexedAccess` cannot know that, and spelling the fallback out at every
+ * call site would bury the intent. Callers must pass a valid `Date`; an invalid one makes
+ * `toISOString()` throw.
  *
  * @param date - The date to render. Must be a valid `Date`.
  * @returns The UTC calendar day as `YYYY-MM-DD`.

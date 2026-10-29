@@ -4,19 +4,8 @@
 import { describe, expect, it } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import ServiceDetailsCard from '~/components/client/services/ServiceDetailsCard.vue'
-import type { ServiceDetail } from '~/types/servicedetail'
-
-/**
- * Builds a service with the fields the card reads.
- *
- * @param overrides - Fields to set.
- * @returns A service.
- */
-const service = (overrides: Partial<ServiceDetail> = {}): ServiceDetail => ({
-  id: 4, name: 'Starter', domain: 'example.com', status: 'Active', billingcycle: 'monthly', regdate: '2026-01-01', nextduedate: '2026-12-01',
-  recurringamount: '10.00', firstpaymentamount: '12.00', paymentmethod: 'stripe', paymentmethodname: 'Card',
-  ...overrides
-} as ServiceDetail)
+import { makeClientService as service } from '~/tests/helpers/clientServiceFixture'
+import { BillingCycle } from '~/types/billingcycle'
 
 describe('ServiceDetailsCard', () => {
   it('lists the plan, the domain and the billing cycle', () => {
@@ -24,7 +13,13 @@ describe('ServiceDetailsCard', () => {
 
     expect(wrapper.text()).toContain('Starter')
     expect(wrapper.text()).toContain('example.com')
-    expect(wrapper.text()).toContain('monthly')
+    expect(wrapper.text()).toContain('products.pricing.cycles.monthly')
+  })
+
+  it('names the yearly cycle with its locale key', () => {
+    const wrapper = mountClient(ServiceDetailsCard, { props: { service: service({ billingCycle: BillingCycle.Annual }), currency: {} } })
+
+    expect(wrapper.text()).toContain('products.pricing.cycles.annually')
   })
 
   it('formats both amounts in the account currency', () => {
@@ -34,14 +29,14 @@ describe('ServiceDetailsCard', () => {
     expect(wrapper.text()).toContain('$12.00')
   })
 
-  it('prefers the payment method name over the module name', () => {
+  it('shows the payment method the backend sent', () => {
     const wrapper = mountClient(ServiceDetailsCard, { props: { service: service(), currency: {} } })
 
-    expect(wrapper.text()).toContain('Card')
+    expect(wrapper.text()).toContain('stripe')
   })
 
   it('shows a dash for a missing domain', () => {
-    const wrapper = mountClient(ServiceDetailsCard, { props: { service: service({ domain: '' }), currency: {} } })
+    const wrapper = mountClient(ServiceDetailsCard, { props: { service: service({ domain: null }), currency: {} } })
 
     expect(wrapper.text()).toContain('—')
   })

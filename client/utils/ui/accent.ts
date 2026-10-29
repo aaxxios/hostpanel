@@ -5,8 +5,8 @@
  * Tailwind class can name it. `UiAccent` writes that colour once, as the `--accent` custom
  * property of a wrapper; every class here reads the property, so the colour-dependent look is a
  * literal Tailwind class (`text-[color:var(--accent)]`) and a screen never carries a hex or an
- * inline style of its own. A tint is made with `color-mix`, which keeps the opacity steps the old
- * `${color}15` hex suffixes had (15 = 8 %, 25 = 15 %, 40 = 25 %, 50 = 31 %).
+ * inline style of its own. A tint is made with `color-mix` at fixed opacity steps (8 %, 15 %,
+ * 25 % and 31 %).
  *
  * @module utils/ui/accent
  */
@@ -47,7 +47,7 @@ const ACCENT_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 /**
  * Checks a colour from the catalogue before it is written into a style.
  *
- * A colour is operator data; anything that is not a plain hex (a `url(...)`, a second declaration)
+ * A colour is operator data; anything that is not a plain hex (a `url()`, a second declaration)
  * must never reach a stylesheet, so it is refused rather than escaped.
  *
  * @param value The colour string from the data.

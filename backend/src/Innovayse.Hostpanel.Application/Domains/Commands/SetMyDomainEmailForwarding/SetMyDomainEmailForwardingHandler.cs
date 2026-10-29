@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SetMyDomainEmailForwarding;
+
 /// <summary>
 /// Toggles email forwarding on one of the calling client's own domains, refusing every domain that
 /// is not theirs.

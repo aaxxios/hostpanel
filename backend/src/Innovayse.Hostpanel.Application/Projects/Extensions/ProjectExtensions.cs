@@ -24,26 +24,13 @@ public static class ProjectExtensions
             x.Translations.ToDictionary(t => t.Locale, t => new ProjectTranslationDto(t.Title, t.Summary, t.Description)));
     }
 
-    /// <summary>
-    /// Makes the project's translations exactly the given set: locales that are no longer sent are
-    /// removed, the rest are added or updated in place.
-    /// </summary>
-    /// <param name="x">The project to change.</param>
-    /// <param name="translations">The complete set of translations, keyed by locale code.</param>
-    public static void ApplyTranslations(this Project x, IReadOnlyDictionary<string, ProjectTranslationDto> translations)
+    /// <summary>Turns the translations a command carries into the text the project keeps per locale.</summary>
+    /// <param name="translations">The translations as sent, keyed by locale code.</param>
+    /// <returns>The same set, keyed by locale code, ready for <see cref="Project.ReplaceTranslations"/>.</returns>
+    public static IReadOnlyDictionary<string, ProjectTranslationContent> ToContent(this IReadOnlyDictionary<string, ProjectTranslationDto> translations)
     {
-        ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(translations);
 
-        var stale = x.Translations.Select(t => t.Locale).Where(locale => !translations.ContainsKey(locale)).ToList();
-        foreach (var locale in stale)
-        {
-            x.RemoveTranslation(locale);
-        }
-
-        foreach (var (locale, translation) in translations)
-        {
-            x.SetTranslation(locale, translation.Title, translation.Summary, translation.Description);
-        }
+        return translations.ToDictionary(t => t.Key, t => new ProjectTranslationContent(t.Value.Title, t.Value.Summary, t.Value.Description));
     }
 }

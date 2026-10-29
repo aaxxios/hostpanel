@@ -19,39 +19,52 @@ using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Demo;
+using Innovayse.Hostpanel.Infrastructure.Persistence.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence;
+
 /// <summary>
-/// Seeds realistic test data for development. Idempotent — skips if clients already exist.
+/// Seeds realistic test data for development. Idempotent: skips if clients already exist.
 /// </summary>
 public sealed class DevDataSeeder
 {
-    /// <summary>The db this class uses.</summary>
+    /// <summary>The database the development data is written to.</summary>
     private readonly AppDbContext _db;
 
-    /// <summary>The user manager this class uses.</summary>
+    /// <summary>Creates the development sign-in accounts.</summary>
     private readonly UserManager<AppUser> _userManager;
 
-    /// <summary>The event gate this class uses.</summary>
+    /// <summary>Discards the domain events seed saves raise, so seeding triggers no notifications.</summary>
     private readonly IDomainEventGate _eventGate;
 
-    /// <summary>The logger this class uses.</summary>
+    /// <summary>The sign-in passwords of the accounts this class creates.</summary>
+    private readonly DevDataSeederOptions _passwords;
+
+    /// <summary>Records which parts were seeded or skipped.</summary>
     private readonly ILogger<DevDataSeeder> _logger;
 
+    /// <summary>The moment this seeding run counts every date from, read once from the clock.</summary>
+    private readonly DateTimeOffset _now;
+
     /// <summary>Initializes a new instance of the <see cref="DevDataSeeder"/> class.</summary>
-    /// <param name="db">The db this class uses.</param>
-    /// <param name="userManager">The user manager this class uses.</param>
-    /// <param name="eventGate">The event gate this class uses.</param>
-    /// <param name="logger">The logger this class uses.</param>
-    public DevDataSeeder(AppDbContext db, UserManager<AppUser> userManager, IDomainEventGate eventGate, ILogger<DevDataSeeder> logger)
+    /// <param name="db">The database the development data is written to.</param>
+    /// <param name="userManager">Creates the development sign-in accounts.</param>
+    /// <param name="eventGate">Discards the domain events seed saves raise, so seeding triggers no notifications.</param>
+    /// <param name="options">The sign-in passwords of the accounts this class creates, from configuration.</param>
+    /// <param name="logger">Records which parts were seeded or skipped.</param>
+    /// <param name="clock">The source of the moment the seeded dates count from.</param>
+    public DevDataSeeder(AppDbContext db, UserManager<AppUser> userManager, IDomainEventGate eventGate, IOptions<DevDataSeederOptions> options, ILogger<DevDataSeeder> logger, IClock clock)
     {
         _db = db;
         _userManager = userManager;
         _eventGate = eventGate;
+        _passwords = options.Value;
         _logger = logger;
+        _now = clock.UtcNow;
     }
 
     /// <summary>Fixed-seed generator so every dev database gets the same pseudo-random figures.</summary>
@@ -65,11 +78,12 @@ public sealed class DevDataSeeder
     private const string SeedInvoiceCurrency = "USD";
 
     /// <summary>Builds a date in the middle of a past month, relative to now.</summary>
+    /// <param name="now">The moment the months are counted back from.</param>
     /// <param name="months">How many whole months back from the current month.</param>
     /// <param name="day">Day of that month, 1-based.</param>
     /// <returns>Midnight UTC on the requested day.</returns>
-    private static DateTimeOffset MonthsAgo(int months, int day = 15) =>
-        new DateTimeOffset(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero)
+    private static DateTimeOffset MonthsAgo(DateTimeOffset now, int months, int day = 15) =>
+        new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero)
             .AddMonths(-months)
             .AddDays(day - 1);
 
@@ -83,7 +97,7 @@ public sealed class DevDataSeeder
 
         // The storefront content (testimonials, partners, projects, FAQs) is the same fictional set the demo
         // ships, filled into whichever of those tables are still empty; one source, so the two never drift.
-        await new DemoStorefrontSeeder(_db).SeedContentAsync(ct);
+        await new DemoStorefrontSeeder(_db, DemoAnchor.Today(_now)).SeedContentAsync(ct);
 
         // ── Admin user ───────────────────────────────────────────────────────
         const string adminEmail = "admin@example.test";
@@ -97,7 +111,7 @@ public sealed class DevDataSeeder
                 LastName = "User",
                 EmailConfirmed = true,
             };
-            var adminResult = await _userManager.CreateAsync(adminUser, "Admin123!");
+            var adminResult = await _userManager.CreateAsync(adminUser, _passwords.AdminPassword);
             if (adminResult.Succeeded)
             {
                 await _userManager.AddToRoleAsync(adminUser, Roles.Admin);
@@ -113,25 +127,25 @@ public sealed class DevDataSeeder
         {
             if (!await _db.Slides.AnyAsync(ct))
             {
-                await SeedSlidesAsync(_db, _logger, ct);
+                await SeedSlidesAsync(_db, _now, _logger, ct);
             }
 
             // Keyed on tickets rather than departments: DefaultDepartmentsSeeder fills the
-            // departments table in every environment before this runs, so the old check
-            // would now always be false and the KB and tickets would never be seeded.
+            // departments table in every environment before this runs, so a departments check
+            // would always be false and the KB and tickets would never be seeded.
             if (!await _db.Tickets.AnyAsync(ct))
             {
-                await SeedSupportAsync(_db, ct, _logger);
+                await SeedSupportAsync(_db, _now, ct, _logger);
             }
 
             if (!await _db.Domains.AnyAsync(ct))
             {
-                await SeedDomainsAsync(_db, ct, _logger);
+                await SeedDomainsAsync(_db, _now, ct, _logger);
             }
 
             if (!await _db.ServerGroups.AnyAsync(ct))
             {
-                await SeedServersAsync(_db, ct, _logger);
+                await SeedServersAsync(_db, _now, ct, _logger);
             }
 
             if (!await _db.Settings.AnyAsync(ct))
@@ -154,7 +168,7 @@ public sealed class DevDataSeeder
                     await _db.SaveChangesAsync(ct);
                 }
 
-                var domainProduct = Product.Create(domainGroup.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m);
+                var domainProduct = Product.Create(domainGroup.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m, _now);
                 domainProduct.SetPrice(SeedInvoiceCurrency, BillingCycle.Monthly, 0m);
                 domainProduct.SetPrice(SeedInvoiceCurrency, BillingCycle.Annual, 0m);
                 _db.Products.Add(domainProduct);
@@ -198,16 +212,25 @@ public sealed class DevDataSeeder
             var clientIdx = 0;
             foreach (var (email, first, last, company, phone, street, city, state, postCode, country, status) in clientDefs)
             {
-                var user = new AppUser { UserName = email, Email = email, FirstName = first, LastName = last, EmailConfirmed = true };
-                var result = await _userManager.CreateAsync(user, "Test@12345");
-                if (!result.Succeeded)
+                // An account that already exists (an earlier run stopped half way, or a person signed up
+                // with this address) keeps its password; the client record is created for it all the same.
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user is null)
                 {
-                    continue;
+                    user = new AppUser { UserName = email, Email = email, FirstName = first, LastName = last, EmailConfirmed = true };
+                    var result = await _userManager.CreateAsync(user, _passwords.ClientPassword);
+                    if (!result.Succeeded)
+                    {
+                        continue;
+                    }
                 }
 
-                await _userManager.AddToRoleAsync(user, Roles.Client);
+                if (!await _userManager.IsInRoleAsync(user, Roles.Client))
+                {
+                    await _userManager.AddToRoleAsync(user, Roles.Client);
+                }
 
-                var client = Client.Create(user.Id, first, last, email, company);
+                var client = Client.Create(user.Id, first, last, email, _now, company);
                 if (phone is not null)
                 {
                     client.Update(first, last, company, phone);
@@ -220,20 +243,23 @@ public sealed class DevDataSeeder
 
                 if (status == ClientStatus.Suspended)
                 {
-                    client.Suspend();
+                    client.Suspend(_now);
                 }
 
                 _db.Clients.Add(client);
 
                 var signupMonthsBack = 5 - (clientIdx * 6 / clientDefs.Count);
-                _db.Entry(client).Property(nameof(Client.CreatedAt)).CurrentValue = MonthsAgo(signupMonthsBack, Rng.Next(1, 28));
+                client.Backdate(MonthsAgo(_now, signupMonthsBack, Rng.Next(1, 28)));
                 clientIdx++;
 
                 await _db.SaveChangesAsync(ct);
 
                 if (company is not null)
                 {
-                    client.AddContact(first, last, company, email, phone, ContactType.Billing, null, null, null, null, null, null, true, true, true, true, true, true);
+                    client.AddContact(new ContactDetails(
+                        first, last, company, email, phone, ContactType.Billing,
+                        new PostalAddress(null, null, null, null, null, null),
+                        new ContactNotifications(true, true, true, true, true, true)));
                     await _db.SaveChangesAsync(ct);
                 }
             }
@@ -253,11 +279,11 @@ public sealed class DevDataSeeder
             {
                 for (int monthsBack = 5; monthsBack >= 0; monthsBack--)
                 {
-                    var invoiceDate = MonthsAgo(monthsBack, Rng.Next(1, 20));
+                    var invoiceDate = MonthsAgo(_now, monthsBack, Rng.Next(1, 20));
                     var dueDate = invoiceDate.AddDays(30);
                     var productIndex = Rng.Next(products.Length);
 
-                    var invoice = Invoice.Create(client.Id, dueDate, SeedInvoiceCurrency);
+                    var invoice = Invoice.Create(client.Id, dueDate, SeedInvoiceCurrency, invoiceDate);
                     invoice.AddItem(products[productIndex], prices[productIndex], 1);
 
                     if (Rng.Next(3) == 0)
@@ -268,30 +294,30 @@ public sealed class DevDataSeeder
 
                     if (monthsBack >= 4)
                     {
-                        invoice.MarkPaid("stripe_" + Rng.Next(100000, 999999));
+                        invoice.RecordPaidHistory("txn_" + Rng.Next(100000, 999999), _now);
                     }
                     else if (monthsBack == 3)
                     {
                         if (Rng.Next(2) == 0)
                         {
-                            invoice.MarkPaid("stripe_" + Rng.Next(100000, 999999));
+                            invoice.RecordPaidHistory("txn_" + Rng.Next(100000, 999999), _now);
                         }
                         else
                         {
-                            invoice.MarkOverdue();
+                            invoice.MarkOverdue(_now);
                         }
                     }
                     else if (monthsBack == 2)
                     {
                         if (Rng.Next(3) == 0)
                         {
-                            invoice.MarkOverdue();
+                            invoice.MarkOverdue(_now);
                         }
                     }
 
                     _db.Invoices.Add(invoice);
                     invoices.Add(invoice);
-                    _db.Entry(invoice).Property(nameof(Invoice.CreatedAt)).CurrentValue = invoiceDate;
+                    invoice.Backdate(invoiceDate);
                 }
             }
 
@@ -314,7 +340,7 @@ public sealed class DevDataSeeder
                 }
 
                 var payDate = inv.DueDate.AddDays(-Rng.Next(1, 10));
-                var gateway = Rng.Next(3) switch { 0 => PaymentMethodNames.Card, 1 => "PayPal", _ => "Bank Transfer" };
+                var gateway = Rng.Next(3) switch { 0 => PaymentMethodNames.Card, 1 => PaymentMethodNames.PayPal, _ => PaymentMethodNames.BankTransfer };
                 var fees = Math.Round(inv.Total * 0.029m + 0.30m, 2);
 
                 var tx = InvoiceTransaction.Create(
@@ -338,7 +364,7 @@ public sealed class DevDataSeeder
             {
                 for (int m = 0; m < 3; m++)
                 {
-                    var date = MonthsAgo(m * 2, Rng.Next(1, 28));
+                    var date = MonthsAgo(_now, m * 2, Rng.Next(1, 28));
                     var amount = Math.Round((decimal)(Rng.NextDouble() * 200 + 50), 2);
                     var tx = Transaction.Create(
                         client.Id, date, "Monthly hosting payment",
@@ -363,7 +389,7 @@ public sealed class DevDataSeeder
             foreach (var client in clients.Take(8))
             {
                 var subject = quoteSubjects[Rng.Next(quoteSubjects.Length)];
-                var expiryDate = DateTimeOffset.UtcNow.AddDays(30 + Rng.Next(30));
+                var expiryDate = _now.AddDays(30 + Rng.Next(30));
                 var quote = Quote.Create(
                     client.Id, subject, expiryDate, SeedInvoiceCurrency, "Please review and accept this quote.");
                 quote.AddItem("Setup Fee", 99.00m, 1);
@@ -390,8 +416,8 @@ public sealed class DevDataSeeder
             {
                 var idx = Rng.Next(itemDescs.Length);
                 var item = BillableItem.Create(
-                    client.Id, itemDescs[idx], itemPrices[idx], "USD",
-                    BillableItemType.OneTime, null, DateTimeOffset.UtcNow);
+                    client.Id, itemDescs[idx], itemPrices[idx], SeedInvoiceCurrency,
+                    BillableItemType.OneTime, null, _now);
                 _db.BillableItems.Add(item);
             }
 
@@ -420,9 +446,13 @@ public sealed class DevDataSeeder
 
                 foreach (var (name, monthly, annual) in products)
                 {
+                    // A hosting plan names the panel package its accounts are created with; provisioning refuses one without it.
+                    var packageName = productType is ProductType.SharedHosting or ProductType.Vps or ProductType.Dedicated
+                        ? name.ToLowerInvariant().Replace(' ', '-')
+                        : null;
                     // The legacy columns receive the same figures for the rollback release; the
                     // storefront and the order flow read the per-currency rows.
-                    var product = Product.Create(group.Id, name, null, null, null, null, productType, monthly, annual);
+                    var product = Product.Create(group.Id, name, null, null, null, packageName, productType, monthly, annual, _now);
                     product.SetPrice(SeedInvoiceCurrency, BillingCycle.Monthly, monthly);
                     product.SetPrice(SeedInvoiceCurrency, BillingCycle.Annual, annual);
                     _db.Products.Add(product);
@@ -438,7 +468,7 @@ public sealed class DevDataSeeder
         {
             var products = await _db.Products.Include(p => p.Prices).ToListAsync(ct);
             var activeClients = await _db.Clients.Where(c => c.Status == ClientStatus.Active).ToListAsync(ct);
-            var billingCycles = new[] { "monthly", "annual" };
+            var billingCycles = new[] { BillingCycle.Monthly, BillingCycle.Annual };
             var renewalDevPlaced = false;
 
             foreach (var client in activeClients)
@@ -448,34 +478,21 @@ public sealed class DevDataSeeder
                 {
                     var product = products[Rng.Next(products.Count)];
                     var cycle = billingCycles[Rng.Next(2)];
-                    var svc = ClientService.Create(client.Id, product.Id, cycle);
 
-                    // ClientService.Create leaves both amounts at zero, and every renewal is
-                    // billed from RecurringAmount by ProcessRenewalsCronHandler. Without this
-                    // the seeded portal shows a wall of 0.00 invoices — the Pay screens have
-                    // nothing to charge and no dev sees what a real balance looks like. The two
-                    // production callers, OrderServiceHandler and MigrationPullWorker, both set
-                    // these the same way immediately after Create; this seeder was the only one
-                    // that did not.
-                    var cyclePrice = product.PriceFor(SeedInvoiceCurrency, BillingCycleParser.Parse(cycle)) ?? 0m;
-
-                    svc.Update(
-                        domain: null, dedicatedIp: null, username: null,
-                        password: null, billingCycle: cycle,
-                        recurringAmount: cyclePrice, paymentMethod: null,
-                        nextRenewalAt: null, subscriptionId: null,
-                        overrideAutoSuspend: false, suspendUntil: null,
-                        autoTerminateEndOfCycle: false, autoTerminateReason: null,
-                        adminNotes: null, provisioningRef: null,
-                        firstPaymentAmount: cyclePrice,
-                        promotionCode: null, terminatedAt: null,
-                        serverId: null, quantity: 1, productId: null);
+                    // Seeded through the ordering factory with both amounts set: every renewal is
+                    // billed from RecurringAmount by ProcessRenewalsCronHandler, and without it the
+                    // seeded portal shows a wall of 0.00 invoices, so the Pay screens have nothing to
+                    // charge and no dev sees what a real balance looks like.
+                    var cyclePrice = product.PriceFor(SeedInvoiceCurrency, cycle) ?? 0m;
+                    var svc = ClientService.CreateOrdered(
+                        client.Id, product.Id, cycle, domain: null,
+                        firstPaymentAmount: cyclePrice, recurringAmount: cyclePrice, paymentMethod: null, firstInvoiceId: null, now: _now);
 
                     var monthsBack = Rng.Next(1, 12);
-                    _db.Entry(svc).Property(nameof(ClientService.CreatedAt)).CurrentValue = MonthsAgo(monthsBack);
+                    svc.Backdate(MonthsAgo(_now, monthsBack));
 
                     // Leave the first of a client's several services Pending, the rest Active. This
-                    // is what gives the portal a service to run the setup wizard against — without
+                    // is what gives the portal a service to run the setup wizard against: without
                     // it every seeded service is already provisioned and "Build My Server" has
                     // nothing to act on. A client with only one service keeps it Active so no
                     // account is left unusable; a Pending service is never activated and holds no
@@ -488,13 +505,13 @@ public sealed class DevDataSeeder
                     }
                     else
                     {
-                        svc.Activate("prov_" + Rng.Next(10000, 99999));
+                        svc.Activate("prov_" + Rng.Next(10000, 99999), svc.CreatedAt, _now);
 
-                        // One service always renews ten days out -- inside the 14-day invoicing window -- so
+                        // One service always renews ten days out, inside the 14-day invoicing window, so
                         // the renewal flow has something to raise an invoice for on a fresh dev database.
                         if (!renewalDevPlaced)
                         {
-                            _db.Entry(svc).Property(nameof(ClientService.NextRenewalAt)).CurrentValue = DateTimeOffset.UtcNow.AddDays(10);
+                            svc.ExtendRenewalTo(_now.AddDays(10));
                             renewalDevPlaced = true;
                         }
                     }
@@ -520,19 +537,19 @@ public sealed class DevDataSeeder
                 {
                     var client = activeClients[Rng.Next(activeClients.Count)];
                     var product = products[Rng.Next(products.Count)];
-                    var invoiceDate = MonthsAgo(monthsBack, Rng.Next(1, 25));
+                    var invoiceDate = MonthsAgo(_now, monthsBack, Rng.Next(1, 25));
 
-                    var invoice = Invoice.Create(client.Id, invoiceDate.AddDays(30), SeedInvoiceCurrency);
+                    var invoice = Invoice.Create(client.Id, invoiceDate.AddDays(30), SeedInvoiceCurrency, invoiceDate);
                     invoice.AddItem(product.Name, product.PriceFor(SeedInvoiceCurrency, BillingCycle.Monthly) ?? 0m, 1);
                     if (Rng.Next(3) == 0)
                     {
                         var p2 = products[Rng.Next(products.Count)];
                         invoice.AddItem(p2.Name, p2.PriceFor(SeedInvoiceCurrency, BillingCycle.Monthly) ?? 0m, 1);
                     }
-                    invoice.MarkPaid("stripe_" + Rng.Next(100000, 999999));
+                    invoice.RecordPaidHistory("txn_" + Rng.Next(100000, 999999), _now);
 
                     _db.Invoices.Add(invoice);
-                    _db.Entry(invoice).Property(nameof(Invoice.CreatedAt)).CurrentValue = invoiceDate;
+                    invoice.Backdate(invoiceDate);
                 }
             }
 
@@ -545,7 +562,7 @@ public sealed class DevDataSeeder
         {
             var products = await _db.Products.Include(p => p.Prices).ToListAsync(ct);
             var activeClients = await _db.Clients.Where(c => c.Status == ClientStatus.Active).ToListAsync(ct);
-            var gateways = new[] { PaymentMethodNames.Card, "PayPal", "Bank Transfer" };
+            var gateways = new[] { PaymentMethodNames.Card, PaymentMethodNames.PayPal, PaymentMethodNames.BankTransfer };
 
             for (int month = 11; month >= 0; month--)
             {
@@ -555,16 +572,16 @@ public sealed class DevDataSeeder
                     var client = activeClients[Rng.Next(activeClients.Count)];
                     var product = products[Rng.Next(products.Count)];
                     var gateway = gateways[Rng.Next(gateways.Length)];
-                    var orderDate = MonthsAgo(month, Rng.Next(1, 28));
+                    var orderDate = MonthsAgo(_now, month, Rng.Next(1, 28));
 
                     var order = Order.Create(
-                        $"ORD-{Rng.Next(10000, 99999)}", client.Id, gateway, null, SeedInvoiceCurrency);
+                        $"ORD-{Rng.Next(10000, 99999)}", client.Id, gateway, null, SeedInvoiceCurrency, _now);
                     var monthlyPrice = product.PriceFor(SeedInvoiceCurrency, BillingCycle.Monthly) ?? 0m;
-                    order.AddItem(product.Id, product.Name, "monthly", monthlyPrice, monthlyPrice, null, null);
-                    order.Accept();
+                    order.AddItem(product.Id, product.Name, BillingCycle.Monthly, monthlyPrice, monthlyPrice, null, null);
+                    order.Accept(_now);
 
                     _db.Orders.Add(order);
-                    _db.Entry(order).Property(nameof(Order.CreatedAt)).CurrentValue = orderDate;
+                    order.Backdate(orderDate);
                 }
             }
 
@@ -575,22 +592,22 @@ public sealed class DevDataSeeder
         // ── SSL checks ────────────────────────────────────────────────────────
         if (!await _db.SslChecks.AnyAsync(ct))
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = _now;
             (string domain, bool hasSsl, string? issuer, DateTimeOffset? expires, bool isActive)[] sslDefs =
             [
-                ("example.test",       true,  "Let's Encrypt",         now.AddDays(60),  true),
-                ("google.com",          true,  "Google Trust Services", now.AddDays(75),  true),
-                ("github.com",          true,  "DigiCert Inc",          now.AddDays(45),  true),
-                ("cloudflare.com",      true,  "Google Trust Services", now.AddDays(90),  true),
-                ("microsoft.com",       true,  "DigiCert Inc",          now.AddDays(200), true),
-                ("letsencrypt.org",     true,  "Let's Encrypt",         now.AddDays(20),  true),
-                ("expired-demo.local",  false, null,                    null,             false),
-                ("no-ssl.local",        false, null,                    null,             true),
+                ("example.test",         true,  "Example Root CA",       now.AddDays(60),  true),
+                ("shop.example",         true,  "Example Issuing CA",    now.AddDays(75),  true),
+                ("code.example",         true,  "Sample Trust Services", now.AddDays(45),  true),
+                ("cdn.example",          true,  "Example Issuing CA",    now.AddDays(90),  true),
+                ("app.example",          true,  "Sample Trust Services", now.AddDays(200), true),
+                ("certs.test",           true,  "Example Root CA",       now.AddDays(20),  true),
+                ("expired-demo.test",    false, null,                    null,             false),
+                ("no-ssl.test",          false, null,                    null,             true),
             ];
 
             foreach (var (domain, hasSsl, issuer, expires, isActive) in sslDefs)
             {
-                _db.SslChecks.Add(SslCheck.Create(domain, hasSsl, issuer, expires, isActive));
+                _db.SslChecks.Add(SslCheck.Create(domain, hasSsl, issuer, expires, isActive, now));
             }
 
             await _db.SaveChangesAsync(ct);
@@ -600,27 +617,27 @@ public sealed class DevDataSeeder
         // ── Slides ────────────────────────────────────────────────────────────
         if (!await _db.Slides.AnyAsync(ct))
         {
-            await SeedSlidesAsync(_db, _logger, ct);
+            await SeedSlidesAsync(_db, _now, _logger, ct);
         }
 
         // ── Support: Tickets, KB ─────────────────────────────────────────────
-        // Keyed on tickets, not departments: departments now exist in every environment
-        // before this runs, so the old check would have skipped the KB and tickets too.
+        // Keyed on tickets, not departments: departments exist in every environment
+        // before this runs, so a departments check would skip the KB and tickets too.
         if (!await _db.Tickets.AnyAsync(ct))
         {
-            await SeedSupportAsync(_db, ct, _logger);
+            await SeedSupportAsync(_db, _now, ct, _logger);
         }
 
         // ── Domains ───────────────────────────────────────────────────────────
         if (!await _db.Domains.AnyAsync(ct))
         {
-            await SeedDomainsAsync(_db, ct, _logger);
+            await SeedDomainsAsync(_db, _now, ct, _logger);
         }
 
         // ── Servers ───────────────────────────────────────────────────────────
         if (!await _db.ServerGroups.AnyAsync(ct))
         {
-            await SeedServersAsync(_db, ct, _logger);
+            await SeedServersAsync(_db, _now, ct, _logger);
         }
 
         // ── Settings ──────────────────────────────────────────────────────────
@@ -642,13 +659,14 @@ public sealed class DevDataSeeder
 
     /// <summary>Seeds support departments, tickets and replies.</summary>
     /// <param name="db">Context the rows are added to and saved through.</param>
+    /// <param name="now">The moment the ticket dates count from.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <param name="logger">Receives the seeding progress line.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
-    private static async Task SeedSupportAsync(AppDbContext db, CancellationToken ct, ILogger logger)
+    private static async Task SeedSupportAsync(AppDbContext db, DateTimeOffset now, CancellationToken ct, ILogger logger)
     {
         // Departments are seeded for every environment by DefaultDepartmentsSeeder, which
-        // has already run by the time we get here — so take those rather than adding a
+        // has already run by the time we get here, so take those rather than adding a
         // duplicate set. The tickets below index into this list, so it must be ordered.
         var departments = await db.Departments.OrderBy(d => d.Id).ToListAsync(ct);
 
@@ -743,19 +761,21 @@ public sealed class DevDataSeeder
             var client = clients[i % clients.Count];
             var dept = departments[deptIndex % departments.Count];
 
-            var ticket = Ticket.Create(client.Id, subject, message, dept.Id, priority);
-            db.Entry(ticket).Property(nameof(Ticket.CreatedAt)).CurrentValue = MonthsAgo(rng.Next(0, 3), rng.Next(1, 28));
+            var ticket = Ticket.Create(client.Id, subject, message, dept.Id, priority, now);
+            var openedAt = MonthsAgo(now, rng.Next(0, 3), rng.Next(1, 28));
 
             if (hasReply)
             {
-                ticket.AddReply("Thank you for contacting us. We are looking into this and will get back to you shortly.", "Support Team", true);
+                ticket.AddReply("Thank you for contacting us. We are looking into this and will get back to you shortly.", "Support Team", true, now);
             }
 
             if (isClosed)
             {
-                ticket.Close();
+                ticket.Close(now);
             }
 
+            // After the replies, so the staff answer is moved into the past with the ticket it belongs to.
+            ticket.Backdate(openedAt, TimeSpan.FromHours(4));
             db.Tickets.Add(ticket);
         }
 
@@ -767,18 +787,17 @@ public sealed class DevDataSeeder
 
     /// <summary>Seeds domains with their DNS records.</summary>
     /// <param name="db">Context the rows are added to and saved through.</param>
+    /// <param name="now">The moment the domain dates count from.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <param name="logger">Receives the seeding progress line.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
-    private static async Task SeedDomainsAsync(AppDbContext db, CancellationToken ct, ILogger logger)
+    private static async Task SeedDomainsAsync(AppDbContext db, DateTimeOffset now, CancellationToken ct, ILogger logger)
     {
         var clients = await db.Clients.Where(c => c.Status == ClientStatus.Active).ToListAsync(ct);
         if (clients.Count == 0)
         {
             return;
         }
-
-        var now = DateTimeOffset.UtcNow;
 
         (string Name, decimal Price, int ExpiresInDays, bool AutoRenew, bool WhoisPrivacy, string Registrar)[] domainDefs =
         [
@@ -798,10 +817,10 @@ public sealed class DevDataSeeder
             var client = clients[i % clients.Count];
             var expiresAt = now.AddDays(expiresInDays);
 
-            var domain = RegisteredDomain.Register(client.Id, name, expiresAt, autoRenew, whoisPrivacy,
-                price, price, "USD", registrar, 1);
+            var domain = RegisteredDomain.Register(client.Id, name, now, expiresAt, autoRenew, whoisPrivacy,
+                SeedInvoiceCurrency, price, price, registrar, 1);
 
-            domain.Activate("REG-" + (100000 + i));
+            domain.Activate("REG-" + (100000 + i), domain.ExpiresAt, now);
             domain.SetLock(true);
             domain.SetNameservers(["ns1.example.test", "ns2.example.test"]);
 
@@ -816,10 +835,11 @@ public sealed class DevDataSeeder
 
     /// <summary>Seeds server groups and servers.</summary>
     /// <param name="db">Context the rows are added to and saved through.</param>
+    /// <param name="now">The moment the servers are added and tested at.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <param name="logger">Receives the seeding progress line.</param>
     /// <returns>A task that completes once the rows are saved.</returns>
-    private static async Task SeedServersAsync(AppDbContext db, CancellationToken ct, ILogger logger)
+    private static async Task SeedServersAsync(AppDbContext db, DateTimeOffset now, CancellationToken ct, ILogger logger)
     {
         // Server Groups
         var sharedGroup = ServerGroup.Create("Shared Hosting Cluster", ServerFillType.LeastFull);
@@ -832,47 +852,47 @@ public sealed class DevDataSeeder
         var serverDefs = new[]
         {
             new ServerDetails("Shared US-01", "shared01.example.test", "192.168.1.10", null,
-                ServerModule.CPanel, "root", "changeme", null, null,
+                ServerModule.CPanel, "root", new ServerCredentials("changeme", null, null),
                 true, 500, true, false, 150m, "US-East DC", null,
-                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
-                null, null, null, null, null, null),
+                new ServerNameServers(
+                    "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2", null, null, null, null, null, null)),
 
             new ServerDetails("Shared EU-01", "shared01-eu.example.test", "10.0.0.10", null,
-                ServerModule.CPanel, "root", "changeme", null, null,
+                ServerModule.CPanel, "root", new ServerCredentials("changeme", null, null),
                 true, 500, false, false, 150m, "EU-West DC", null,
-                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
-                null, null, null, null, null, null),
+                new ServerNameServers(
+                    "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2", null, null, null, null, null, null)),
 
             new ServerDetails("VPS US-01", "vps01.example.test", "172.16.0.10", null,
-                ServerModule.Plesk, "admin", "changeme", null, null,
+                ServerModule.Plesk, "admin", new ServerCredentials("changeme", null, null),
                 true, 100, true, false, 350m, "US-East DC", null,
-                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
-                null, null, null, null, null, null),
+                new ServerNameServers(
+                    "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2", null, null, null, null, null, null)),
 
             new ServerDetails("Dedicated US-01", "dedicated01.example.test", "203.0.113.10", null,
-                ServerModule.DirectAdmin, "admin", "changeme", null, null,
+                ServerModule.DirectAdmin, "admin", new ServerCredentials("changeme", null, null),
                 true, 50, false, false, 800m, "US-West DC", null,
-                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
-                null, null, null, null, null, null),
+                new ServerNameServers(
+                    "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2", null, null, null, null, null, null)),
 
-            // The only CWP7 server, and the only one the setup flow can actually pick: every
+            // The only Cwp7-module server, and the only one the setup flow can actually pick: every
             // hosting product maps to the Cwp7 module (SetupServiceHandler.MapProductTypeToModule),
             // so without a Cwp7 server the server selector returns nothing and "Build My Server"
-            // fails before it starts. The access hash is a dev placeholder — the real CWP7 call is
+            // fails before it starts. The access hash is a dev placeholder: the real panel call is
             // short-circuited by the fake provider (Provisioning:UseFakeProvider), so it is never used.
             new ServerDetails("CWP7 US-01", "cwp01.example.test", "203.0.113.20", null,
-                ServerModule.Cwp7, "root", "changeme", null, "dev-access-hash",
+                ServerModule.Cwp7, "root", new ServerCredentials("changeme", null, "dev-access-hash"),
                 true, 200, true, false, 300m, "US-East DC", null,
-                "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2",
-                null, null, null, null, null, null),
+                new ServerNameServers(
+                    "ns1.example.test", "192.168.1.1", "ns2.example.test", "192.168.1.2", null, null, null, null, null, null)),
         };
 
         var groupIds = new[] { sharedGroup.Id, sharedGroup.Id, vpsGroup.Id, vpsGroup.Id, sharedGroup.Id };
         for (var i = 0; i < serverDefs.Length; i++)
         {
-            var server = Server.Create(serverDefs[i]);
+            var server = Server.Create(serverDefs[i], now);
             server.AssignToGroup(groupIds[i]);
-            server.RecordConnectionTest(true, 10 + i * 5);
+            server.RecordConnectionTest(true, 10 + i * 5, now);
             db.Servers.Add(server);
         }
 
@@ -896,9 +916,8 @@ public sealed class DevDataSeeder
             ("company.phone",             "+1-555-0100",                "Primary support phone number"),
             ("company.address",           "1 Market Street, Fairhaven", "Company mailing address"),
             ("company.logo",              "/images/logo.png",                "Path to company logo"),
-            ("billing.currency",          "USD",                             "Default billing currency"),
+            ("billing.currency",          SeedInvoiceCurrency,                           "Default billing currency"),
             ("billing.tax_rate",          "0",                               "Default tax rate percentage"),
-            ("billing.late_fee",          "5",                               "Late fee percentage applied to overdue invoices"),
             ("billing.payment_gateway",   "Stripe",                        "Default payment gateway"),
             ("support.ticket_auto_close", "14",                              "Days after last reply before a ticket is auto-closed"),
             ("support.department_default","1",                               "Default department ID for new tickets"),
@@ -953,38 +972,39 @@ public sealed class DevDataSeeder
 
     /// <summary>Seeds the initial homepage slider slides with English translations.</summary>
     /// <param name="db">Context the slides are added to and saved through.</param>
+    /// <param name="now">The moment the slides are added at.</param>
     /// <param name="logger">Receives the seeding progress line.</param>
     /// <param name="ct">Cancels the request.</param>
     /// <returns>A task that completes once the slides are saved.</returns>
-    private static async Task SeedSlidesAsync(AppDbContext db, ILogger logger, CancellationToken ct)
+    private static async Task SeedSlidesAsync(AppDbContext db, DateTimeOffset now, ILogger logger, CancellationToken ct)
     {
         (string Key, string Icon, string Color, string Image, string? DemoUrl, string LearnMoreUrl,
-         string Title, string Tagline, string Description, string Features, string CtaText)[] slideDefs =
+         string Title, string Tagline, string Description, string[] Features, string CtaText)[] slideDefs =
         [
             ("web-hosting", "cloud-check", "#0ea5e9", DemoContentSeeder.SlideImageUrl("web-hosting"),
                 null, "/hosting",
                 "Web Hosting", "Fast & Reliable Hosting",
                 "Launch your website on high-performance servers with free SSL, daily backups and one-click app installs.",
-                "[\"Free SSL certificate\",\"One-click app installs\",\"24/7 expert support\",\"Daily backups\"]",
+                ["Free SSL certificate", "One-click app installs", "24/7 expert support", "Daily backups"],
                 "Get Started"),
             ("domains", "earth", "#3b82f6", DemoContentSeeder.SlideImageUrl("domains"),
                 null, "/domains",
                 "Domain Registration", "Find & Register Your Domain",
                 "Search and register your perfect domain name with competitive pricing and instant activation.",
-                "[\"Free DNS management\",\"WHOIS privacy protection\",\"Auto-renewal options\"]",
+                ["Free DNS management", "WHOIS privacy protection", "Auto-renewal options"],
                 "Get Started"),
             ("cloud-vps", "server", "#8b5cf6", DemoContentSeeder.SlideImageUrl("cloud-vps"),
                 null, "/products/cloud-vps",
                 "Cloud VPS", "Full Control, Instant Setup",
                 "Isolated virtual servers with root access and NVMe storage, ready within minutes of your order.",
-                "[\"Root access\",\"NVMe storage\",\"Snapshots included\"]",
+                ["Root access", "NVMe storage", "Snapshots included"],
                 "Learn More"),
         ];
 
         for (var sortOrder = 0; sortOrder < slideDefs.Length; sortOrder++)
         {
             var (key, icon, color, image, demoUrl, learnMoreUrl, title, tagline, description, features, ctaText) = slideDefs[sortOrder];
-            var slide = Slide.Create(icon, color, image, demoUrl, learnMoreUrl, null, sortOrder, true, SlideAudience.All, null, null);
+            var slide = Slide.Create(new SlideSettings(icon, color, image, demoUrl, learnMoreUrl, null, sortOrder, true, SlideAudience.All, null, null), now);
             slide.SetTranslation("en", title, tagline, description, features, ctaText, learnMoreUrl);
             db.Slides.Add(slide);
         }

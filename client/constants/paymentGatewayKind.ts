@@ -10,13 +10,13 @@
 import { Banknote, CreditCard, Landmark } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import { PaymentGatewayKind } from '~/types/paymentgatewaykind'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_INECOBANK, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
 
 /** Kind of each gateway module the portal knows by name. */
 export const PAYMENT_GATEWAY_KIND_BY_MODULE: Readonly<Record<string, PaymentGatewayKind>> = {
-  [PAYMENT_MODULE_STRIPE]: PaymentGatewayKind.Card,
-  [PAYMENT_MODULE_INECOBANK]: PaymentGatewayKind.Card,
-  [PAYMENT_MODULE_BANK_TRANSFER]: PaymentGatewayKind.BankTransfer
+  [PaymentModule.Stripe]: PaymentGatewayKind.Card,
+  [PaymentModule.Inecobank]: PaymentGatewayKind.Card,
+  [PaymentModule.BankTransfer]: PaymentGatewayKind.BankTransfer
 }
 
 /** Icon drawn for each kind. */

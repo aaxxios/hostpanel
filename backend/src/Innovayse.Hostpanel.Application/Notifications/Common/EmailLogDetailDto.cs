@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
+
 namespace Innovayse.Hostpanel.Application.Notifications.Common;
 
 /// <summary>One email as it was sent, body included.</summary>
@@ -7,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Notifications.Common;
 /// <param name="Body">The rendered body.</param>
 /// <param name="SentAt">When it was sent.</param>
 /// <param name="Success">Whether delivery to the mail server succeeded.</param>
-/// <param name="Error">Why it failed, when it did.</param>
+/// <param name="Failure">Why it failed, when it did.</param>
 /// <remarks>
 /// Separate from <see cref="EmailLogDto"/> because of the body: a list of a client's mail is a
 /// list of subjects, and shipping every rendered message with it would send far more than the
@@ -15,4 +17,4 @@ namespace Innovayse.Hostpanel.Application.Notifications.Common;
 /// </remarks>
 public record EmailLogDetailDto(
     int Id, string To, string Subject, string Body,
-    DateTimeOffset SentAt, bool Success, string? Error);
+    DateTimeOffset SentAt, bool Success, EmailSendFailure? Failure);

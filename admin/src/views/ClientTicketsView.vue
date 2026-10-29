@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Client tickets list page -- displays support tickets with summary cards,
+ * Client tickets list page: displays support tickets with summary cards,
  * search, table, and pagination. Follows the same layout as ClientTransactionsView.
  */
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
@@ -9,9 +9,9 @@ import { useI18n } from 'vue-i18n'
 import { useClientTicketsStore } from '@/stores/clientTickets'
 import { formatDate } from '@/lib/format'
 import { ticketStatusLabel, ticketStatusTone } from '@/lib/tones'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -114,9 +114,13 @@ onBeforeUnmount(() => {
       </UiLink>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-tickets-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="client-tickets-error"
+      @retry="fetchTickets()"
+    />
 
     <UiStack v-if="store.loading && store.tickets.length === 0" data-testid="client-tickets-loading">
       <UiSkeleton :lines="3" />

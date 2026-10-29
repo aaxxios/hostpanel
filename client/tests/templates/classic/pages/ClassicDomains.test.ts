@@ -12,6 +12,8 @@ import type { BillingCurrency } from '~/types/currency'
 import type { TldPricing } from '~/types/tldpricing'
 import { CartItemType } from '~/types/cartitemtype'
 import { DomainOrderAction } from '~/types/domainorderaction'
+import { DomainAvailabilityStatus } from '~/types/domainavailabilitystatus'
+import { ProductType } from '~/types/producttype'
 
 /** The mocked catalogue endpoints, re-created for every test. */
 const api = { checkDomain: vi.fn(), fetchProducts: vi.fn(), fetchTldPricing: vi.fn() }
@@ -67,10 +69,10 @@ vi.mock('~/composables/apis/useClientApi', () => ({
 /** The price table the catalogue answers with. */
 const pricing: TldPricing = {
   currency: { code: 'USD', prefix: '$' },
-  pricing: {
-    com: { sellCurrency: 'USD', register: { 1: '10.00' }, transfer: { 1: '9.00' }, renew: { 1: '11.00' }, categories: ['popular'] },
-    dev: { sellCurrency: 'USD', register: { 1: '15.00' }, transfer: { 1: '14.00' }, renew: { 1: '16.00' }, categories: ['technology'] },
-  },
+  pricing: [
+    { tld: 'com', sellCurrency: 'USD', register: [{ years: 1, amount: 10 }], transfer: [{ years: 1, amount: 9 }], renew: [{ years: 1, amount: 11 }], categories: ['popular'] },
+    { tld: 'dev', sellCurrency: 'USD', register: [{ years: 1, amount: 15 }], transfer: [{ years: 1, amount: 14 }], renew: [{ years: 1, amount: 16 }], categories: ['technology'] },
+  ],
 }
 
 /**
@@ -102,7 +104,7 @@ describe('ClassicDomains', () => {
   beforeEach(() => {
     api.checkDomain.mockReset()
     api.fetchProducts.mockReset()
-    api.fetchProducts.mockResolvedValue([{ id: 99, type: 'Domain' }])
+    api.fetchProducts.mockResolvedValue([{ id: 99, type: ProductType.Domain }])
     api.fetchTldPricing.mockReset()
     api.fetchTldPricing.mockResolvedValue(pricing)
     window.localStorage.clear()
@@ -133,7 +135,7 @@ describe('ClassicDomains', () => {
   })
 
   it('shows an available domain with a register button', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: DomainAvailabilityStatus.Available })
     const wrapper = await mountDomains()
 
     await search(wrapper, 'example.com')
@@ -145,7 +147,7 @@ describe('ClassicDomains', () => {
   })
 
   it('adds the registration to the cart at the one-year price', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: DomainAvailabilityStatus.Available })
     const wrapper = await mountDomains()
     await search(wrapper, 'example.com')
 
@@ -165,7 +167,7 @@ describe('ClassicDomains', () => {
   })
 
   it('disables the register button once the domain is in the cart', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'example.com', available: true, status: DomainAvailabilityStatus.Available })
     const wrapper = await mountDomains()
     await search(wrapper, 'example.com')
     await wrapper.find('[data-testid="classic-domains-register"]').trigger('click')
@@ -186,7 +188,7 @@ describe('ClassicDomains', () => {
   })
 
   it('says so when the extension is not offered', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'example.zzz', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'example.zzz', available: true, status: DomainAvailabilityStatus.Available })
     const wrapper = await mountDomains()
 
     await search(wrapper, 'example.zzz')
@@ -205,7 +207,7 @@ describe('ClassicDomains', () => {
   })
 
   it('searches at once when the route carries a domain', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'prefilled.com', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'prefilled.com', available: true, status: DomainAvailabilityStatus.Available })
 
     await mountDomains({ domain: 'prefilled.com' })
 
@@ -236,7 +238,7 @@ describe('ClassicDomains', () => {
   })
 
   it('runs a quick search for a row, keeping the typed base name', async () => {
-    api.checkDomain.mockResolvedValue({ domain: 'mysite.dev', available: true, status: 'available' })
+    api.checkDomain.mockResolvedValue({ domain: 'mysite.dev', available: true, status: DomainAvailabilityStatus.Available })
     const wrapper = await mountDomains()
     await wrapper.find('[data-testid="search-bar-input"]').setValue('mysite.com')
 

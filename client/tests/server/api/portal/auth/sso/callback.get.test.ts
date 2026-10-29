@@ -55,7 +55,7 @@ describe('GET /api/portal/auth/sso/callback', () => {
   })
 
   it('keeps every cookie far below the 4 KB browser limit however large the tokens are', async () => {
-    // A refresh token of about 5 KB is what the browser silently dropped when it was a cookie.
+    // A refresh token of about 5 KB is what a browser silently drops when it is a cookie.
     const largeAccess = `h.${Buffer.from(JSON.stringify({ sub: 'person-1', pad: 'a'.repeat(1400) })).toString('base64url')}.s`
     const largeRefresh = 'r'.repeat(5000)
     backend.respondWith(() => ({ body: { access_token: largeAccess, refresh_token: largeRefresh, expires_in: 899, token_type: 'Bearer' } }))
@@ -105,6 +105,24 @@ describe('GET /api/portal/auth/sso/callback', () => {
     expect(event.redirectedTo).toBe('/pricing')
   })
 
+  it('skips a return path that is not local and goes to the next local one, or the dashboard', async () => {
+    backend.respondWith(() => ({ body: { access_token: 'at', expires_in: 900, token_type: 'Bearer' } }))
+    const skipped = makeEvent({
+      query: { code: 'c1', state: 'st' },
+      cookies: { ...flowCookies, sso_silent_return: 'https://elsewhere.test/', post_login_redirect: '/client/invoices' },
+    })
+    const foreign = makeEvent({
+      query: { code: 'c1', state: 'st' },
+      cookies: { ...flowCookies, post_login_redirect: '//elsewhere.test/' },
+    })
+
+    await route.default(skipped)
+    await route.default(foreign)
+
+    expect(skipped.redirectedTo).toBe('/client/invoices')
+    expect(foreign.redirectedTo).toBe('/client/dashboard')
+  })
+
   it('returns a guest to the page they came from with the sign-in prompt when the SSO answers login_required', async () => {
     const event = makeEvent({ query: { error: 'login_required' }, cookies: { sso_silent_return: '/pricing' } })
 
@@ -145,6 +163,22 @@ describe('GET /api/portal/auth/sso/callback', () => {
     const error = await refusal(() => route.default(makeEvent({ query: { code: 'c1', state: 'other' }, cookies: flowCookies })))
 
     expect(error).toMatchObject({ statusCode: 400, data: { code: 'OAUTH_STATE_INVALID' } })
+    expect(backend.requests).toHaveLength(0)
+  })
+
+  it('refuses a callback whose state differs only in length from the stored one', async () => {
+    const error = await refusal(() => route.default(makeEvent({ query: { code: 'c1', state: 'st-longer' }, cookies: flowCookies })))
+
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'OAUTH_STATE_INVALID' } })
+    expect(backend.requests).toHaveLength(0)
+  })
+
+  it.each(['code', 'state', 'error'])('refuses a repeated %s key with 400 and calls no token endpoint', async (key) => {
+    const query = { code: 'c1', state: 'st', [key]: ['a', 'b'] as unknown as string }
+
+    const error = await refusal(() => route.default(makeEvent({ query, cookies: flowCookies })))
+
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'BAD_QUERY' } })
     expect(backend.requests).toHaveLength(0)
   })
 

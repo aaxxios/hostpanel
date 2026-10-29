@@ -9,7 +9,7 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Faqs.Common;
 
 /// <summary>
-/// Validates one entry of a question's translation map — the locale it is keyed by and the translation
+/// Validates one entry of a question's translation map: the locale it is keyed by and the translation
 /// itself; shared by the create and update validators.
 /// </summary>
 public sealed class FaqTranslationValidator : LocalizedValidator<KeyValuePair<string, FaqTranslationDto>>

@@ -11,9 +11,9 @@ export interface KbArticle {
   title: string
   /** Short plain-text lead-in shown in list rows. */
   excerpt?: string
-  /** View counter, used to order the "popular" list. */
+  /** View counter, shown on the article page when the backend sends it. */
   views?: number
-  /** Full body as HTML — rendered through `UiRichText`, which rebuilds it from an allow-list of tags. */
+  /** Full body as HTML: rendered through `UiRichText`, which rebuilds it from an allow-list of tags. */
   body?: string
   /** When the article was last edited, already formatted by the backend for display. */
   dateupdated?: string

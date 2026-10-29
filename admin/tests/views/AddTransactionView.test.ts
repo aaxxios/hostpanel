@@ -14,7 +14,7 @@ const noClients = () => json({ items: [], totalCount: 0 })
 
 /** The ledger answer the store reloads after a create. */
 const emptyLedger = () =>
-  json({ transactions: { items: [], totalCount: 0, page: 1, pageSize: 25 }, totalIn: 0, totalOut: 0, totalFees: 0, balance: 0 })
+  json({ transactions: { items: [], pageNumber: 1, pageSize: 25, totalCount: 0, totalPages: 0 }, totalIn: 0, totalOut: 0, totalFees: 0, balance: 0 })
 
 afterEach(() => {
   vi.unstubAllGlobals()

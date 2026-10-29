@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Innovayse — Project Manager
+# HostPanel project manager
 # Usage: ./docker/scripts/manage.sh <command> [service] [--native]
 #
 # Commands:
@@ -147,7 +147,7 @@ docker_restart() {
 }
 
 docker_status() {
-    header "Innovayse Service Status (Docker)"
+    header "HostPanel Service Status (Docker)"
     dc ps
 }
 
@@ -253,25 +253,52 @@ kill_service() {
     rm -f "$(pid_file "$name")"
 }
 
+# Prints the PID listening on TCP port $1, or nothing when the port is free. ss on Linux, lsof where ss is
+# missing (macOS), netstat under Git Bash on Windows.
+port_owner() {
+    local port="$1"
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltnpH "sport = :${port}" 2>/dev/null | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | head -n 1
+    elif command -v lsof >/dev/null 2>&1; then
+        lsof -t -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null | head -n 1
+    else
+        netstat -ano 2>/dev/null | grep ":${port} " | grep "LISTENING" | awk '{print $NF}' | head -n 1
+    fi
+}
+
+# Asks to stop the process that holds a port the API needs. Nothing is stopped without a typed yes, and
+# only with an ordinary termination request: a process that ignores it is reported, never force-killed.
+# $1 port, $2 pid
+confirm_free_port() {
+    local port="$1" pid="$2" answer=""
+    warn "Port ${port} is in use by PID ${pid}"
+    if [[ ! -t 0 ]]; then
+        error "Cannot ask for confirmation without a terminal. Stop PID ${pid} yourself, or pick another API_PORT."
+        exit 1
+    fi
+    read -rp "Ask PID ${pid} to stop so the API can use port ${port}? [y/N] " answer
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+        error "Port ${port} is busy; not starting the API."
+        exit 1
+    fi
+    kill "$pid" 2>/dev/null || taskkill //PID "$pid" 2>/dev/null || true
+    sleep 2
+    if [[ -n "$(port_owner "$port")" ]]; then
+        error "PID ${pid} is still holding port ${port}. Stop it yourself, then start again."
+        exit 1
+    fi
+}
+
 native_start_api() {
     if is_running "api"; then
         warn "api is already running (pid $(read_pid api))"
         return
     fi
-    local stale api_port
+    local api_port port_pid
     api_port="$(need_env API_PORT)" || exit 1
-    stale=$(pgrep -f "Innovayse.Hostpanel.API" 2>/dev/null || true)
-    if [[ -n "$stale" ]]; then
-        warn "Killing stale API process(es): $stale"
-        echo "$stale" | xargs kill -9 2>/dev/null || true
-        sleep 1
-    fi
-    local port_pid
-    port_pid=$(netstat -ano 2>/dev/null | grep ":${api_port} " | grep "LISTENING" | awk '{print $NF}' | head -1 || true)
+    port_pid="$(port_owner "$api_port")"
     if [[ -n "$port_pid" ]]; then
-        warn "Port ${api_port} in use by PID $port_pid — killing it"
-        taskkill //F //PID "$port_pid" 2>/dev/null || kill -9 "$port_pid" 2>/dev/null || true
-        sleep 1
+        confirm_free_port "$api_port" "$port_pid"
     fi
     info "Starting C# API on http://${LOCAL_HOST}:${api_port} ..."
     cd "$BACKEND"
@@ -340,7 +367,7 @@ native_dispatch_restart() {
 }
 
 native_status() {
-    header "Innovayse Service Status (native)"
+    header "HostPanel Service Status (native)"
     for svc in api client admin; do
         if is_running "$svc"; then
             echo -e "  ${GREEN}●${NC} ${BOLD}$svc${NC}  running  (pid $(read_pid "$svc"))"
@@ -356,7 +383,7 @@ native_status() {
     client_port="$(need_env CLIENT_PORT)" || exit 1
     for port in "$api_port" "$client_port" "$ADMIN_DEV_PORT"; do
         local result
-        result=$(netstat -ano 2>/dev/null | grep ":${port} " | grep "LISTENING" | awk '{print $5}' | head -1 || true)
+        result="$(port_owner "$port")"
         if [[ -n "$result" ]]; then
             echo -e "  ${GREEN}●${NC} port $port  in use (pid $result)"
         else
@@ -443,8 +470,8 @@ native_db() {
             info "Connecting to the database..."
             local pg_port pg_user pg_db
             pg_port="$(need_env POSTGRES_PORT)" || exit 1
-            pg_user="${db_user}" || exit 1
-            pg_db="${db_name}" || exit 1
+            pg_user="$(need_env POSTGRES_USER)" || exit 1
+            pg_db="$(need_env POSTGRES_DB)" || exit 1
             psql -h "$LOCAL_HOST" -p "$pg_port" -U "$pg_user" -d "$pg_db"
             ;;
         *)
@@ -482,17 +509,17 @@ show_info() {
         admin_port="$(need_env ADMIN_HOST_PORT)" || exit 1
         db_port="$(need_env POSTGRES_HOST_PORT)" || exit 1
     fi
-    db_name="${db_name}" || exit 1
-    db_user="${db_user}" || exit 1
+    db_name="$(need_env POSTGRES_DB)" || exit 1
+    db_user="$(need_env POSTGRES_USER)" || exit 1
     if [[ "$NATIVE" != true ]]; then
-        mailhog_port="${mailhog_port}" || exit 1
-        rabbit_port="${rabbit_port}" || exit 1
+        mailhog_port="$(need_env MAILHOG_UI_HOST_PORT)" || exit 1
+        rabbit_port="$(need_env RABBITMQ_MANAGEMENT_HOST_PORT)" || exit 1
     fi
-    header "Innovayse — URLs & Credentials"
+    header "HostPanel URLs and credentials"
     echo ""
     echo -e "${BOLD}Services${NC}"
     echo -e "  ${CYAN}API${NC}          http://${LOCAL_HOST}:${api_port}"
-    echo -e "  ${CYAN}API Docs${NC}     http://${LOCAL_HOST}:${api_port}/scalar/v1"
+    echo -e "  ${CYAN}API Docs${NC}     http://${LOCAL_HOST}:${api_port}/swagger"
     echo -e "  ${CYAN}Client${NC}       http://${LOCAL_HOST}:${client_port}"
     echo -e "  ${CYAN}Admin${NC}        http://${LOCAL_HOST}:${admin_port}"
     if [[ "$NATIVE" != true ]]; then
@@ -513,7 +540,7 @@ show_info() {
 }
 
 show_help() {
-    echo -e "${BOLD}${CYAN}Innovayse Project Manager${NC}"
+    echo -e "${BOLD}${CYAN}HostPanel Project Manager${NC}"
     echo ""
     echo -e "${BOLD}Usage:${NC}  ./docker/scripts/manage.sh <command> [service] [--native]"
     echo ""

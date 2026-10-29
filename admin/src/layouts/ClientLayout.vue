@@ -10,6 +10,7 @@ import { useClientsStore } from '@/stores/clients'
 import { clientStatusTone } from '@/lib/tones'
 import ClientInnerSidebar from '@/components/clients/ClientInnerSidebar.vue'
 import ClientExportModal from '@/components/clients/ClientExportModal.vue'
+import RoutedView from '@/components/layout/RoutedView.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -129,7 +130,7 @@ onMounted(() => {
       <UiStack direction="row" gap="none" class="flex-1 min-h-0">
         <ClientInnerSidebar :client-id="String(route.params.id)" />
         <UiStack gap="none" class="flex-1 min-w-0 overflow-y-auto">
-          <RouterView />
+          <RoutedView />
         </UiStack>
       </UiStack>
     </template>

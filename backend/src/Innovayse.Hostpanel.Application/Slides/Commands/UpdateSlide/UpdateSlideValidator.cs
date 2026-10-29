@@ -2,6 +2,7 @@ using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Application.Slides.Common;
+using Innovayse.Hostpanel.Domain.Slides;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Slides.Commands.UpdateSlide;
@@ -9,18 +10,6 @@ namespace Innovayse.Hostpanel.Application.Slides.Commands.UpdateSlide;
 /// <summary>Validates <see cref="UpdateSlideCommand"/> before it reaches the handler.</summary>
 public sealed class UpdateSlideValidator : LocalizedValidator<UpdateSlideCommand>
 {
-    /// <summary>Longest an icon name may be — matches the <c>Slides.IconName</c> column.</summary>
-    private const int IconNameMaxLength = 100;
-
-    /// <summary>Longest a brand color may be — matches the <c>Slides.BrandColor</c> column.</summary>
-    private const int BrandColorMaxLength = 20;
-
-    /// <summary>Longest an image URL may be — matches the <c>Slides.ImageUrl</c> column.</summary>
-    private const int ImageUrlMaxLength = 500;
-
-    /// <summary>Longest a demo or learn-more link may be — matches their columns.</summary>
-    private const int LinkMaxLength = 500;
-
     /// <summary>
     ///     Initializes validator with localization service.
     /// </summary>
@@ -30,19 +19,24 @@ public sealed class UpdateSlideValidator : LocalizedValidator<UpdateSlideCommand
     {
         RuleFor(x => x.Id).MustBePositiveId(L["SlideIdInvalid"]);
         RuleFor(x => x.IconName).NotEmpty().WithMessage(L["SlideIconNameRequired"])
-            .MaximumLength(IconNameMaxLength).WithMessage(L["SlideIconNameTooLong", IconNameMaxLength]);
+            .MaximumLength(Slide.IconNameMaxLength).WithMessage(L["SlideIconNameTooLong", Slide.IconNameMaxLength]);
         RuleFor(x => x.BrandColor).NotEmpty().WithMessage(L["SlideBrandColorRequired"])
-            .MaximumLength(BrandColorMaxLength).WithMessage(L["SlideBrandColorTooLong", BrandColorMaxLength]);
+            .MaximumLength(Slide.BrandColorMaxLength).WithMessage(L["SlideBrandColorTooLong", Slide.BrandColorMaxLength]);
         RuleFor(x => x.ImageUrl).NotEmpty().WithMessage(L["SlideImageUrlRequired"])
-            .MaximumLength(ImageUrlMaxLength).WithMessage(L["SlideImageUrlTooLong", ImageUrlMaxLength]);
-        RuleFor(x => x.DemoUrl).MaximumLength(LinkMaxLength).When(x => x.DemoUrl is not null)
-            .WithMessage(L["SlideDemoUrlTooLong", LinkMaxLength]);
-        RuleFor(x => x.LearnMoreUrl).MaximumLength(LinkMaxLength).When(x => x.LearnMoreUrl is not null)
-            .WithMessage(L["SlideLearnMoreUrlTooLong", LinkMaxLength]);
+            .MaximumLength(Slide.ImageUrlMaxLength).WithMessage(L["SlideImageUrlTooLong", Slide.ImageUrlMaxLength])
+            .MustBeWebLink(L["ContentUrlInvalid"]);
+        RuleFor(x => x.DemoUrl).MaximumLength(Slide.LinkMaxLength).When(x => x.DemoUrl is not null)
+            .WithMessage(L["SlideDemoUrlTooLong", Slide.LinkMaxLength])
+            .MustBeWebLink(L["ContentUrlInvalid"]);
+        RuleFor(x => x.LearnMoreUrl).MaximumLength(Slide.LinkMaxLength).When(x => x.LearnMoreUrl is not null)
+            .WithMessage(L["SlideLearnMoreUrlTooLong", Slide.LinkMaxLength])
+            .MustBeWebLink(L["ContentUrlInvalid"]);
         RuleFor(x => x.ProductId).GreaterThan(0).When(x => x.ProductId is not null)
             .WithMessage(L["ProductIdInvalid"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["SlideSortOrderInvalid"]);
         RuleFor(x => x.TargetAudience).IsInEnum().WithMessage(L["SlideTargetAudienceInvalid"]);
+        RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
+        RuleFor(x => x.Translations).MustHaveDistinctLocales(t => t.Locale, L["ContentTranslationLocaleDuplicate"]);
         RuleForEach(x => x.Translations).SetValidator(new SlideTranslationValidator(localizer));
     }
 }

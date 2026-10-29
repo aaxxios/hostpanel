@@ -92,7 +92,12 @@ const clearSelection = (): void => {
   selectedCountry.value = null
 }
 
-onMounted(async () => {
+/**
+ * Loads the country and the city breakdowns together.
+ *
+ * @returns Resolves when both requests have settled.
+ */
+const load = async (): Promise<void> => {
   const result = await store.fetchReports<[ReportCountryRow[], ReportCityRow[]]>([
     '/reports/clients-by-country',
     '/reports/clients-by-city',
@@ -101,11 +106,13 @@ onMounted(async () => {
     countries.value = result[0]
     cities.value = result[1]
   }
-})
+}
+
+onMounted(load)
 </script>
 
 <template>
-  <ReportPage :title="t('reports.clientsByCountry.clientsByCountry')" :description="t('reports.clientsByCountry.thisReportShowsTheTotal')">
+  <ReportPage :retry="load" :title="t('reports.clientsByCountry.clientsByCountry')" :description="t('reports.clientsByCountry.thisReportShowsTheTotal')">
     <WorldMap v-if="cities.length > 0" :city-data="cities" @select-country="toggleCountry" />
 
     <UiStack gap="sm">

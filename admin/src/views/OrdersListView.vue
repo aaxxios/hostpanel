@@ -1,18 +1,19 @@
 <script setup lang="ts">
 /**
- * Orders list view — paged table of all customer orders with a status filter.
+ * Orders list view: paged table of all customer orders with a status filter.
  *
  * Shows order number, client, status, payment method, total, item count and date, with row
  * actions to accept or cancel a pending order and to open its detail. Reads `stores/orders`;
- * a refused load shows `store.error`, a refused accept or cancel shows `store.actionError`.
+ * a refused load shows `store.error` with a retry, and the outcome of an accept or cancel (success, or
+ * the API's sentence) shows above the table. Cancelling is confirmed first.
  */
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiLink from '@/components/ui/UiLink.vue'
@@ -20,6 +21,7 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -35,15 +37,46 @@ import { OrderStatus } from '@/types/order'
 import { orderStatusTone, statusLabel } from '@/lib/tones'
 import { useOrdersStore } from '@/stores/orders'
 import { clientPath, orderPath } from '@/lib/routes'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
-
 const store = useOrdersStore()
+
+/** The outcome line of the last accept or cancel. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** The order waiting for the cancel confirmation, null when the prompt is closed. */
+const cancelling = ref<number | null>(null)
+
+/** True while an accept or cancel is in flight. */
+const processing = ref(false)
+
+/**
+ * Runs one order command, shows its outcome and reloads the list on success.
+ *
+ * @param command - The store call to run.
+ * @param successKey - Locale key of the success sentence.
+ * @returns True when the API accepted the command, once the reload has settled.
+ */
+const runCommand = async (command: () => Promise<boolean>, successKey: string): Promise<boolean> => {
+  feedback.clear()
+  processing.value = true
+  const ok = await command()
+  processing.value = false
+  if (ok) {
+    feedback.show(t(successKey), false)
+    await store.fetchAll()
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+  return ok
+}
 
 /**
  * Moves to a page of the list and loads it.
@@ -61,7 +94,7 @@ const goToPage = (page: number): void => {
  * @param status - Chosen status, empty for all.
  */
 const onStatusChange = (status: string): void => {
-  store.statusFilter = status || null
+  store.statusFilter = Object.values(OrderStatus).find((value) => value === status) ?? null
   store.page = 1
   void store.fetchAll()
 }
@@ -73,20 +106,30 @@ const onStatusChange = (status: string): void => {
  * @returns Resolves when the list has been refreshed.
  */
 const accept = async (id: number): Promise<void> => {
-  if (await store.acceptOrder(id)) {
-    await store.fetchAll()
+  const ok = await runCommand(() => store.acceptOrder(id), 'orders.ordersList.orderAccepted')
+  if (ok && store.acceptFailures.length > 0) {
+    feedback.show(t('orders.fulfillment.acceptedWithFailedLines', { lines: store.acceptFailureNames }), true)
   }
 }
 
 /**
- * Cancels a pending order, then reloads the list.
+ * Cancels the order the operator confirmed, then reloads the list.
  *
- * @param id - The order primary key.
  * @returns Resolves when the list has been refreshed.
  */
-const cancel = async (id: number): Promise<void> => {
-  if (await store.cancelOrder(id)) {
-    await store.fetchAll()
+const confirmCancel = async (): Promise<void> => {
+  const id = cancelling.value
+  if (id === null) {
+    return
+  }
+  await runCommand(() => store.cancelOrder(id), 'orders.ordersList.orderCancelled')
+  cancelling.value = null
+}
+
+/** Closes the cancel confirmation; ignored while the cancel runs. */
+const dismissCancel = (): void => {
+  if (!processing.value) {
+    cancelling.value = null
   }
 }
 
@@ -112,13 +155,15 @@ onMounted(() => store.fetchAll())
       </template>
     </UiPageHeader>
 
-    <UiAlert v-if="store.actionError" variant="danger" data-testid="orders-action-error">
-      {{ store.actionError }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="orders-action-feedback" />
 
-    <UiAlert v-if="store.error" variant="danger" data-testid="orders-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="orders-error"
+      @retry="store.fetchAll()"
+    />
 
     <UiCard v-else-if="store.orders.length > 0 || store.loading">
       <UiTable density="comfortable" :loading="store.loading && store.orders.length === 0" :colspan="8" data-testid="orders-table">
@@ -145,7 +190,7 @@ onMounted(() => store.fetchAll())
             <UiTableCell>{{ order.orderNumber }}</UiTableCell>
             <UiTableCell>
               <UiLink variant="link" :to="clientPath(order.clientId)" :data-testid="`orders-client-${order.id}`">
-                {{ clientLabel(order.clientName, order.clientId) }}
+                {{ order.clientName }}
               </UiLink>
             </UiTableCell>
             <UiTableCell>
@@ -173,7 +218,7 @@ onMounted(() => store.fetchAll())
                   :label="t('shared.cancel')"
                   size="sm"
                   :data-testid="`orders-cancel-${order.id}`"
-                  @click="cancel(order.id)"
+                  @click="cancelling = order.id"
                 >
                   <UiIcon :markup="Icon.Close" size="sm" />
                 </UiIconButton>
@@ -214,5 +259,17 @@ onMounted(() => store.fetchAll())
         </template>
       </UiEmptyState>
     </UiCard>
+
+    <UiDialog
+      :open="cancelling !== null"
+      :variant="UiDialogVariant.Confirm"
+      :title="t('orders.ordersList.confirmCancelTitle')"
+      :message="t('orders.ordersList.confirmCancelMessage')"
+      :confirm-label="t('orders.ordersList.cancelOrder')"
+      :loading="processing"
+      :tone="UiTone.Danger"
+      @confirm="confirmCancel"
+      @close="dismissCancel"
+    />
   </UiStack>
 </template>

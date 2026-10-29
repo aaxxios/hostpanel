@@ -20,6 +20,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// invite and remove people on their own account.
 /// </remarks>
 [Route("api/me/users")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class MyUsersController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -35,13 +36,16 @@ public sealed class MyUsersController : BaseApiController
     /// <summary>Lists the people linked to the authenticated client's own account.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the account's users; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks full access (<c>All</c>).
+    /// 200 with the account's users; 401 without a session; 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks
+    /// full access (<c>All</c>); 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.All)]
     [ProducesResponseType(typeof(IReadOnlyList<ClientUserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMyUsersAsync(CancellationToken ct)
     {
@@ -53,16 +57,21 @@ public sealed class MyUsersController : BaseApiController
     /// <param name="command">Who to invite and what they may do.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when sent; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c> or
-    /// <c>ACCOUNT_OWNER_NOT_FOUND</c>; 400 with <c>CANNOT_INVITE_ACCOUNT_OWNER</c>; 409 with
-    /// <c>USER_ALREADY_LINKED</c> or <c>INVITATION_ALREADY_PENDING</c>;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks full access (<c>All</c>).
+    /// 204 when sent; 400 with <c>VALIDATION_ERROR</c> or <c>CANNOT_INVITE_ACCOUNT_OWNER</c>; 401 without a session; 403 for a caller without client access
+    /// with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks full access (<c>All</c>); 404 with
+    /// <c>CLIENT_PROFILE_NOT_FOUND</c>, <c>CLIENT_NOT_FOUND</c> or <c>ACCOUNT_OWNER_NOT_FOUND</c>; 409
+    /// with <c>USER_ALREADY_LINKED</c> or <c>INVITATION_ALREADY_PENDING</c>;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("invite")]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.All)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> InviteMyUserAsync([FromBody] InviteMyUserCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(command, ct);
@@ -73,13 +82,18 @@ public sealed class MyUsersController : BaseApiController
     /// <param name="userId">The Identity user id to remove.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when removed; 401; 404 with <c>CLIENT_PROFILE_NOT_FOUND</c>;
-    /// 403 with <c>CLIENT_PERMISSION_DENIED</c> when the user lacks full access (<c>All</c>).
+    /// 204 when removed; 400 with <c>VALIDATION_ERROR</c> for a malformed user id; 401 without a session; 403 with
+    /// <c>CLIENT_PERMISSION_DENIED</c> when the user lacks full access (<c>All</c>); 404 with
+    /// <c>CLIENT_PROFILE_NOT_FOUND</c> or <c>CLIENT_NOT_FOUND</c>;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpDelete("{userId}")]
     [Authorize(Policy = Policies.Client)]
     [RequiresClientPermission(ClientPermission.All)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveMyUserAsync(string userId, CancellationToken ct)
     {

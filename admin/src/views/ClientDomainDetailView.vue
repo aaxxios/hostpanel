@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Editable domain detail page -- displays and allows editing all domain fields.
+ * Editable domain detail page: displays and allows editing all domain fields.
  * Supports registrar commands, management tool toggles, DNS records, email forwarding, and reminders.
  */
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -20,6 +20,7 @@ import UiCard from '@/components/ui/UiCard.vue'
 import UiDatePicker from '@/components/ui/UiDatePicker.vue'
 import { UiDatePickerDirection } from '@/utils/ui/datePicker'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiForm from '@/components/ui/UiForm.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -77,8 +78,8 @@ const error = computed(() => store.error)
 /** True while save is in flight. */
 const saving = ref(false)
 
-/** Success message after save. */
-const saveSuccess = ref(false)
+/** Success sentence of the last save or registrar command, null when none is on show. */
+const saveSuccess = ref<string | null>(null)
 
 /** Timer that hides the success message. */
 let savedTimer: ReturnType<typeof setTimeout> | undefined
@@ -138,7 +139,7 @@ const nextDueDate = ref('')
 const registrationPeriod = ref(1)
 
 /** Domain status. */
-const status = ref<string>(DomainStatus.Active)
+const status = ref<DomainStatus>(DomainStatus.Active)
 
 /** The nameserver hosts, one per field. */
 const nameservers = ref<string[]>(Array.from({ length: NAMESERVER_COUNT }, () => ''))
@@ -174,15 +175,15 @@ const populateForm = (): void => {
     return
   }
 
-  firstPaymentAmount.value = d.firstPaymentAmount
-  recurringAmount.value = d.recurringAmount
-  paymentMethod.value = d.paymentMethod ?? ''
-  promotionCode.value = d.promotionCode ?? ''
-  subscriptionId.value = d.subscriptionId ?? ''
+  firstPaymentAmount.value = d.billing.firstPaymentAmount
+  recurringAmount.value = d.billing.recurringAmount
+  paymentMethod.value = d.billing.paymentMethod ?? ''
+  promotionCode.value = d.billing.promotionCode ?? ''
+  subscriptionId.value = d.billing.subscriptionId ?? ''
   adminNotes.value = d.adminNotes ?? ''
-  expiresAt.value = toDateInputValue(d.expiresAt)
-  nextDueDate.value = toDateInputValue(d.nextDueDate)
-  registrationPeriod.value = d.registrationPeriod
+  expiresAt.value = toDateInputValue(d.term.expiresAt)
+  nextDueDate.value = toDateInputValue(d.term.nextDueDate)
+  registrationPeriod.value = d.term.registrationPeriod
   status.value = d.status || DomainStatus.Active
 
   const ns = d.nameservers ?? []
@@ -200,6 +201,19 @@ const fetchDomain = async (): Promise<void> => {
 }
 
 /**
+ * Shows a success sentence next to the Save button for a few seconds.
+ *
+ * @param message - The sentence to show.
+ */
+const flashSuccess = (message: string): void => {
+  saveSuccess.value = message
+  clearTimeout(savedTimer)
+  savedTimer = setTimeout(() => {
+    saveSuccess.value = null
+  }, NOTICE_VISIBLE_MS)
+}
+
+/**
  * Resets form to the last saved state.
  *
  * @returns Nothing.
@@ -207,7 +221,7 @@ const fetchDomain = async (): Promise<void> => {
 const handleCancel = (): void => {
   populateForm()
   store.actionError = null
-  saveSuccess.value = false
+  saveSuccess.value = null
 }
 
 /**
@@ -216,7 +230,7 @@ const handleCancel = (): void => {
  * @returns Promise that resolves when the save completes.
  */
 const handleSave = async (): Promise<void> => {
-  saveSuccess.value = false
+  saveSuccess.value = null
   saving.value = true
 
   const saved = await store.update(domainId.value, {
@@ -233,18 +247,14 @@ const handleSave = async (): Promise<void> => {
     nameservers: nameservers.value.filter(Boolean),
   })
   if (saved) {
-    saveSuccess.value = true
-    clearTimeout(savedTimer)
-    savedTimer = setTimeout(() => {
-      saveSuccess.value = false
-    }, NOTICE_VISIBLE_MS)
+    flashSuccess(t('shared.changesSavedSuccessfully'))
     await fetchDomain()
   }
   saving.value = false
 }
 
 /**
- * Opens the register confirmation modal. Only stages the intent — {@link confirmRegister} sends
+ * Opens the register confirmation modal. Only stages the intent: {@link confirmRegister} sends
  * the command, so the question is asked by the app's own modal rather than the browser's dialog.
  *
  * @returns Nothing.
@@ -254,14 +264,17 @@ const handleRegister = (): void => {
 }
 
 /**
- * Runs a registrar command with the shared busy flag and reloads the domain when it succeeds.
+ * Runs a registrar command with the shared busy flag, reports success next to the Save button and
+ * reloads the domain when it succeeds; a refusal shows the store's sentence in the same place.
  *
  * @param command - The store call to run.
  * @returns Promise that resolves when the command and the reload finish.
  */
 const runCommand = async (command: () => Promise<boolean>): Promise<void> => {
+  saveSuccess.value = null
   commandLoading.value = true
   if (await command()) {
+    flashSuccess(t('clients.clientDomainDetail.registrarCommandDone'))
     await fetchDomain()
   }
   commandLoading.value = false
@@ -325,7 +338,7 @@ const handleGetEppCode = async (): Promise<void> => {
  * @returns Promise that resolves when the action completes.
  */
 const handleToggleIdProtection = async (): Promise<void> => {
-  await runCommand(() => store.setWhoisPrivacy(domainId.value, !domain.value?.whoisPrivacy))
+  await runCommand(() => store.setWhoisPrivacy(domainId.value, !domain.value?.features.whoisPrivacy))
 }
 
 /**
@@ -335,8 +348,10 @@ const handleToggleIdProtection = async (): Promise<void> => {
  * @returns Promise that resolves when the action completes.
  */
 const handleModifyContact = async (contact: Record<string, string>): Promise<void> => {
+  saveSuccess.value = null
   contactSaving.value = true
   if (await store.modifyContact(domainId.value, contact)) {
+    flashSuccess(t('clients.clientDomainDetail.contactSaved'))
     await fetchDomain()
     showContactModal.value = false
   }
@@ -400,9 +415,13 @@ onBeforeUnmount(() => {
       <UiText :tone="UiTextTone.Secondary">{{ t('clients.clientDomainDetail.loadingDomain') }}</UiText>
     </UiStack>
 
-    <UiAlert v-else-if="error && !domain" variant="error" data-testid="client-domain-error">
-      {{ error }}
-    </UiAlert>
+    <UiErrorState
+      v-else-if="error && !domain"
+      :message="error"
+      :loading="loading"
+      testid="client-domain-error"
+      @retry="fetchDomain()"
+    />
 
     <template v-else-if="domain">
       <UiForm stacked @submit="handleSave">
@@ -422,7 +441,7 @@ onBeforeUnmount(() => {
           </UiStack>
           <UiStack direction="row" :align="UiAlignItems.Center" gap="sm">
             <UiAlert v-if="saveSuccess" variant="success" data-testid="client-domain-saved">
-              {{ t('shared.changesSavedSuccessfully') }}
+              {{ saveSuccess }}
             </UiAlert>
             <UiAlert v-if="saveError" variant="error" data-testid="client-domain-action-error">
               {{ saveError }}
@@ -453,16 +472,16 @@ onBeforeUnmount(() => {
                 <UiHeading :level="2" variant="card">{{ t('clients.clientDomainDetail.domainInfo') }}</UiHeading>
                 <UiStack direction="row" gap="lg" wrap>
                   <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Sm">
-                    {{ t('clients.clientDomainDetail.order') }} {{ domain.orderId ?? '—' }}
+                    {{ t('clients.clientDomainDetail.order') }} {{ domain.origin.orderId ?? '—' }}
                   </UiText>
                   <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Sm">
-                    {{ t('clients.clientDomainDetail.orderType') }} {{ domain.orderType }}
+                    {{ t('clients.clientDomainDetail.orderType') }} {{ domain.origin.orderType }}
                   </UiText>
                   <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Sm">
                     {{ t('clients.clientDomainDetail.domain') }} {{ domain.name }}
                   </UiText>
                   <UiText :tone="UiTextTone.Muted" :size="UiTextSize.Sm">
-                    {{ t('clients.clientDomainDetail.registrar') }} {{ domain.registrar ?? '—' }}
+                    {{ t('clients.clientDomainDetail.registrar') }} {{ domain.registrar.module ?? '—' }}
                   </UiText>
                 </UiStack>
                 <UiGrid :columns="2" gap="sm">
@@ -557,12 +576,12 @@ onBeforeUnmount(() => {
                   </UiButton>
                   <UiButton
                     type="button"
-                    :variant="domain.whoisPrivacy ? UiButtonVariant.Danger : UiButtonVariant.Secondary"
+                    :variant="domain.features.whoisPrivacy ? UiButtonVariant.Danger : UiButtonVariant.Secondary"
                     :disabled="commandLoading"
                     data-testid="client-domain-id-protection"
                     @click="handleToggleIdProtection"
                   >
-                    {{ commandLoading ? t('shared.processing') : (domain.whoisPrivacy ? t('clients.clientDomainDetail.disableIdProtection') : t('clients.clientDomainDetail.enableIdProtection')) }}
+                    {{ commandLoading ? t('shared.processing') : (domain.features.whoisPrivacy ? t('clients.clientDomainDetail.disableIdProtection') : t('clients.clientDomainDetail.enableIdProtection')) }}
                   </UiButton>
                 </UiStack>
               </UiStack>
@@ -581,7 +600,7 @@ onBeforeUnmount(() => {
                     </UiStack>
                   </UiField>
                   <UiField :label="t('shared.registrationDate')">
-                    <UiText :tone="UiTextTone.Muted">{{ formatDate(domain.registeredAt) }}</UiText>
+                    <UiText :tone="UiTextTone.Muted">{{ formatDate(domain.term.registeredAt) }}</UiText>
                   </UiField>
                   <UiField :label="t('shared.expiryDate')">
                     <UiDatePicker v-model="expiresAt" :direction="UiDatePickerDirection.Future" />
@@ -604,7 +623,7 @@ onBeforeUnmount(() => {
                 <UiHeading :level="2" variant="card">{{ t('clients.clientDomainDetail.managementTools') }}</UiHeading>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle
-                    :model-value="domain.dnsManagement"
+                    :model-value="domain.features.dnsManagement"
                     data-testid="client-domain-toggle-dns"
                     @update:model-value="handleToggleDnsManagement"
                   />
@@ -612,7 +631,7 @@ onBeforeUnmount(() => {
                 </UiLabel>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle
-                    :model-value="domain.emailForwarding"
+                    :model-value="domain.features.emailForwarding"
                     data-testid="client-domain-toggle-forwarding"
                     @update:model-value="handleToggleEmailForwarding"
                   />
@@ -620,7 +639,7 @@ onBeforeUnmount(() => {
                 </UiLabel>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle
-                    :model-value="domain.whoisPrivacy"
+                    :model-value="domain.features.whoisPrivacy"
                     data-testid="client-domain-toggle-id-protection"
                     @update:model-value="handleToggleIdProtection"
                   />
@@ -628,7 +647,7 @@ onBeforeUnmount(() => {
                 </UiLabel>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle
-                    :model-value="domain.autoRenew"
+                    :model-value="domain.features.autoRenew"
                     data-testid="client-domain-toggle-auto-renew"
                     @update:model-value="handleToggleAutoRenew"
                   />
@@ -636,7 +655,7 @@ onBeforeUnmount(() => {
                 </UiLabel>
                 <UiLabel :variant="UiLabelVariant.Inline">
                   <UiToggle
-                    :model-value="domain.isLocked"
+                    :model-value="domain.features.isLocked"
                     data-testid="client-domain-toggle-lock"
                     @update:model-value="handleToggleLock"
                   />
@@ -661,14 +680,14 @@ onBeforeUnmount(() => {
       </UiForm>
 
       <EmailForwardingTable
-        v-if="domain.emailForwarding"
+        v-if="domain.features.emailForwarding"
         :domain-id="Number(domainId)"
         :rules="domain.emailForwardingRules"
         @refresh="fetchDomain"
       />
 
       <DnsRecordsTable
-        v-if="domain.dnsManagement"
+        v-if="domain.features.dnsManagement"
         :domain-id="Number(domainId)"
         :records="domain.dnsRecords"
         @refresh="fetchDomain"

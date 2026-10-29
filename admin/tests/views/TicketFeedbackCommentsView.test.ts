@@ -1,5 +1,5 @@
 /**
- * Tests of TicketFeedbackCommentsView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of TicketFeedbackCommentsView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses.
  */
 import { vi } from 'vitest'
@@ -21,4 +21,5 @@ runReportCase({
     }),
   },
   expected: ['Ticket Feedback Comments', 'Great service', 'Beta', '01/02/2024'],
+  retryable: true,
 })

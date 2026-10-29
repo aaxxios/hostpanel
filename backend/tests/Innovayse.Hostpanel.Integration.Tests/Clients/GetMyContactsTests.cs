@@ -2,13 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
@@ -24,7 +21,7 @@ public sealed class GetMyContactsTests(IntegrationTestFactory factory) : IClassF
         var empty = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
         empty.GetArrayLength().Should().Be(0);
         (await client.PostAsJsonAsync("/api/clients/me/contacts", ClientsTestSeeds.ContactBody("Listed")))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            .StatusCode.Should().Be(HttpStatusCode.Created);
 
         var listed = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
 

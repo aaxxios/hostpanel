@@ -1,7 +1,11 @@
+using System.Globalization;
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Domains.Events;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
 
@@ -16,30 +20,24 @@ public sealed class DomainExpiringNotificationHandler
     /// <summary>Message bus, for dispatching the notification email command.</summary>
     private readonly IMessageBus _bus;
 
-    /// <summary>The module's data context, for the client that owns the domain.</summary>
-    private readonly IHostpanelDbContext _context;
-
-    /// <summary>Reads people from wherever they live.</summary>
-    private readonly IIdentityProvider _identity;
-
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DomainExpiringNotificationHandler> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Message bus, for dispatching the notification email command.</param>
-    /// <param name="context">The module's data context, for the client that owns the domain.</param>
-    /// <param name="identity">Reads people from wherever they live.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public DomainExpiringNotificationHandler(
         IMessageBus bus,
-        IHostpanelDbContext context,
-        IIdentityProvider identity,
-        ILogger<DomainExpiringNotificationHandler> logger)
+        ILogger<DomainExpiringNotificationHandler> logger,
+        IClock clock)
     {
         _bus = bus;
-        _context = context;
-        _identity = identity;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -52,10 +50,7 @@ public sealed class DomainExpiringNotificationHandler
     {
         try
         {
-            // Was IClientRepository.FindByIdAsync -- read-only, so no tracking is needed. Contacts
-            // and Users are not read here, so unlike the repository's Include-laden query, this one
-            // stays a plain lookup: nothing below reads either navigation.
-            var client = await _context.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == evt.ClientId, ct);
+            var client = await _bus.FindClientBriefAsync(evt.ClientId, withEmail: true, ct);
             if (client is null)
             {
                 _logger.LogWarning(
@@ -65,37 +60,32 @@ public sealed class DomainExpiringNotificationHandler
                 return;
             }
 
-            var user = await _identity.FindBySubjectAsync(client.UserId, ct);
-            if (user is null)
+            var email = client.Email;
+            if (email is null)
             {
                 _logger.LogWarning(
                     "User {UserId} not found for domain expiring notification (domain {DomainId}).",
-                    client.UserId,
+                    client.UserSubject,
                     evt.DomainId);
                 return;
             }
 
-            var daysUntilExpiry = (int)Math.Ceiling((evt.ExpiresAt - DateTimeOffset.UtcNow).TotalDays);
+            var daysUntilExpiry = (int)Math.Ceiling((evt.ExpiresAt - _clock.UtcNow).TotalDays);
 
-            var data = new
-            {
-                domain = new
-                {
-                    id = evt.DomainId,
-                    name = evt.Name,
-                    expiresAt = evt.ExpiresAt.ToString("yyyy-MM-dd"),
-                    daysUntilExpiry,
-                }
-            };
+            var data = new DomainExpiringTemplateModel(new ExpiringDomainTemplateData(
+                evt.DomainId,
+                evt.Name,
+                evt.ExpiresAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                daysUntilExpiry));
 
-            await _bus.InvokeAsync(new SendEmailCommand(user.Email, "domain-expiring", data), ct);
+            await _bus.InvokeAsync(new SendEmailCommand(email, client.Language, "domain-expiring", data, new ContactCopy(evt.ClientId, ContactNotification.Domain)), ct);
 
             _logger.LogInformation(
                 "Sent domain-expiring notification for domain {DomainName} (ID {DomainId}, expires in {Days} days) to {Email}.",
                 evt.Name,
                 evt.DomainId,
                 daysUntilExpiry,
-                user.Email);
+                email);
         }
         catch (Exception ex)
         {

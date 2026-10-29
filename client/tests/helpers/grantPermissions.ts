@@ -1,7 +1,7 @@
 /**
  * Test helper: signs a person with a given permission value into the active Pinia's client store.
  *
- * The permission-aware components read `useClientStore().mayDo(...)`, which answers from the loaded
+ * The permission-aware components read `useClientStore().mayDo(flag)`, which answers from the loaded
  * person. A component test mounts first (the mount creates the Pinia the component reads), then
  * calls this, then asserts on what the component now shows.
  *
@@ -10,7 +10,7 @@
 
 import { nextTick } from 'vue'
 import { useClientStore } from '~/stores/client'
-import type { ClientUser } from '~/types/clientuser'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 
 /**
  * Loads a person holding exactly the given permissions into the client store and lets the DOM settle.
@@ -19,6 +19,6 @@ import type { ClientUser } from '~/types/clientuser'
  * @returns Resolves once the components have re-rendered.
  */
 export const grantPermissions = async (permissions: number): Promise<void> => {
-  useClientStore().user = { id: 1, firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.test', permissions } as ClientUser
+  useClientStore().user = makeClientUser({ permissions })
   await nextTick()
 }

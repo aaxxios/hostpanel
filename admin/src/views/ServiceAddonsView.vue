@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Service Addons — add-on services attached to client accounts.
+ * Service Addons: add-on services attached to client accounts.
  *
  * The feature is not built yet, so the screen says so instead of showing records that do not exist.
  */

@@ -28,7 +28,7 @@ updates:
     open-pull-requests-limit: 0
     labels: [dependencies, "area: backend"]
     ignore:
-      # Published to Innovayse's private registry, which Dependabot cannot reach.
+      # Published to a private package feed, which Dependabot cannot reach.
       - dependency-name: Innovayse.Auth
       # The ImageSharp line was dropped for licensing reasons; see Directory.Packages.props.
       - dependency-name: SixLabors.ImageSharp

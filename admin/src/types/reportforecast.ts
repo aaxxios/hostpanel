@@ -1,15 +1,17 @@
-/** Projected income of one month, split by billing cycle. */
+/** Income of one month with its trailing windows; every amount is in `currency`. */
 export interface ReportForecastRow {
   /** Month caption. */
   month: string
-  /** Income from monthly services. */
+  /** Income booked in this month alone. */
   monthly: number
-  /** Income from quarterly services. */
+  /** Income over this month and the two before it. */
   quarterly: number
-  /** Income from semi-annual services. */
+  /** Income over this month and the five before it. */
   semiAnnual: number
-  /** Income from annual services. */
+  /** Income over the whole year. */
   annual: number
-  /** Sum of the above. */
+  /** Income from January up to and including this month. */
   total: number
+  /** ISO 4217 code of the base currency the amounts are converted to. */
+  currency: string
 }

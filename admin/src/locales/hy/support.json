@@ -16,7 +16,8 @@
     "noAnnouncementsFound": "Հայտարարություններ չեն գտնվել",
     "createYourFirstAnnouncementTo": "Սկսելու համար ստեղծեք առաջին հայտարարությունը։",
     "deleteAnnouncement": "Ջնջել հայտարարությունը",
-    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս հայտարարությունը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս հայտարարությունը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "announcementDeleted": "Հայտարարությունը ջնջվեց։"
   },
   "downloads": {
     "downloads": "Ներբեռնումներ",
@@ -48,7 +49,10 @@
     "deleteTitle": "Ջնջել՝ {item}",
     "deleteMessage": "Վստա՞հ եք, որ ցանկանում եք ջնջել «{name}»։ Այս գործողությունը հնարավոր չէ չեղարկել։",
     "selectType": "Ընտրեք տեսակը",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "categorySaved": "Կատեգորիան պահպանվեց։",
+    "downloadSaved": "Ներբեռնումը պահպանվեց։",
+    "deleted": "Ջնջվեց։"
   },
   "knowledgebase": {
     "knowledgebase": "Գիտելիքների բազա",
@@ -68,7 +72,10 @@
     "saveArticle": "Պահպանել հոդվածը",
     "deleteCategory": "Ջնջել կատեգորիան",
     "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս կատեգորիան։ Դա կարող է ազդել դրա բոլոր հոդվածների վրա։",
-    "addArticle": "Ավելացնել հոդված"
+    "addArticle": "Ավելացնել հոդված",
+    "categorySaved": "Կատեգորիան պահպանվեց։",
+    "categoryDeleted": "Կատեգորիան ջնջվեց։",
+    "articleSaved": "Հոդվածը պահպանվեց։"
   },
   "networkIssueForm": {
     "updateTheNetworkIssueDetails": "Թարմացրեք ցանցային խնդրի տվյալները ստորև",
@@ -164,7 +171,10 @@
     "conversation": "Նամակագրություն",
     "staff": "Աշխատակից",
     "deleteTicket": "Ջնջել տոմսը",
-    "deleteTicketMessage": "Վստա՞հ եք, որ ցանկանում եք ջնջել #TKT-{id} տոմսը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "deleteTicketMessage": "Վստա՞հ եք, որ ցանկանում եք ջնջել #TKT-{id} տոմսը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "ticketClosed": "Տոմսը փակված է։",
+    "ticketReopened": "Տոմսը վերաբացված է։",
+    "replySent": "Պատասխանն ուղարկված է։"
   },
   "supportTickets": {
     "supportTickets": "Աջակցության տոմսեր",
@@ -174,8 +184,9 @@
     "flag": "Նշել դրոշակով",
     "unflag": "Հանել դրոշակը",
     "requestor": "Հայտատու",
-    "clientClientid": "Հաճախորդ №{clientId}",
     "noTicketsFound": "Տոմսեր չեն գտնվել",
-    "tryAdjustingYourFiltersOr": "Փորձեք փոխել ֆիլտրերը կամ որոնման հարցումը։"
+    "tryAdjustingYourFiltersOr": "Փորձեք փոխել ֆիլտրերը կամ որոնման հարցումը։",
+    "confirmBulkDeleteTitle": "Ջնջե՞լ ընտրված տոմսերը",
+    "confirmBulkDeleteMessage": "Ընդմիշտ կջնջվի {count} տոմս։ Այս գործողությունը հնարավոր չէ հետարկել։"
   }
 }

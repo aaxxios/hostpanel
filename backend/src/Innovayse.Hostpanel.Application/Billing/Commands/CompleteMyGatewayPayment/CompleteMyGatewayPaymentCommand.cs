@@ -4,7 +4,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.CompleteMyGatewayPaym
 /// <remarks>
 /// Carries no client id. Which account the invoice must belong to is resolved inside the handler
 /// from the credential. The reconciliation cron, which verifies every pending session and has no
-/// caller at all, dispatches <c>CompleteGatewayPaymentCommand</c> directly -- which is precisely
+/// caller at all, dispatches <c>CompleteGatewayPaymentCommand</c> directly, which is precisely
 /// why the check could not be added to that shared handler.
 /// </remarks>
 /// <param name="InvoiceId">The invoice whose gateway session should be verified.</param>

@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Migration;
+
 /// <summary>
 /// Records the outcome of a single record import attempt during a migration job.
 /// One row per entity processed (imported, skipped, or failed).
@@ -23,7 +25,13 @@ public sealed class MigrationLog : BaseEntity
     /// <summary>What happened to this record during import.</summary>
     public MigrationLogAction Action { get; private set; }
 
-    /// <summary>Explanation for Skipped or Failed actions; null for Imported.</summary>
+    /// <summary>Why the record was skipped or failed; null when it was imported.</summary>
+    public MigrationSkipReason? SkipReason { get; private set; }
+
+    /// <summary>
+    /// Free-text failure detail kept only on rows written before failures were logged as
+    /// <see cref="MigrationSkipReason.ImportFailed"/>; new rows never set it, so no exception text reaches admins.
+    /// </summary>
     public string? Reason { get; private set; }
 
     /// <summary>When this log entry was written.</summary>
@@ -37,14 +45,14 @@ public sealed class MigrationLog : BaseEntity
     /// <param name="entityType">Kind of record.</param>
     /// <param name="identifier">Identifier of the record in the source system.</param>
     /// <param name="action">What happened to the record.</param>
-    /// <param name="reason">Why it was skipped or failed, or null.</param>
+    /// <param name="skipReason">Why it was skipped or failed, or null when it was imported.</param>
     /// <returns>The new log entry.</returns>
     public static MigrationLog Create(
         int jobId,
         MigrationEntityType entityType,
         string identifier,
         MigrationLogAction action,
-        string? reason = null)
+        MigrationSkipReason? skipReason = null)
     {
         return new MigrationLog
         {
@@ -52,8 +60,7 @@ public sealed class MigrationLog : BaseEntity
             EntityType = entityType,
             Identifier = identifier,
             Action = action,
-            Reason = reason,
-            CreatedAt = DateTimeOffset.UtcNow,
+            SkipReason = skipReason,
         };
     }
 }

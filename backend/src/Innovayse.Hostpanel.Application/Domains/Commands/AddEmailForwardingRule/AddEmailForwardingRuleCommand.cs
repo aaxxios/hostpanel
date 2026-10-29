@@ -8,4 +8,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.AddEmailForwardingRul
 /// </param>
 /// <param name="Source">Source alias or local part (e.g. "info").</param>
 /// <param name="Destination">Destination email address.</param>
-public record AddEmailForwardingRuleCommand(int? DomainId, string Source, string Destination);
+public sealed record AddEmailForwardingRuleCommand(int? DomainId, string Source, string Destination);

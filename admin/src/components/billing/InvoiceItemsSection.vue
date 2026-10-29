@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * The line items of an invoice: a read-only table with the totals, or — when `readonly` is off —
+ * The line items of an invoice: a read-only table with the totals, or, when `readonly` is off,
  * an editor that adds, removes and re-prices lines and saves them through the billing store.
- * Every invoice tab shows this block, so the logic lives here once.
+ * Every invoice tab shows this block, so the logic lives here once. The outcome of a save
+ * (success, or the API's sentence) shows next to the save button.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -14,6 +15,7 @@ import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableBody from '@/components/ui/UiTableBody.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
@@ -22,30 +24,27 @@ import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
 import { Icon } from '@/lib/icons'
 import { formatUsdPlain } from '@/lib/money'
 import { useBillingStore } from '@/stores/billing'
-import type { Invoice, InvoiceItemUpdate } from '@/types/invoice'
+import type { InvoiceDetail, InvoiceItemUpdate } from '@/types/invoice'
 import { MAX_PERCENT } from '@/lib/limits'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   /** The invoice whose lines are shown. */
-  invoice: Invoice
+  invoice: InvoiceDetail
   /** True to show the lines without editing controls. */
   readonly?: boolean
-  /** Tax percentage previewed on the taxed lines; 0 adds no tax row. */
+  /** Tax percentage previewed on the sub-total; 0 adds no tax row. */
   taxPercent?: number
 }>(), {
   readonly: false,
   taxPercent: 0,
 })
-
-const emit = defineEmits<{
-  /** Emitted after the edited lines were saved. */
-  updated: []
-}>()
 
 /** One line while it is being edited. */
 interface EditableLine {
@@ -89,6 +88,12 @@ const lines = ref<EditableLine[]>([])
 /** True while the lines are being saved. */
 const saving = ref(false)
 
+/** The outcome line of the last save, shown next to the save button. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
 /** Ids of existing lines the operator removed; they are sent as deletions on save. */
 const removedIds = ref<number[]>([])
 
@@ -109,9 +114,6 @@ const snapshot = (): string =>
 /** True when the editor holds changes that are not saved yet. */
 const dirty = computed<boolean>(() => snapshot() !== baseline.value)
 
-/** True when the invoice carries a tax rate, so a line defaults to taxed. */
-const invoiceIsTaxed = computed<boolean>(() => (props.invoice.taxRate ?? 0) > 0)
-
 /** True when every editable line is ticked (and there is at least one). */
 const allSelected = computed<boolean>(() => lines.value.length > 0 && lines.value.every((line) => line.selected))
 
@@ -125,16 +127,16 @@ const previewSubTotal = computed<number>(() => lines.value.reduce((sum, line) =>
 const previewTax = computed<number>(() => previewSubTotal.value * (props.taxPercent / MAX_PERCENT))
 
 /** Total due after the invoice credit, as the editor previews it. */
-const previewTotal = computed<number>(() => previewSubTotal.value + previewTax.value - (props.invoice.credit ?? 0))
+const previewTotal = computed<number>(() => previewSubTotal.value + previewTax.value - (props.invoice.amounts.credit ?? 0))
 
 /** The totals block: what the API computed when read-only, the live preview while editing. */
 const totalRows = computed<TotalRow[]>(() => {
-  const credit = props.invoice.credit ?? 0
+  const credit = props.invoice.amounts.credit ?? 0
   const rows: TotalRow[] = [
     {
       key: 'subtotal',
       label: t('shared.subTotal'),
-      value: props.readonly ? (props.invoice.subTotal ?? 0) : previewSubTotal.value,
+      value: props.readonly ? (props.invoice.amounts.subTotal ?? 0) : previewSubTotal.value,
       strong: false,
     },
   ]
@@ -145,7 +147,7 @@ const totalRows = computed<TotalRow[]>(() => {
   rows.push({
     key: 'total',
     label: t('shared.totalDue'),
-    value: props.readonly ? (props.invoice.total ?? 0) : previewTotal.value,
+    value: props.readonly ? (props.invoice.amounts.total ?? 0) : previewTotal.value,
     strong: true,
   })
   return rows
@@ -196,8 +198,13 @@ const deleteSelected = (): void => {
   lines.value = lines.value.filter((line) => !line.selected)
 }
 
-/** Saves the edited lines through the store and tells the parent when they were accepted. */
+/**
+ * Saves the edited lines through the store and shows the outcome.
+ *
+ * @returns Resolves when the request has settled.
+ */
 const save = async (): Promise<void> => {
+  feedback.clear()
   saving.value = true
   // The API changes only the lines it is told about, so a removed line must be sent as a deletion.
   const kept: InvoiceItemUpdate[] = lines.value.map((line) => ({
@@ -219,17 +226,11 @@ const save = async (): Promise<void> => {
   if (ok) {
     // Mark the editor clean so the reloaded invoice (new ids for added lines) replaces the lines.
     baseline.value = snapshot()
-    emit('updated')
+    feedback.show(t('shared.changesSavedSuccessfully'), false)
+  } else {
+    feedback.show(store.error ?? t('errors.noAnswer'), true)
   }
 }
-
-/**
- * Whether tax applies to a read-only line.
- *
- * @param taxed - The flag the API sent for the line, when it sent one.
- * @returns True when the line is taxed.
- */
-const isTaxed = (taxed: boolean | undefined): boolean => taxed ?? invoiceIsTaxed.value
 
 onMounted(populate)
 
@@ -257,23 +258,19 @@ watch(
           v-if="readonly"
           density="compact"
           :empty="(invoice.items ?? []).length === 0"
-          :colspan="3"
+          :colspan="2"
           data-testid="billing-invoice-items-table"
         >
           <UiTableHead>
             <UiTableRow>
               <UiTableHeader>{{ t('shared.description') }}</UiTableHeader>
               <UiTableHeader align="right">{{ t('shared.amount') }}</UiTableHeader>
-              <UiTableHeader align="center">{{ t('shared.taxed') }}</UiTableHeader>
             </UiTableRow>
           </UiTableHead>
           <UiTableBody divided>
             <UiTableRow v-for="item in invoice.items ?? []" :key="item.id" hoverable>
               <UiTableCell>{{ item.description }}</UiTableCell>
               <UiTableCell align="right">{{ formatUsdPlain(item.amount) }}</UiTableCell>
-              <UiTableCell align="center" muted>
-                {{ isTaxed(item.taxed) ? t('shared.yes') : t('shared.no') }}
-              </UiTableCell>
             </UiTableRow>
           </UiTableBody>
           <template #empty>
@@ -403,5 +400,6 @@ watch(
         {{ t('shared.cancelChanges') }}
       </UiButton>
     </UiStack>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-invoice-items-feedback" />
   </UiStack>
 </template>

@@ -5,38 +5,34 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useServicesApi } from '@/composables/apis/useServicesApi'
-import type { UpdateServicePayload } from '@/types/service'
+import { BillingCycle, ServiceStatus, type ServiceBillingTermsPayload, type ServiceHostingAccountPayload } from '@/types/service'
 import { json, stubFetch, callOf } from '../../helpers/fetch'
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** A valid service save body. */
-const fields: UpdateServicePayload = {
-  domain: 'example.com',
-  dedicatedIp: null,
-  username: null,
-  password: null,
-  provisioningRef: null,
-  recurringAmount: 12,
+/** A valid billing section body. */
+const billing: ServiceBillingTermsPayload = {
+  productId: 2,
+  quantity: 1,
+  billingCycle: BillingCycle.Monthly,
   firstPaymentAmount: 12,
+  recurringAmount: 12,
   nextRenewalAt: null,
-  createdAt: null,
-  terminatedAt: null,
-  billingCycle: 'monthly',
   paymentMethod: null,
   promotionCode: null,
   subscriptionId: null,
-  overrideAutoSuspend: false,
-  suspendUntil: null,
-  autoTerminateEndOfCycle: false,
-  autoTerminateReason: null,
-  adminNotes: null,
-  status: 'Active',
-  quantity: 1,
-  serverId: null,
-  productId: 2,
+}
+
+/** A valid hosting account section body. */
+const hosting: ServiceHostingAccountPayload = {
+  serverId: 3,
+  domain: 'example.com',
+  provisioningRef: 'acct1',
+  dedicatedIp: null,
+  username: 'user1',
+  password: null,
 }
 
 describe('useServicesApi', () => {
@@ -50,14 +46,34 @@ describe('useServicesApi', () => {
     expect(callOf(mock, 1).url).toBe('/api/services?clientId=7&page=2&pageSize=100')
   })
 
-  it('getService reads the detail and updateService PUTs the fields', async () => {
+  it('getService reads the detail', async () => {
     const mock = stubFetch(json({ id: 4 }))
+
+    expect(await useServicesApi().getService(4)).toEqual({ id: 4 })
+    expect(callOf(mock).url).toBe('/api/services/4')
+  })
+
+  it('each section PUTs its own fields to its own endpoint', async () => {
+    const mock = stubFetch(new Response(null, { status: 204 }))
     const api = useServicesApi()
 
-    expect(await api.getService(4)).toEqual({ id: 4 })
-    await api.updateService(4, fields)
-    expect(callOf(mock, 0).url).toBe('/api/services/4')
-    expect(callOf(mock, 1)).toMatchObject({ url: '/api/services/4', method: 'PUT', body: fields })
+    await api.updateBillingTerms(4, billing)
+    await api.updateHostingAccount(4, hosting)
+    await api.updateAutomation(4, { autoRenew: true, overrideAutoSuspend: true, suspendUntil: '2031-01-01', autoTerminateEndOfCycle: false, autoTerminateReason: null })
+    await api.updateNotes(4, { adminNotes: 'note' })
+    await api.changeStatus(4, { status: ServiceStatus.Suspended })
+    await api.correctTerminationDate(4, { terminatedAt: '2030-06-01' })
+
+    expect(callOf(mock, 0)).toMatchObject({ url: '/api/services/4/billing', method: 'PUT', body: billing })
+    expect(callOf(mock, 1)).toMatchObject({ url: '/api/services/4/hosting-account', method: 'PUT', body: hosting })
+    expect(callOf(mock, 2)).toMatchObject({
+      url: '/api/services/4/automation',
+      method: 'PUT',
+      body: { autoRenew: true, overrideAutoSuspend: true, suspendUntil: '2031-01-01', autoTerminateEndOfCycle: false, autoTerminateReason: null },
+    })
+    expect(callOf(mock, 3)).toMatchObject({ url: '/api/services/4/notes', method: 'PUT', body: { adminNotes: 'note' } })
+    expect(callOf(mock, 4)).toMatchObject({ url: '/api/services/4/status', method: 'PUT', body: { status: 'Suspended' } })
+    expect(callOf(mock, 5)).toMatchObject({ url: '/api/services/4/termination-date', method: 'PUT', body: { terminatedAt: '2030-06-01' } })
   })
 
   it('getPanelLoginUrl reads the single sign-on url', async () => {

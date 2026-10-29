@@ -7,4 +7,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteEmailForwarding
 /// ever ran.
 /// </param>
 /// <param name="RuleId">Primary key of the email forwarding rule to delete; overlaid from the route.</param>
-public record DeleteEmailForwardingRuleCommand(int? DomainId, int? RuleId);
+public sealed record DeleteEmailForwardingRuleCommand(int? DomainId, int? RuleId);

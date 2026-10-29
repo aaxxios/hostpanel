@@ -1,27 +1,28 @@
-using Innovayse.Hostpanel.Domain.Migration;
+using Innovayse.Hostpanel.Domain.Migration.Enums;
 
 namespace Innovayse.Hostpanel.Application.Migration.Common;
-/// <summary>Migration job summary returned to the admin frontend.</summary>
-/// <param name="Id">The identifier.</param>
-/// <param name="Key">The key.</param>
-/// <param name="SourceUrl">The source url.</param>
-/// <param name="Status">The status.</param>
-/// <param name="Label">The label.</param>
-/// <param name="ErrorMessage">The error message.</param>
-/// <param name="EntitySelection">The entity selection.</param>
-/// <param name="Progress">The progress.</param>
-/// <param name="OverallPercent">The overall percent.</param>
-/// <param name="PluginConnected">Whether plugin connected.</param>
-/// <param name="LastPingAt">The last ping at.</param>
-/// <param name="CreatedAt">The created at.</param>
-/// <param name="CompletedAt">The completed at.</param>
+
+/// <summary>A migration job as the admin migration screen shows it: where it pulls from, how far it got, and whether the source is reachable.</summary>
+/// <param name="Id">The job, used in every migration route.</param>
+/// <param name="Key">The shared key the legacy source plugin must send back; shown once so the operator can paste it into the plugin.</param>
+/// <param name="SourceUrl">The address of the legacy source the job pulls from.</param>
+/// <param name="Status">Where the job is in its life: pending, in progress, completed or failed.</param>
+/// <param name="Label">The operator's own name for the job; null when none was given.</param>
+/// <param name="Failure">Why the job failed, as a closed reason the screen translates; null unless the job failed.</param>
+/// <param name="EntitySelection">Which kinds of record the operator chose to pull.</param>
+/// <param name="Progress">Imported, skipped and total counts per kind of record.</param>
+/// <param name="OverallPercent">How much of the selected work is done, 0 to 100.</param>
+/// <param name="PluginConnected">Whether the source plugin answered a ping in the last five minutes.</param>
+/// <param name="LastPingAt">When the source plugin last answered (UTC); null when it never has.</param>
+/// <param name="CreatedAt">When the job was created (UTC).</param>
+/// <param name="CompletedAt">When the pull finished (UTC); null while it has not.</param>
 public sealed record MigrationJobDto(
     int Id,
     string Key,
     string SourceUrl,
-    string Status,
+    MigrationJobStatus Status,
     string? Label,
-    string? ErrorMessage,
+    MigrationJobFailure? Failure,
     MigrationEntitySelectionDto EntitySelection,
     MigrationProgressDto Progress,
     int OverallPercent,

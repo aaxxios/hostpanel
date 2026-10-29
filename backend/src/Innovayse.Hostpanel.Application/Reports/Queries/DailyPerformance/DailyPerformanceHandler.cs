@@ -1,6 +1,8 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
+using Innovayse.Hostpanel.Application.Reports.Common;
+using Innovayse.Hostpanel.Application.Reports.Extensions;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +14,16 @@ public sealed class DailyPerformanceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public DailyPerformanceHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public DailyPerformanceHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
@@ -28,61 +35,65 @@ public sealed class DailyPerformanceHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var to = query.To ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var to = query.To ?? DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime);
         var from = query.From ?? to.AddDays(-29);
-        var fromUtc = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toUtc = to.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
-        var newInvoices = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => i.CreatedAt >= fromUtc && i.CreatedAt <= toUtc)
-            .GroupBy(i => new { i.CreatedAt.Year, i.CreatedAt.Month, i.CreatedAt.Day })
-            .Select(g => new { Date = new { g.Key.Year, g.Key.Month, g.Key.Day }, Count = g.Count() })
-            .ToListAsync(ct);
+        // The window is half-open, [first day 00:00, the day after the last 00:00), so the last
+        // day counts in full and the bounds compare the columns themselves.
+        var fromUtc = from.StartOfDayUtc();
+        var toUtc = to.EndOfDayExclusiveUtc();
 
-        var paidInvoices = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => i.Status == InvoiceStatus.Paid && i.CreatedAt >= fromUtc && i.CreatedAt <= toUtc)
-            .GroupBy(i => new { i.CreatedAt.Year, i.CreatedAt.Month, i.CreatedAt.Day })
-            .Select(g => new { Date = new { g.Key.Year, g.Key.Month, g.Key.Day }, Count = g.Count() })
-            .ToListAsync(ct);
+        var newInvoices = await CountByDayAsync(
+            _context.Invoices.AsNoTracking().Where(i => i.CreatedAt >= fromUtc && i.CreatedAt < toUtc).Select(i => i.CreatedAt), ct);
 
-        var orders = await _context.Orders
-            .AsNoTracking()
-            .Where(o => o.CreatedAt >= fromUtc && o.CreatedAt <= toUtc)
-            .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month, o.CreatedAt.Day })
-            .Select(g => new { Date = new { g.Key.Year, g.Key.Month, g.Key.Day }, Count = g.Count() })
-            .ToListAsync(ct);
+        // An invoice counts as paid on the day it was paid, not the day it was raised.
+        var paidInvoices = await CountByDayAsync(
+            _context.Invoices.AsNoTracking()
+                .Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt >= fromUtc && i.PaidAt < toUtc)
+                .Select(i => i.PaidAt!.Value),
+            ct);
 
-        var cancellations = await _context.CancellationRequests
-            .AsNoTracking()
-            .Where(c => c.CreatedAt >= fromUtc && c.CreatedAt <= toUtc)
-            .GroupBy(c => new { c.CreatedAt.Year, c.CreatedAt.Month, c.CreatedAt.Day })
-            .Select(g => new { Date = new { g.Key.Year, g.Key.Month, g.Key.Day }, Count = g.Count() })
-            .ToListAsync(ct);
+        // Only an accepted order is completed; a pending, cancelled or fraud order is not.
+        var completedOrders = await CountByDayAsync(
+            _context.Orders.AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Active && o.CreatedAt >= fromUtc && o.CreatedAt < toUtc)
+                .Select(o => o.CreatedAt),
+            ct);
 
-        var openedTickets = await _context.Tickets
-            .AsNoTracking()
-            .Where(t => t.CreatedAt >= fromUtc && t.CreatedAt <= toUtc)
-            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month, t.CreatedAt.Day })
-            .Select(g => new { Date = new { g.Key.Year, g.Key.Month, g.Key.Day }, Count = g.Count() })
-            .ToListAsync(ct);
+        var cancellations = await CountByDayAsync(
+            _context.CancellationRequests.AsNoTracking().Where(c => c.CreatedAt >= fromUtc && c.CreatedAt < toUtc).Select(c => c.CreatedAt), ct);
+
+        var openedTickets = await CountByDayAsync(
+            _context.Tickets.AsNoTracking().Where(t => t.CreatedAt >= fromUtc && t.CreatedAt < toUtc).Select(t => t.CreatedAt), ct);
 
         var days = Enumerable.Range(0, to.DayNumber - from.DayNumber + 1).Select(i => from.AddDays(i));
 
         IReadOnlyList<DailyPerformanceDto> rows = days.Select(day => new DailyPerformanceDto(
             Date: day.ToString("yyyy-MM-dd"),
-            CompletedOrders: orders.FirstOrDefault(x => x.Date.Year == day.Year && x.Date.Month == day.Month && x.Date.Day == day.Day)?.Count ?? 0,
-            NewInvoices: newInvoices.FirstOrDefault(x => x.Date.Year == day.Year && x.Date.Month == day.Month && x.Date.Day == day.Day)?.Count ?? 0,
-            PaidInvoices: paidInvoices.FirstOrDefault(x => x.Date.Year == day.Year && x.Date.Month == day.Month && x.Date.Day == day.Day)?.Count ?? 0,
-            OpenedTickets: openedTickets.FirstOrDefault(x => x.Date.Year == day.Year && x.Date.Month == day.Month && x.Date.Day == day.Day)?.Count ?? 0,
-            // The old repository never counted replies here either; a reply total needs the
-            // ticket-replies aggregate this report does not otherwise compute. Kept at zero
-            // rather than invented, matching the pre-conversion behaviour exactly.
+            CompletedOrders: completedOrders.GetValueOrDefault(day),
+            NewInvoices: newInvoices.GetValueOrDefault(day),
+            PaidInvoices: paidInvoices.GetValueOrDefault(day),
+            OpenedTickets: openedTickets.GetValueOrDefault(day),
+            // A reply total needs the ticket-replies aggregate this report does not otherwise
+            // compute, so it is reported as zero rather than invented.
             TicketReplies: 0,
-            CancellationRequests: cancellations.FirstOrDefault(x => x.Date.Year == day.Year && x.Date.Month == day.Month && x.Date.Day == day.Day)?.Count ?? 0
+            CancellationRequests: cancellations.GetValueOrDefault(day)
         )).ToList();
 
         return Result<IReadOnlyList<DailyPerformanceDto>>.Success(rows);
+    }
+
+    /// <summary>Counts moments per UTC calendar day, grouped in the database.</summary>
+    /// <param name="moments">The moments to count, already filtered to the window.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The count of each day that has at least one moment.</returns>
+    private static async Task<Dictionary<DateOnly, int>> CountByDayAsync(IQueryable<DateTimeOffset> moments, CancellationToken ct)
+    {
+        var counts = await moments
+            .GroupBy(m => new { m.Year, m.Month, m.Day })
+            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Day, Count = g.Count() })
+            .ToListAsync(ct);
+
+        return counts.ToDictionary(c => new DateOnly(c.Year, c.Month, c.Day), c => c.Count);
     }
 }

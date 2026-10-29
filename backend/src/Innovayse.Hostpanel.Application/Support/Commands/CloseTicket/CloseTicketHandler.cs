@@ -11,11 +11,16 @@ public sealed class CloseTicketHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock that dates the closing.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public CloseTicketHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock that dates the closing.</param>
+    public CloseTicketHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -35,7 +40,7 @@ public sealed class CloseTicketHandler
             return Result.FailureCode(HostpanelErrorCodes.TICKET_NOT_FOUND);
         }
 
-        ticket.Close();
+        ticket.Close(_clock.UtcNow);
         await _context.SaveChangesAsync(ct);
         return Result.Success();
     }

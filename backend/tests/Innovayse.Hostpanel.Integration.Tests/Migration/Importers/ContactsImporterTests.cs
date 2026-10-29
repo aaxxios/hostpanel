@@ -2,11 +2,10 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Migration.Common;
 using Innovayse.Hostpanel.Application.Migration.Importers;
 using Innovayse.Hostpanel.Application.Migration.Pull;
+using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration.Importers;
 
@@ -22,7 +21,7 @@ public sealed class ContactsImporterTests(IntegrationTestFactory factory) : ICla
     [Fact]
     public async Task RunAsync_Contacts_AddsAContactToAKnownClientAsync()
     {
-        var source = new FakeMigrationPullSource { Totals = new MigrationSourceTotals(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0) };
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Accounts = new MigrationAccountTotals(Contacts: 1) } };
         using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
@@ -46,5 +45,32 @@ public sealed class ContactsImporterTests(IntegrationTestFactory factory) : ICla
 
         var reloaded = await context.Clients.AsNoTracking().Include(c => c.Contacts).FirstAsync(c => c.UserId == userId);
         Assert.Single(reloaded.Contacts, c => c.Email == contactEmail);
+    }
+
+    /// <summary>A client closed in the source still gets its contacts: importing history is not a user change.</summary>
+    [Fact]
+    public async Task RunAsync_Contacts_AddsAContactToAClosedClientAsync()
+    {
+        var source = new FakeMigrationPullSource { Totals = MigrationSourceTotals.Empty with { Accounts = new MigrationAccountTotals(Contacts: 1) } };
+        using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var email = await MigrationTestSeeds.SeedClientAsync(scope.ServiceProvider, context);
+        var userId = await MigrationTestSeeds.UserIdForEmailAsync(scope.ServiceProvider, email);
+        var seeded = await context.Clients.FirstAsync(c => c.UserId == userId);
+        seeded.Close(DateTimeOffset.UtcNow);
+        await context.SaveChangesAsync(CancellationToken.None);
+        var job = await MigrationTestSeeds.SeedJobSelectingOnlyAsync(context, MigrationEntityType.Contacts);
+        var contactEmail = $"contact-{Guid.NewGuid():N}@example.test";
+        source.SetDatasetJson("contacts", $$"""
+            [{"ClientEmail":"{{email}}","FirstName":"Sam","LastName":"Smith","Company":null,"Email":"{{contactEmail}}","Phone":null,"Address":null,"City":null,"State":null,"PostCode":null,"Country":null}]
+            """);
+
+        var worker = scope.ServiceProvider.GetRequiredService<MigrationPullWorker>();
+        await worker.RunAsync(job.Id, CancellationToken.None);
+
+        var client = await context.Clients.AsNoTracking().Include(c => c.Contacts).FirstAsync(c => c.UserId == userId);
+        Assert.Equal(ClientStatus.Closed, client.Status);
+        Assert.Contains(client.Contacts, c => c.Email == contactEmail);
     }
 }

@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Reports.Queries.GetTicketFeedbackComme
 /// <summary>
 /// Validator for <see cref="GetTicketFeedbackCommentsQuery"/>. The staff filter is a free-text
 /// comparison and the date bounds are plain <c>WHERE</c> filters with no iteration behind them, so
-/// nothing here can crash the handler; no rule is declared — decided, not forgotten.
+/// nothing here can crash the handler; no rule is declared: decided, not forgotten.
 /// </summary>
 public sealed class GetTicketFeedbackCommentsValidator : LocalizedValidator<GetTicketFeedbackCommentsQuery>
 {

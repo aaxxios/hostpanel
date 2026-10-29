@@ -2,12 +2,16 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a knowledge base article that can be published and made visible to clients.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class KbArticle : BaseEntity
 {
+    /// <summary>Longest a category name may be: matches the <c>KbArticles.Category</c> column.</summary>
+    public const int CategoryMaxLength = 255;
+
     /// <summary>Gets the article title.</summary>
     public string Title { get; private set; } = string.Empty;
 
@@ -20,10 +24,10 @@ public sealed class KbArticle : BaseEntity
     /// <summary>Gets a value indicating whether this article is visible to clients.</summary>
     public bool IsPublished { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private KbArticle() { }
 
-    /// <summary>Internal constructor — use <see cref="Create"/> factory instead.</summary>
+    /// <summary>Internal constructor: use <see cref="Create"/> factory instead.</summary>
     /// <param name="title">The article title.</param>
     /// <param name="content">The article body content.</param>
     /// <param name="category">The category name.</param>

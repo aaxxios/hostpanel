@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Domain.Domains;
 
 namespace Innovayse.Hostpanel.Application.Common.Interfaces;
@@ -49,117 +50,98 @@ public interface IRegistrarProvider
     /// <summary>
     /// Cancels a pending incoming transfer before it completes.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">Registrar transfer reference to cancel.</param>
+    /// <param name="domain">The domain at the registrar.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the cancellation succeeded.</returns>
-    Task<RegistrarResult> CancelTransferAsync(string domainName, string registrarRef, CancellationToken ct);
+    Task<RegistrarResult> CancelTransferAsync(DomainRef domain, CancellationToken ct);
 
     /// <summary>
     /// Initiates an outgoing transfer to another registrar (unlocks and generates EPP code).
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
+    /// <param name="domain">The domain at the registrar.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating success; the EPP code is retrieved separately via <see cref="GetEppCodeAsync"/>.</returns>
-    Task<RegistrarResult> InitiateOutgoingTransferAsync(string domainName, string registrarRef, CancellationToken ct);
+    Task<RegistrarResult> InitiateOutgoingTransferAsync(DomainRef domain, CancellationToken ct);
 
     /// <summary>
     /// Enables or disables automatic renewal at the registrar level.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="enabled">Whether auto-renew should be enabled.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the update succeeded.</returns>
-    Task<RegistrarResult> SetAutoRenewAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct);
+    Task<RegistrarResult> SetAutoRenewAsync(RegistrarFlagChange change, CancellationToken ct);
 
     /// <summary>
     /// Enables or disables WHOIS privacy for a domain.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="enabled">Whether WHOIS privacy should be enabled.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the update succeeded.</returns>
-    Task<RegistrarResult> SetWhoisPrivacyAsync(string domainName, string registrarRef, bool enabled, CancellationToken ct);
+    Task<RegistrarResult> SetWhoisPrivacyAsync(RegistrarFlagChange change, CancellationToken ct);
 
     /// <summary>
     /// Enables or disables the registrar lock (transfer-prohibit status) for a domain.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="locked">Whether the domain should be locked.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the lock status was updated.</returns>
-    Task<RegistrarResult> SetRegistrarLockAsync(string domainName, string registrarRef, bool locked, CancellationToken ct);
+    Task<RegistrarResult> SetRegistrarLockAsync(RegistrarFlagChange change, CancellationToken ct);
 
     /// <summary>
     /// Retrieves the EPP (authorization) code for an outgoing transfer.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
+    /// <param name="domain">The domain at the registrar.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The EPP code, or null if the registrar does not support retrieval.</returns>
-    Task<string?> GetEppCodeAsync(string domainName, string registrarRef, CancellationToken ct);
+    Task<string?> GetEppCodeAsync(DomainRef domain, CancellationToken ct);
 
     /// <summary>
     /// Updates the nameservers for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="nameservers">New list of nameserver hostnames (minimum 2).</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the nameservers were updated.</returns>
-    Task<RegistrarResult> SetNameserversAsync(string domainName, string registrarRef, IReadOnlyList<string> nameservers, CancellationToken ct);
+    Task<RegistrarResult> SetNameserversAsync(NameserverChange change, CancellationToken ct);
 
     /// <summary>
     /// Retrieves all DNS records for a domain from the registrar's DNS zone.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
+    /// <param name="domain">The domain at the registrar.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>List of DNS records in the zone.</returns>
-    Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(string domainName, string registrarRef, CancellationToken ct);
+    Task<IReadOnlyList<DnsRecord>> GetDnsRecordsAsync(DomainRef domain, CancellationToken ct);
 
     /// <summary>
     /// Adds a new DNS record to the domain's zone at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="record">The DNS record to add.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the record was added.</returns>
-    Task<RegistrarResult> AddDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct);
+    Task<RegistrarResult> AddDnsRecordAsync(DnsRecordChange change, CancellationToken ct);
 
     /// <summary>
     /// Updates an existing DNS record in the domain's zone at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="record">The updated DNS record (matched by ID or host+type).</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the record was updated.</returns>
-    Task<RegistrarResult> UpdateDnsRecordAsync(string domainName, string registrarRef, DnsRecord record, CancellationToken ct);
+    Task<RegistrarResult> UpdateDnsRecordAsync(DnsRecordChange change, CancellationToken ct);
 
     /// <summary>
     /// Deletes a DNS record from the domain's zone at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="registrarRef">The registrar's reference for this domain.</param>
-    /// <param name="recordId">The ID of the DNS record to delete.</param>
+    /// <param name="removal">What to remove.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the record was deleted.</returns>
-    Task<RegistrarResult> DeleteDnsRecordAsync(string domainName, string registrarRef, int recordId, CancellationToken ct);
+    Task<RegistrarResult> DeleteDnsRecordAsync(DnsRecordRemoval removal, CancellationToken ct);
 
     /// <summary>
     /// Modifies the WHOIS registrant contact details for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="contact">The updated contact details.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the contact details were updated.</returns>
-    Task<RegistrarResult> ModifyContactDetailsAsync(string domainName, DomainContact contact, CancellationToken ct);
+    Task<RegistrarResult> ModifyContactDetailsAsync(DomainContactChange change, CancellationToken ct);
 
     /// <summary>
     /// Reads the current WHOIS registrant contact details of a domain from the registrar.
@@ -175,49 +157,42 @@ public interface IRegistrarProvider
     /// <summary>
     /// Enables or disables email forwarding for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="enabled">Whether email forwarding should be enabled.</param>
+    /// <param name="toggle">The feature and whether it should be on.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the update succeeded.</returns>
-    Task<RegistrarResult> SetEmailForwardingAsync(string domainName, bool enabled, CancellationToken ct);
+    Task<RegistrarResult> SetEmailForwardingAsync(DomainFeatureToggle toggle, CancellationToken ct);
 
     /// <summary>
     /// Adds an email forwarding rule for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="source">Source alias or local part (e.g. "info").</param>
-    /// <param name="destination">Destination email address.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the rule was added.</returns>
-    Task<RegistrarResult> AddEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct);
+    Task<RegistrarResult> AddEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct);
 
     /// <summary>
     /// Updates an existing email forwarding rule for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="source">Source alias or local part to update.</param>
-    /// <param name="destination">New destination email address.</param>
+    /// <param name="change">The change to apply.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the rule was updated.</returns>
-    Task<RegistrarResult> UpdateEmailForwardingRuleAsync(string domainName, string source, string destination, CancellationToken ct);
+    Task<RegistrarResult> UpdateEmailForwardingRuleAsync(EmailForwardingRuleChange change, CancellationToken ct);
 
     /// <summary>
     /// Deletes an email forwarding rule for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="source">Source alias or local part to delete.</param>
+    /// <param name="removal">What to remove.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the rule was deleted.</returns>
-    Task<RegistrarResult> DeleteEmailForwardingRuleAsync(string domainName, string source, CancellationToken ct);
+    Task<RegistrarResult> DeleteEmailForwardingRuleAsync(EmailForwardingRuleRemoval removal, CancellationToken ct);
 
     /// <summary>
     /// Enables or disables DNS management for a domain at the registrar.
     /// </summary>
-    /// <param name="domainName">The fully-qualified domain name.</param>
-    /// <param name="enabled">Whether DNS management should be enabled.</param>
+    /// <param name="toggle">The feature and whether it should be on.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating whether the update succeeded.</returns>
-    Task<RegistrarResult> SetDnsManagementAsync(string domainName, bool enabled, CancellationToken ct);
+    Task<RegistrarResult> SetDnsManagementAsync(DomainFeatureToggle toggle, CancellationToken ct);
 
     /// <summary>
     /// Checks whether a domain name is available for registration.

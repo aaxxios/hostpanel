@@ -102,7 +102,7 @@
 
 <script setup lang="ts">
 /**
- * Error page: shown by Nuxt for any unhandled error (404, 403, 500 ...) with wording and an icon
+ * Error page: shown by Nuxt for any unhandled error (404, 403, 500 and so on) with wording and an icon
  * per status, a way back and a way home.
  */
 

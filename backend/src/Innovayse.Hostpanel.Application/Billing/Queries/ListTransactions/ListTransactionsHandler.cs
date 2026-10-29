@@ -1,11 +1,12 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
-using Innovayse.Hostpanel.Application.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListTransactions;
 
@@ -15,11 +16,16 @@ public sealed class ListTransactionsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public ListTransactionsHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public ListTransactionsHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles <see cref="ListTransactionsQuery"/>.</summary>
@@ -62,20 +68,16 @@ public sealed class ListTransactionsHandler
         var baseCurrency = await _context.GetBaseCurrencyAsync(ct);
 
         var clientIds = items.Select(t => t.ClientId).Distinct().ToList();
-        var clientMap = await _context.Clients
-            .AsNoTracking()
-            .Where(c => clientIds.Contains(c.Id))
-            .Select(c => new { c.Id, Name = (c.FirstName + " " + c.LastName).Trim() })
-            .ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var clientMap = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
 
         var dtos = items.Select(t => new TransactionDto(
             t.Id, t.ClientId,
-            clientMap.TryGetValue(t.ClientId, out var name) ? name : null,
+            clientMap[t.ClientId].FullName,
             t.Date, t.Description, t.TransactionId,
             t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit, t.Currency))
             .ToList();
 
-        var paged = new PagedResult<TransactionDto>(dtos, totalCount, query.Page, query.PageSize);
+        var paged = new PaginatedList<TransactionDto>(dtos, totalCount, query.Page, query.PageSize);
         var balance = totalIn - totalOut - totalFees;
 
         return Result<TransactionsResultDto>.Success(

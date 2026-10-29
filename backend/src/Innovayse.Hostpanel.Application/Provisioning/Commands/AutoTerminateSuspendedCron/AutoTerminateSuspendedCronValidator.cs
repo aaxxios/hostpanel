@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Provisioning.Commands.AutoTerminateSuspendedCron;
 
-/// <summary>Validates <see cref="AutoTerminateSuspendedCronCommand"/>: no rules — the command carries no input.</summary>
+/// <summary>Validates <see cref="AutoTerminateSuspendedCronCommand"/>: no rules; the command carries no input.</summary>
 public sealed class AutoTerminateSuspendedCronValidator : LocalizedValidator<AutoTerminateSuspendedCronCommand>
 {
     /// <summary>Initializes the validator with the localization service.</summary>

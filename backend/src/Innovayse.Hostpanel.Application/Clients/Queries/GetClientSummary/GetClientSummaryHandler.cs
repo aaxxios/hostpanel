@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Clients.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Common;
 using Innovayse.Hostpanel.Application.Notifications.Extensions;
@@ -9,6 +10,7 @@ using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Application.Clients.Queries.GetClientSummary;
 
 /// <summary>
@@ -40,8 +42,7 @@ public sealed class GetClientSummaryHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The aggregated summary. A client id that names nobody answers a zero-valued summary rather
-    /// than a refusal -- the dashboard this backs has never distinguished the two, and changing
-    /// that is outside this batch.
+    /// than a refusal, because the dashboard this backs does not distinguish the two.
     /// </returns>
     public async Task<Result<ClientSummaryDto>> HandleAsync(GetClientSummaryQuery query, CancellationToken ct)
     {
@@ -49,7 +50,7 @@ public sealed class GetClientSummaryHandler
 
         var clientId = query.ClientId;
 
-        // EF Core's DbContext is not thread-safe -- the sections are read one after another.
+        // EF Core's DbContext is not thread-safe: the sections are read one after another.
         var invoicesByStatus = await _context.Invoices.AsNoTracking()
             .Where(i => i.ClientId == clientId)
             .GroupBy(i => i.Status)
@@ -96,24 +97,27 @@ public sealed class GetClientSummaryHandler
         var totalFees = transactionTotals?.TotalFees ?? 0m;
 
         var summary = new ClientSummaryDto(
-            Draft: GetStatusCount(invoicesByStatus, InvoiceStatus.Draft),
-            Unpaid: GetStatusCount(invoicesByStatus, InvoiceStatus.Unpaid),
-            Paid: GetStatusCount(invoicesByStatus, InvoiceStatus.Paid),
-            Overdue: GetStatusCount(invoicesByStatus, InvoiceStatus.Overdue),
-            Cancelled: GetStatusCount(invoicesByStatus, InvoiceStatus.Cancelled),
-            Refunded: GetStatusCount(invoicesByStatus, InvoiceStatus.Refunded),
-            GrossRevenue: totalIn,
-            ClientExpenses: totalOut,
-            TotalFees: totalFees,
-            NetIncome: totalIn - totalOut - totalFees,
+            Invoices: new ClientInvoiceStatusesDto(
+                Draft: GetStatusCount(invoicesByStatus, InvoiceStatus.Draft),
+                Unpaid: GetStatusCount(invoicesByStatus, InvoiceStatus.Unpaid),
+                Paid: GetStatusCount(invoicesByStatus, InvoiceStatus.Paid),
+                Overdue: GetStatusCount(invoicesByStatus, InvoiceStatus.Overdue),
+                Cancelled: GetStatusCount(invoicesByStatus, InvoiceStatus.Cancelled),
+                Refunded: GetStatusCount(invoicesByStatus, InvoiceStatus.Refunded)),
+            Transactions: new ClientTransactionTotalsDto(
+                GrossRevenue: totalIn,
+                ClientExpenses: totalOut,
+                TotalFees: totalFees,
+                NetIncome: totalIn - totalOut - totalFees),
             CreditBalance: client?.CreditBalance ?? 0m,
-            ActiveServicesCount: activeServicesCount,
-            TotalServicesCount: totalServicesCount,
-            TotalDomainsCount: totalDomainsCount,
-            AcceptedQuotesCount: acceptedQuotesCount,
-            TotalQuotesCount: totalQuotesCount,
-            OpenTicketsCount: openTicketsCount,
-            TotalTicketsCount: totalTicketsCount,
+            Counts: new ClientRecordCountsDto(
+                ActiveServicesCount: activeServicesCount,
+                TotalServicesCount: totalServicesCount,
+                TotalDomainsCount: totalDomainsCount,
+                AcceptedQuotesCount: acceptedQuotesCount,
+                TotalQuotesCount: totalQuotesCount,
+                OpenTicketsCount: openTicketsCount,
+                TotalTicketsCount: totalTicketsCount),
             RecentEmails: recentEmails);
 
         return Result<ClientSummaryDto>.Success(summary);

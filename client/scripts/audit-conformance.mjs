@@ -1,6 +1,6 @@
 /**
- * `yarn audit:conformance [path...] [--files] [--json] [--strict]` -- measures how far the client is
- * from the workspace frontend standard (spec 2026-10-14, section 2).
+ * `yarn audit:conformance [paths] [--files] [--json] [--strict]`: measures how far the client is
+ * from the frontend rules.
  *
  * Every metric is a regex heuristic over the source, kept deliberately close to what the guard hook
  * and the ESLint rules check, so a path that reports 0 here is a path the rules will accept:

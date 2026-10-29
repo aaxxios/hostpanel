@@ -2,7 +2,7 @@
  * Points the browser transport at a real stub server, for api-composable tests.
  *
  * An api composable is a list of paths, verbs, queries and bodies, so its test sends the real
- * request through `apiFetch` and asserts on what arrived at the stub -- never by mocking the
+ * request through `apiFetch` and asserts on what arrived at the stub, never by mocking the
  * transport. The Nuxt instance `apiFetch` asks for its locale is faked just enough to answer.
  *
  * @module tests/helpers/stubTransport
@@ -12,6 +12,7 @@ import { ofetch } from 'ofetch'
 import { expect, vi } from 'vitest'
 import { startStubServer } from './stubServer'
 import type { StubReply, StubRequest, StubServer } from './stubServer'
+import type { HttpMethod } from '~/types/httpmethod'
 
 /**
  * Starts a stub server and makes `$fetch` and `useNuxtApp` talk to it.
@@ -36,7 +37,7 @@ export interface ExpectedRequest {
   /** Calls the endpoint function under test. */
   call: () => Promise<unknown>
   /** HTTP verb the endpoint must use. */
-  method: string
+  method: HttpMethod
   /** Path and query string the endpoint must request. */
   url: string
   /** JSON body the endpoint must send; omitted when it sends none. */

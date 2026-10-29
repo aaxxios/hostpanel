@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.TerminateService;
+
 /// <summary>Validates <see cref="TerminateServiceCommand"/> before the handler executes.</summary>
 public sealed class TerminateServiceValidator : LocalizedValidator<TerminateServiceCommand>
 {

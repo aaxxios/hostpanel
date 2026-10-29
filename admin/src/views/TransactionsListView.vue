@@ -2,13 +2,18 @@
 /**
  * Billing transactions ledger: the totals of the whole ledger, a net-revenue chart of the page,
  * and the page's transactions, narrowed as the operator types by direction, payment method, date
- * range, description, amount and gateway reference. Rows can be edited or deleted.
+ * range, description, amount and gateway reference. Rows can be edited or deleted; a delete is
+ * confirmed in a danger prompt and its outcome (success, or the API's sentence) shows above the
+ * table. A refused load offers a retry.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
 import TransactionChart from '@/components/billing/TransactionChart.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { useResultBanner } from '@/composables/useResultBanner'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
@@ -43,11 +48,6 @@ import type { Transaction } from '@/types/transaction'
 import { AppRoute, transactionEditPath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 /** Which side of the ledger the list shows. */
 const Direction = {
@@ -158,12 +158,32 @@ const clearFilters = (): void => {
  */
 const load = (next: number): Promise<void> => store.fetchAll(next, store.pageSize)
 
-/** Deletes the transaction that waits for confirmation (the store reloads the page). */
+/** The outcome line of the last delete. */
+const feedback = useResultBanner()
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const feedbackTone = computed<UiTone>(() => (feedback.isError.value ? UiTone.Danger : UiTone.Success))
+
+/** Deletes the transaction that waits for confirmation (the store reloads the page) and shows the outcome. */
 const confirmDelete = async (): Promise<void> => {
   const id = pendingDeleteId.value
+  if (id === null) {
+    return
+  }
+  feedback.clear()
+  const deleted = await store.remove(id)
   pendingDeleteId.value = null
-  if (id !== null) {
-    await store.remove(id)
+  if (deleted) {
+    feedback.show(t('shared.recordDeleted'), false)
+  } else {
+    feedback.show(store.actionError ?? t('errors.noAnswer'), true)
+  }
+}
+
+/** Closes the delete confirmation; ignored while the delete runs. */
+const dismissDelete = (): void => {
+  if (!store.loading) {
+    pendingDeleteId.value = null
   }
 }
 
@@ -229,9 +249,15 @@ onMounted(() => load(1))
       </template>
     </UiFilterCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="billing-transactions-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiStatusMessage :message="feedback.message.value" :tone="feedbackTone" data-testid="billing-transactions-feedback" />
+
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="billing-transactions-error"
+      @retry="load(store.page)"
+    />
 
     <UiGrid :columns="4">
       <UiStatTile :label="t('billing.transactionsList.totalIncome')" :value="formatPlainAmount(store.summary.totalIn, store.summary.currency)" tone="success" data-testid="billing-transactions-total-in" />
@@ -274,7 +300,7 @@ onMounted(() => load(1))
         </UiTableHead>
         <UiTableBody divided>
           <UiTableRow v-for="transaction in shownTransactions" :key="transaction.id" hoverable>
-            <UiTableCell>{{ clientLabel(transaction.clientName, transaction.clientId) }}</UiTableCell>
+            <UiTableCell>{{ transaction.clientName }}</UiTableCell>
             <UiTableCell muted>{{ formatDate(transaction.date) }}</UiTableCell>
             <UiTableCell>{{ transaction.paymentMethod || t('billing.transactionsList.manual') }}</UiTableCell>
             <UiTableCell>{{ transaction.description }}</UiTableCell>
@@ -323,16 +349,16 @@ onMounted(() => load(1))
     />
 
     <UiDialog
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :open="pendingDeleteId !== null"
       :title="t('billing.transactionsList.deleteTransaction')"
       :message="t('billing.transactionsList.deleteTransactionMessage', { id: pendingDeleteId ?? 0 })"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="store.loading"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="confirmDelete"
-      @close="pendingDeleteId = null"
+      @close="dismissDelete"
     />
   </UiStack>
 </template>

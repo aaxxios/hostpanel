@@ -2,9 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing.Currencies;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing.Currencies;
 /// <c>GET /api/currencies</c> against Postgres: the anonymous storefront list, enabled rows only,
 /// with no rate exposed.
 /// </summary>
-/// <remarks>Split from the deleted <c>Billing/CurrenciesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListPublicCurrenciesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -1,12 +1,9 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Seeding;
 using Innovayse.Hostpanel.Domain.Domains.Events;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
@@ -31,7 +28,7 @@ public sealed class DomainRenewalFailedAdminHandlerTests(IntegrationTestFactory 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var name = $"{Guid.NewGuid():N}.test";
 
-        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 99, "Registrar refused the paid renewal."));
+        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 99, "Registrar refused the paid renewal.") { OccurredAt = DateTimeOffset.UtcNow });
 
         for (var i = 0; i < 50 && !sender.Sent.Any(m => m.To == AdminEmail); i++)
         {
@@ -60,7 +57,7 @@ public sealed class DomainRenewalFailedAdminHandlerTests(IntegrationTestFactory 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var name = $"{Guid.NewGuid():N}.test";
 
-        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 0, "No renew price; no renewal invoice was raised."));
+        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 0, "No renew price; no renewal invoice was raised.") { OccurredAt = DateTimeOffset.UtcNow });
 
         for (var i = 0; i < 50 && !sender.Sent.Any(m => m.To == AdminEmail && m.Subject.Contains(name, StringComparison.Ordinal)); i++)
         {
@@ -85,7 +82,7 @@ public sealed class DomainRenewalFailedAdminHandlerTests(IntegrationTestFactory 
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
         var name = $"{Guid.NewGuid():N}.test";
 
-        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 99, "Registrar refused the paid renewal."));
+        await bus.PublishAsync(new DomainRenewalFailedEvent(42, 7, name, 99, "Registrar refused the paid renewal.") { OccurredAt = DateTimeOffset.UtcNow });
 
         for (var i = 0; i < 50 && !sender.Sent.Any(m => m.To == contact); i++)
         {
@@ -105,7 +102,7 @@ public sealed class DomainRenewalFailedAdminHandlerTests(IntegrationTestFactory 
         using var scope = host.Services.CreateScope();
         var bus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        await bus.InvokeAsync(new DomainRenewalFailedEvent(42, 7, $"{Guid.NewGuid():N}.test", 99, "x"), CancellationToken.None);
+        await bus.InvokeAsync(new DomainRenewalFailedEvent(42, 7, $"{Guid.NewGuid():N}.test", 99, "x") { OccurredAt = DateTimeOffset.UtcNow }, CancellationToken.None);
 
         sender.Sent.Should().BeEmpty();
     }

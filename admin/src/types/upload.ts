@@ -17,11 +17,9 @@ export const BrandingImageKind = {
 /** One of the {@link BrandingImageKind} values. */
 export type BrandingImageKind = (typeof BrandingImageKind)[keyof typeof BrandingImageKind]
 
-/** Content areas that own an image upload endpoint under the scope name. */
+/** Content areas that own an image upload endpoint under the scope name. Homepage slides share the storefront content endpoint. */
 export const ImageUploadScope = {
-  /** Homepage slides. */
-  Slides: 'slides',
-  /** Storefront content: testimonial avatars, partner logos, project pictures. */
+  /** Storefront content: slide covers, testimonial avatars, partner logos, project pictures. */
   Storefront: 'storefront',
 } as const
 

@@ -13,23 +13,13 @@ import { mountWithApp } from '../../helpers/mount'
  * @returns The wrapper.
  */
 const mountSidebar = (props: Record<string, unknown> = {}) =>
-  mountWithApp(IntegrationStatusSidebar, { props: { lastTestedAt: null, testResult: null, ...props } })
+  mountWithApp(IntegrationStatusSidebar, { props: { testResult: null, ...props } })
 
 describe('IntegrationStatusSidebar', () => {
-  it('shows "not tested yet" and "never" when nothing was tested', () => {
+  it('shows "not tested yet" when nothing was tested on the page', () => {
     const wrapper = mountSidebar()
 
-    const idle = wrapper.get('[data-testid="integration-status-idle"]')
-    expect(idle.text()).toContain('Not tested yet')
-    expect(idle.text()).toContain('Never')
-  })
-
-  it('shows the previous test when there is a persisted time', () => {
-    const wrapper = mountSidebar({ lastTestedAt: new Date(Date.now() - 5 * 60000).toISOString() })
-
-    const idle = wrapper.get('[data-testid="integration-status-idle"]')
-    expect(idle.text()).toContain('Previously tested OK')
-    expect(idle.text()).toContain('minutes ago')
+    expect(wrapper.get('[data-testid="integration-status-idle"]').text()).toBe('Not tested yet')
   })
 
   it('shows the in-flight state first', () => {

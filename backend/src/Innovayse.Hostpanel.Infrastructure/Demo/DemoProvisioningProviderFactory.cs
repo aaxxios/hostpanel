@@ -1,10 +1,10 @@
+using Innovayse.Hostpanel.Application.Admin.Servers.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Servers;
 
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>Hands out the demo provisioning provider for any server.</summary>
-internal sealed class DemoProvisioningProviderFactory : IProvisioningProviderFactory
+public sealed class DemoProvisioningProviderFactory : IProvisioningProviderFactory
 {
     /// <summary>The one fake provider every server resolves to.</summary>
     private readonly IProvisioningProvider _provider;
@@ -17,5 +17,5 @@ internal sealed class DemoProvisioningProviderFactory : IProvisioningProviderFac
     }
 
     /// <inheritdoc/>
-    public IProvisioningProvider CreateFor(Server server) => _provider;
+    public IProvisioningProvider CreateFor(ServerConnectionDto server) => _provider;
 }

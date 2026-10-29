@@ -1,4 +1,3 @@
-using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Support.Commands.CreateAnnouncement;
 using Innovayse.Hostpanel.Application.Support.Commands.DeleteAnnouncement;
 using Innovayse.Hostpanel.Application.Support.Commands.UpdateAnnouncement;
@@ -20,6 +19,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// </summary>
 [Route("api/announcements")]
 [Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class AnnouncementsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -35,21 +35,33 @@ public sealed class AnnouncementsController : BaseApiController
     /// <summary>Returns a paginated list of all announcements, drafts included.</summary>
     /// <param name="query">The paging window.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page.</returns>
+    /// <returns>
+    /// 200 with the page; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<AnnouncementDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedList<AnnouncementDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListAsync([FromQuery] ListAnnouncementsQuery query, CancellationToken ct)
     {
-        var outcome = await _bus.InvokeAsync<Result<PagedResult<AnnouncementDto>>>(query, ct);
+        var outcome = await _bus.InvokeAsync<Result<PaginatedList<AnnouncementDto>>>(query, ct);
         return HandleResult(outcome);
     }
 
     /// <summary>Returns a single announcement by its identifier.</summary>
     /// <param name="id">Announcement primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the announcement; 404 when the id names no announcement.</returns>
+    /// <returns>
+    /// 200 with the announcement; 404 with <c>ANNOUNCEMENT_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(AnnouncementDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
@@ -60,22 +72,34 @@ public sealed class AnnouncementsController : BaseApiController
     /// <summary>Creates a new announcement.</summary>
     /// <param name="command">Announcement creation details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>201 with the new announcement's id.</returns>
+    /// <returns>
+    /// 201 with the new announcement's id; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPost]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateAnnouncementCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
-        return HandleResult(outcome, id => CreatedResult($"api/announcements/{id}", id));
+        return HandleResult(outcome, id => CreatedResult($"/api/announcements/{id}", id));
     }
 
     /// <summary>Updates an existing announcement.</summary>
     /// <param name="id">Announcement primary key; wins over any id in the body.</param>
     /// <param name="command">Updated announcement details.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 on success; 404 when the id names no announcement.</returns>
+    /// <returns>
+    /// 204 on success; 404 with <c>ANNOUNCEMENT_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateAsync(int id, [FromBody] UpdateAnnouncementCommand command, CancellationToken ct)
     {
@@ -86,9 +110,15 @@ public sealed class AnnouncementsController : BaseApiController
     /// <summary>Permanently deletes an announcement.</summary>
     /// <param name="id">Announcement primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>204 on success; 404 when the id names no announcement.</returns>
+    /// <returns>
+    /// 204 on success; 404 with <c>ANNOUNCEMENT_NOT_FOUND</c>; 400 when the body, query or route fails validation; 401 without a session; 403 for a caller who is not an admin;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {

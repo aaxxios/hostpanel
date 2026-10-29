@@ -5,8 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFallbackLabels } from '@/composables/useFallbackLabels'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -39,11 +38,6 @@ import type { QuoteListItem } from '@/types/quote'
 import { AppRoute, quotePath } from '@/lib/routes'
 
 const { t } = useI18n()
-
-
-/** Fallback text for fields the API leaves unresolved. */
-
-const { clientLabel } = useFallbackLabels()
 
 /** Whether a quote's validity date is still ahead. */
 const ValidityPeriod = {
@@ -180,9 +174,13 @@ onMounted(() => {
       </template>
     </UiFilterCard>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="billing-quotes-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="billing-quotes-error"
+      @retry="load(page)"
+    />
 
     <UiText tone="muted" size="md" data-testid="billing-quotes-count">
       {{ t('shared.totalcountRecordsFound', { totalCount: store.totalCount }) }}
@@ -213,7 +211,7 @@ onMounted(() => {
                 {{ quote.id }}
               </UiLink>
             </UiTableCell>
-            <UiTableCell>{{ clientLabel(quote.clientName, quote.clientId) }}</UiTableCell>
+            <UiTableCell>{{ quote.clientName }}</UiTableCell>
             <UiTableCell>{{ quote.subject }}</UiTableCell>
             <UiTableCell>
               <UiBadge :tone="quoteStageTone(quote.stage)">{{ statusLabel(QUOTE_STAGE_OPTIONS, quote.stage) }}</UiBadge>

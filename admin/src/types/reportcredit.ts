@@ -1,27 +1,37 @@
+import type { PaginatedList } from '@/types/paginatedlist'
+
 /** One credit issued to a client. */
 export interface ReportCreditRow {
-  /** Credit id. */
+  /** Ledger row id. */
   id: number
   /** Client id. */
   clientId: number
   /** Client name. */
   clientName: string
-  /** Date issued. */
+  /** Day issued, `yyyy-MM-dd`. */
   date: string
   /** Description. */
   description: string
+  /** ISO 4217 code the amount is in. */
+  currency: string
   /** Amount credited. */
   amount: number
-  /** Staff member who issued it, when known. */
-  adminUser: string | null
+}
+
+/** The count and sum of the matching credits in one currency. */
+export interface ReportCreditTotal {
+  /** ISO 4217 code. */
+  currency: string
+  /** Number of credits. */
+  totalCount: number
+  /** Sum of the credits. */
+  totalAmount: number
 }
 
 /** The credits reviewer report. */
 export interface ReportCredits {
-  /** Number of credits found. */
-  totalCount: number
-  /** Sum of the credits. */
-  totalAmount: number
-  /** The credits. */
-  rows: ReportCreditRow[]
+  /** Totals per currency over every matching credit. */
+  totals: ReportCreditTotal[]
+  /** One page of the credits, newest first. */
+  rows: PaginatedList<ReportCreditRow>
 }

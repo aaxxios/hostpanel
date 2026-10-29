@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Hosting;
+
 /// <summary>Cached disk and bandwidth usage for a hosting account.</summary>
 public sealed class DiskUsageStat : BaseEntity
 {
@@ -40,9 +41,10 @@ public sealed class DiskUsageStat : BaseEntity
     /// <param name="diskLimitMb">Disk quota in megabytes; 0 means unlimited.</param>
     /// <param name="bwUsageMb">Bandwidth used this period, in megabytes.</param>
     /// <param name="bwLimitMb">Bandwidth quota in megabytes; 0 means unlimited.</param>
+    /// <param name="fetchedAt">When the figures were fetched from the server, UTC.</param>
     /// <returns>The new stat entry.</returns>
     public static DiskUsageStat Create(string serverName, string domain, string clientName,
-        long diskUsageMb, long diskLimitMb, long bwUsageMb, long bwLimitMb)
+        long diskUsageMb, long diskLimitMb, long bwUsageMb, long bwLimitMb, DateTimeOffset fetchedAt)
         => new()
         {
             ServerName = serverName,
@@ -52,20 +54,21 @@ public sealed class DiskUsageStat : BaseEntity
             DiskLimitMb = diskLimitMb,
             BwUsageMb = bwUsageMb,
             BwLimitMb = bwLimitMb,
-            UpdatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = fetchedAt,
         };
 
-    /// <summary>Updates this stat with fresh values.</summary>
+    /// <summary>Records the usage figures fetched from the server and stamps when they were fetched.</summary>
     /// <param name="diskUsageMb">Disk space used, in megabytes.</param>
     /// <param name="diskLimitMb">Disk quota in megabytes; 0 means unlimited.</param>
     /// <param name="bwUsageMb">Bandwidth used this period, in megabytes.</param>
     /// <param name="bwLimitMb">Bandwidth quota in megabytes; 0 means unlimited.</param>
-    public void Update(long diskUsageMb, long diskLimitMb, long bwUsageMb, long bwLimitMb)
+    /// <param name="fetchedAt">When the figures were fetched from the server, UTC.</param>
+    public void RecordUsage(long diskUsageMb, long diskLimitMb, long bwUsageMb, long bwLimitMb, DateTimeOffset fetchedAt)
     {
         DiskUsageMb = diskUsageMb;
         DiskLimitMb = diskLimitMb;
         BwUsageMb = bwUsageMb;
         BwLimitMb = bwLimitMb;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = fetchedAt;
     }
 }

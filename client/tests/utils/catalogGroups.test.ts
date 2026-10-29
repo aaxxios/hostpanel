@@ -27,7 +27,6 @@ const group = (overrides: Partial<PortalProductGroup> = {}): PortalProductGroup 
   id: 3,
   name: 'Alpha Suite',
   description: null,
-  isActive: true,
   productCount: 2,
   ...overrides
 })
@@ -36,7 +35,7 @@ const group = (overrides: Partial<PortalProductGroup> = {}): PortalProductGroup 
 /**
  * The exact shape a operator-authored description arrives in when it was edited as
  * HTML: prose, then check-marked items separated by `<br />`. Printed straight into
- * a card it showed its own markup — "✔ 20 GB Disk Space <br /> ✔ 200 GB Bandwidth".
+ * a card it showed its own markup: "✔ 20 GB Disk Space <br /> ✔ 200 GB Bandwidth".
  */
 const HTML_DESCRIPTION =
   'The Business Hosting plan provides the optimal performance for medium-sized '
@@ -102,12 +101,11 @@ describe('nameToKey', () => {
 })
 
 describe('isFamilyGroup', () => {
-  it('accepts an active group that holds a product', () => {
+  it('accepts a group that holds a product', () => {
     expect(isFamilyGroup(group())).toBe(true)
   })
 
-  it('refuses an inactive group and an empty one', () => {
-    expect(isFamilyGroup(group({ isActive: false }))).toBe(false)
+  it('refuses an empty group', () => {
     expect(isFamilyGroup(group({ productCount: 0 }))).toBe(false)
   })
 })
@@ -139,12 +137,12 @@ describe('familyColor', () => {
  * @param type The product type as the API sends it.
  * @returns The product.
  */
-const typed = (type: string | undefined): PortalProduct => ({ id: 1, groupId: 3, name: 'Plan', type })
+const typed = (type: ProductType | undefined): PortalProduct => ({ id: 1, groupId: 3, name: 'Plan', type })
 
 describe('dominantProductType', () => {
   it('is the type most products have, the first met winning a tie', () => {
-    expect(dominantProductType([typed('A'), typed('B'), typed('B')])).toBe('B')
-    expect(dominantProductType([typed('A'), typed('B')])).toBe('A')
+    expect(dominantProductType([typed(ProductType.Vps), typed(ProductType.Ssl), typed(ProductType.Ssl)])).toBe(ProductType.Ssl)
+    expect(dominantProductType([typed(ProductType.Vps), typed(ProductType.Ssl)])).toBe(ProductType.Vps)
   })
 
   it('is null when no product has a type', () => {

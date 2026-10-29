@@ -10,11 +10,18 @@
     "agingInvoices": "Ժամկետանց հաշիվներ",
     "aSummaryOfOutstandingInvoices": "Չվճարված հաշիվների ամփոփում՝ ըստ ժամկետանցության ժամանակահատվածների",
     "period": "Ժամանակահատված",
-    "curAmount": "Գումար ({cur})"
+    "curAmount": "Գումար ({cur})",
+    "buckets": {
+      "Days0To30": "0 - 30",
+      "Days30To60": "30 - 60",
+      "Days60To90": "60 - 90",
+      "Days90To120": "90 - 120",
+      "Over120": "120 +"
+    }
   },
   "annualIncome": {
     "annualIncomeReport": "Տարեկան եկամուտների հաշվետվություն",
-    "totalIncomePerMonthFor": "Ընդհանուր եկամուտը ըստ ամիսների ընտրված տարվա համար",
+    "totalIncomePerMonthFor": "Ընտրված տարվա ամսական եկամուտը՝ վճարումները հանած վերադարձները։",
     "income": "Եկամուտ"
   },
   "clientsByCountry": {
@@ -39,7 +46,9 @@
     "previousBalance": "Նախորդ մնացորդ՝",
     "noEntriesForThisPeriod": "Այս ժամանակահատվածի համար գրառումներ չկան։",
     "endingBalance": "Վերջնական մնացորդ՝",
-    "debit": "Դեբետ"
+    "debit": "Դեբետ",
+    "invoicePayment": "Հաշվի վճարում - #{id}",
+    "paidHistory": "Հաշիվ #{id}, վճարված ներմուծումից առաջ"
   },
   "creditsReviewer": {
     "creditsReviewer": "Կրեդիտների ստուգում",
@@ -47,10 +56,9 @@
     "allClients": "Բոլոր հաճախորդները",
     "minAmount": "Նվազ. գումար",
     "maxAmount": "Առավ. գումար",
-    "creditsFoundTotal": "կրեդիտ գտնվել է — ընդամենը՝",
+    "currencySummary": "{currency}՝ {count} կրեդիտ, ընդամենը {amount}",
     "creditId": "Կրեդիտի ID",
     "clientId": "Հաճախորդի ID",
-    "adminUser": "Ադմինիստրատոր",
     "noCreditsFoundForThis": "Այս ժամանակահատվածում կրեդիտներ չեն գտնվել։"
   },
   "customerRetention": {
@@ -60,7 +68,10 @@
     "productCount": "Ապրանքների քանակ",
     "averageDaysActive": "Ակտիվ օրերի միջին քանակ",
     "averageYearsMonthsActive": "Միջին ակտիվություն (տարիներ/ամիսներ)",
-    "noDataFound": "Տվյալներ չեն գտնվել։"
+    "noDataFound": "Տվյալներ չեն գտնվել։",
+    "activeYears": "{count} տարի | {count} տարի",
+    "activeMonths": "{count} ամիս | {count} ամիս",
+    "activeDays": "{count} օր | {count} օր"
   },
   "dailyPerformance": {
     "dailyPerformance": "Օրական արդյունավետություն",
@@ -125,24 +136,21 @@
   },
   "incomeForecast": {
     "incomeForecast": "Եկամուտների կանխատեսում",
-    "projectedIncomeBasedOnRecurring": "Կանխատեսվող եկամուտ՝ հիմնված կրկնվող վճարման պարբերությունների վրա",
     "cumulativeForecast": "Կուտակային կանխատեսում",
     "monthly": "Ամսական",
     "quarterly": "Եռամսյակային",
     "semiAnnual": "Կիսամյակային",
-    "annual": "Տարեկան"
+    "annual": "Տարեկան",
+    "incomePerMonthWithTrailingWindows": "Ամսական եկամուտը՝ վերջին եռամսյակի, կիսամյակի և տարեսկզբից գումարներով։"
   },
   "invoicesReport": {
     "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել հաշիվների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։",
     "creationDate": "Ստեղծման ամսաթիվ",
     "totalcountInvoiceSFound": "Գտնվել է հաշիվ՝ {totalCount}",
-    "userId": "Օգտատիրոջ ID",
-    "invoiceNumber": "Հաշվի համար",
-    "tax2": "Հարկ 2",
-    "taxRate2": "Հարկի դրույք 2"
+    "userId": "Օգտատիրոջ ID"
   },
   "monthlyOrders": {
-    "thisReportGivesABreakdown": "Այս հաշվետվությունը ցույց է տալիս յուրաքանչյուր ապրանքի վաճառված միավորների քանակը ըստ ամիսների։",
+    "thisReportGivesABreakdown": "Այս հաշվետվությունը ցույց է տալիս յուրաքանչյուր ապրանքի պատվիրված միավորները ամսում՝ մեկ միավոր պատվերի յուրաքանչյուր տողի համար, սպասվող և ընդունված պատվերներով։",
     "unitsSold": "Վաճառված միավորներ"
   },
   "monthlyTransactions": {
@@ -171,11 +179,7 @@
   "salesTax": {
     "salesTaxLiability": "Վաճառքի հարկի պարտավորություն",
     "thisReportShowsSalesTax": "Այս հաշվետվությունը ցույց է տալիս վաճառքի հարկի պարտավորությունը ընտրված ժամանակահատվածի համար։",
-    "chooseCurrency": "Ընտրեք արժույթը",
-    "invoicesFound": "Գտնված հաշիվներ",
-    "totalInvoiced": "Ընդամենը դուրս գրված՝",
-    "taxLevel1Liability": "Հարկի 1-ին մակարդակի պարտավորություն՝",
-    "taxLevel2Liability": "Հարկի 2-րդ մակարդակի պարտավորություն՝",
+    "currencySummary": "{currency}՝ {count} հաշիվ, դուրս գրված {invoiced}, հարկային պարտավորություն {tax}",
     "tax": "Հարկ",
     "credit": "Կրեդիտ",
     "noInvoicesFoundForThis": "Այս ժամանակահատվածում հաշիվներ չեն գտնվել։",
@@ -246,9 +250,8 @@
   },
   "topClients": {
     "top10ClientsByIncome": "Թոփ 10 հաճախորդներ եկամտով",
-    "thisReportShowsThe10": "Այս հաշվետվությունը ցույց է տալիս մուտքագրված գործարքների համաձայն ամենաբարձր զուտ եկամուտ ունեցող 10 հաճախորդներին։",
-    "noData": "Տվյալներ չկան",
-    "denotesConvertedToDefaultCurrency": "* նշանակում է վերահաշվարկ լռելյայն արժույթով"
+    "thisReportShowsThe10": "Այս հաշվետվությունը ցույց է տալիս հաշիվներից ամենաբարձր զուտ եկամուտ ունեցող 10 հաճախորդներին՝ վճարումները հանած վերադարձներն ու միջնորդավճարները։ Հաշվեկշռի համալրումները եկամուտ չեն։",
+    "noData": "Տվյալներ չկան"
   },
   "transactionsReport": {
     "thisReportCanBeUsed": "Այս հաշվետվությունը թույլ է տալիս ստեղծել գործարքների անհատական արտահանում՝ կիրառելով մինչև 5 ֆիլտր։",
@@ -268,7 +271,7 @@
     "totalVatCollected": "Հավաքված ԱԱՀ ընդամենը",
     "totals": "Ընդամենը",
     "ifACountryDoesNot": "* Եթե երկիրը հաշվետվության մեջ չկա, ապա ընտրված ժամանակահատվածում այդ երկրի հաճախորդներից ԱԱՀ չի գանձվել։",
-    "isleOfManGbAnd": "Մեն կղզին (GB) և Մոնակոն (FR) այս հաշվետվության մեջ նշված են որպես իրենց համապատասխան երկրների ԵՄ անդրծովյան տարածքներ և պետք է ներառվեն հարկային մարմիններին ներկայացվող տվյալների մեջ։",
+    "period": "{from}-ից {to} ժամանակահատվածի համար",
     "quarter1": "Հունվար – մարտ",
     "quarter2": "Ապրիլ – հունիս",
     "quarter3": "Հուլիս – սեպտեմբեր",
@@ -297,6 +300,7 @@
   },
   "common": {
     "years": "{count} տարի",
-    "clientCount": "{count} հաճախորդ | {count} հաճախորդ"
+    "clientCount": "{count} հաճախորդ | {count} հաճախորդ",
+    "convertedToBaseCurrency": "Գումարները {currency}-ով են՝ վերահաշվարկված յուրաքանչյուր հաշվի արժույթից կարգավորված փոխարժեքներով։"
   }
 }

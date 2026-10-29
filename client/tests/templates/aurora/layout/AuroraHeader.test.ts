@@ -129,7 +129,7 @@ describe('AuroraHeader', () => {
   })
 
   it('swaps the sign-in pair for the account menu once there is a session', () => {
-    stubAuroraGlobals({ user: { firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' } })
+    stubAuroraGlobals({ user: { firstName: 'Ann', lastName: 'Lee', email: 'ann@acme.test' } })
     const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
 
     expect(wrapper.find('[data-testid="account-menu-trigger"]').exists()).toBe(true)
@@ -167,7 +167,7 @@ describe('AuroraHeader', () => {
   })
 
   it('carries the client-area link instead of the pair once signed in', async () => {
-    stubAuroraGlobals({ user: { firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' } })
+    stubAuroraGlobals({ user: { firstName: 'Ann', lastName: 'Lee', email: 'ann@acme.test' } })
     const wrapper = mountWithKit(AuroraHeader, { stubs: STUBS })
     await wrapper.find('[data-testid="nav-menu-toggle"]').trigger('click')
 

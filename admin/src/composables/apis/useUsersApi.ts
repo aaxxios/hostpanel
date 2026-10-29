@@ -6,7 +6,7 @@
  */
 
 import { buildQuery, useApi } from '@/composables/useApi'
-import type { PagedResult } from '@/types/pagedresult'
+import type { PaginatedList } from '@/types/paginatedlist'
 import type { UpdateUserPayload, UserDetail, UserListItem } from '@/types/useraccount'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
@@ -27,8 +27,8 @@ export const useUsersApi = () => {
    * @param search - Optional search text.
    * @returns One page of users.
    */
-  const list = (page: number, pageSize: number, search?: string): Promise<PagedResult<UserListItem>> =>
-    request<PagedResult<UserListItem>>(`${ApiPath.AdminUsers}${buildQuery({ page, pageSize, search })}`)
+  const list = (page: number, pageSize: number, search?: string): Promise<PaginatedList<UserListItem>> =>
+    request<PaginatedList<UserListItem>>(`${ApiPath.AdminUsers}${buildQuery({ page, pageSize, search })}`)
 
   /**
    * Loads one user with the linked client accounts.

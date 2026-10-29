@@ -10,11 +10,11 @@ namespace Innovayse.Hostpanel.Application.Common.Settings;
 /// </remarks>
 public sealed class AdminPanelOptions
 {
-    /// <summary>The configuration key this value is read from. Not a section -- a bare top-level key.</summary>
+    /// <summary>The configuration key this value is read from. Not a section: a bare top-level key.</summary>
     public const string ConfigurationKey = "AdminBaseUrl";
 
     /// <summary>
-    /// Absolute base URL of the admin panel, scheme included and no trailing slash -- paths such as
+    /// Absolute base URL of the admin panel, scheme included and no trailing slash: paths such as
     /// <c>/verify-email</c> are appended to it. The default is the admin dev server on a developer
     /// machine, so a deployed tier must override it or its staff mails point at localhost.
     /// </summary>

@@ -1,19 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
 /// <summary>
 /// The local-auth controller's <c>/api/auth/*</c> routes: register and login succeed with the
 /// documented bodies, and every refusal answers in the product's one error shape: problem+json,
-/// the code in <c>type</c>, the status unchanged from before, and a <c>detail</c> in the request's
-/// language. The old <c>{ error: "..." }</c> body is gone.
+/// the code in <c>type</c>, the documented status, and a <c>detail</c> in the request's
+/// language.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -76,7 +73,7 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
     }
 
     /// <summary>
-    /// An empty pending token — what the admin panel sends when its in-memory token is gone — is a 401
+    /// An empty pending token, which the admin panel sends once its in-memory token is lost, is a 401
     /// with the pending-token code and a localized detail, not a 400 from model binding or a 500.
     /// </summary>
     [Fact]
@@ -166,17 +163,6 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
         await AssertRefusalAsync(response, HttpStatusCode.BadRequest, HostpanelErrorCodes.TOKEN_INVALID_OR_EXPIRED);
     }
 
-    /// <summary>Refresh is always a 401 with the session code.</summary>
-    [Fact]
-    public async Task Refresh_Refuses401()
-    {
-        var client = RussianClient();
-
-        var response = await client.PostAsync("/api/auth/refresh", content: null);
-
-        await AssertRefusalAsync(response, HttpStatusCode.Unauthorized, HostpanelErrorCodes.SESSION_UNAUTHORIZED);
-    }
-
     /// <summary>The same refusal in English when no language is asked for.</summary>
     [Fact]
     public async Task Login_WithoutLanguageHeader_AnswersInEnglish()
@@ -220,7 +206,7 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
         return email;
     }
 
-    /// <summary>Asserts the whole error contract: media type, status, code, Russian detail, no legacy member.</summary>
+    /// <summary>Asserts the whole error contract: media type, status, code, Russian detail, and no member beyond the error shape.</summary>
     /// <param name="response">The refusal.</param>
     /// <param name="status">The expected status.</param>
     /// <param name="code">The expected error code.</param>
@@ -239,10 +225,8 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
     /// Register with valid data returns 200 and the new user's id.
     /// </summary>
     /// <remarks>
-    /// It used to return an access token as well, and this test asserted on one. Signing
-    /// the caller in as a side effect of creating an account is the part that went away:
-    /// registration creates the account, and a token comes from /api/auth/login like it
-    /// does for everyone else. The login case below is what covers the token.
+    /// Registration creates the account and does not sign the caller in: a token comes from
+    /// /api/auth/login like it does for everyone else. The login case below covers the token.
     /// </remarks>
     [Fact]
     public async Task Register_WithValidData_Returns200WithUserIdAsync()
@@ -310,11 +294,4 @@ public sealed class LocalAuthControllerTests(IntegrationTestFactory factory) : I
 
         response.StatusCode.Should().NotBe(HttpStatusCode.OK);
     }
-
-    // There was a Logout_Returns204Async here, asserting POST /api/auth/logout returns
-    // 204. That endpoint does not exist in the mode this suite runs. It comes from
-    // Innovayse.Auth's MapInnovayseAuth, which is only wired up under Auth:Mode=sso —
-    // these tests run local, where the session is a bearer JWT with nothing to
-    // invalidate server-side. Nothing calls it either: the client app signs out through
-    // its own Nuxt route, /api/portal/auth/logout. The test asserted a 404 was a 204.
 }

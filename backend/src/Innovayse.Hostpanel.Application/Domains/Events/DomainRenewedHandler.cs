@@ -1,50 +1,47 @@
-using Innovayse.Hostpanel.Application.Clients.Common;
+using System.Globalization;
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
 using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
-using Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
+using Innovayse.Hostpanel.Application.Services.Commands.LiftDomainExpirySuspension;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Domain.Domains.Events;
-using Innovayse.Hostpanel.Domain.Services;
-using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Wolverine;
+
 namespace Innovayse.Hostpanel.Application.Domains.Events;
 
 /// <summary>
 /// Handles <see cref="DomainRenewedEvent"/> raised when a domain is successfully renewed.
-/// If the domain has a linked hosting service that is currently <see cref="ServiceStatus.Suspended"/>,
-/// dispatches an <see cref="UnsuspendServiceCommand"/> to reactivate it.
+/// If the domain has a linked hosting service, dispatches <see cref="LiftDomainExpirySuspensionCommand"/>
+/// so the services module lifts a suspension the domain's expiry caused.
 /// Also sends a domain-renewed notification email to the owning client.
 /// </summary>
 public sealed class DomainRenewedHandler
 {
-    /// <summary>The data context the domain, the linked service and the owning client are read from.</summary>
+    /// <summary>The data context the domain is read from.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Resolves the owning client's identity user, for the notification email address.</summary>
-    private readonly IIdentityProvider _identity;
-
-    /// <summary>Wolverine bus used to unsuspend the linked service and to send the notification email.</summary>
+    /// <summary>Wolverine bus used to lift the linked service's expiry suspension and to send the notification email.</summary>
     private readonly IMessageBus _bus;
 
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DomainRenewedHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The data context the domain, the linked service and the owning client are read from.</param>
-    /// <param name="identity">Resolves the owning client's identity user, for the notification email address.</param>
-    /// <param name="bus">Wolverine bus used to unsuspend the linked service and to send the notification email.</param>
+    /// <param name="context">The data context the domain is read from.</param>
+    /// <param name="bus">Wolverine bus used to lift the linked service's expiry suspension and to send the notification email.</param>
     /// <param name="logger">Structured logger.</param>
     public DomainRenewedHandler(
-        IHostpanelDbContext context, IIdentityProvider identity, IMessageBus bus, ILogger<DomainRenewedHandler> logger)
+        IHostpanelDbContext context, IMessageBus bus, ILogger<DomainRenewedHandler> logger)
     {
         _context = context;
-        _identity = identity;
         _bus = bus;
         _logger = logger;
     }
@@ -76,61 +73,20 @@ public sealed class DomainRenewedHandler
     }
 
     /// <summary>
-    /// Attempts to unsuspend a linked hosting service after the domain is renewed.
-    /// Only unsuspends if the service is currently in <see cref="ServiceStatus.Suspended"/> status.
+    /// Asks the services module to lift the linked hosting service's expiry suspension after the domain
+    /// is renewed; it decides whether there is one to lift.
     /// </summary>
     /// <param name="domainId">The renewed domain ID.</param>
     /// <param name="linkedServiceId">The linked hosting service ID.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous unsuspend operation.</returns>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task TryUnsuspendLinkedServiceAsync(int domainId, int linkedServiceId, CancellationToken ct)
     {
         try
         {
-            var service = await _context.ClientServices.FirstOrDefaultAsync(s => s.Id == linkedServiceId, ct);
+            var outcome = await _bus.InvokeAsync<Result>(new LiftDomainExpirySuspensionCommand(linkedServiceId), ct);
 
-            if (service is null)
-            {
-                _logger.LogWarning(
-                    "Linked service {ServiceId} for domain {DomainId} not found. Skipping unsuspend.",
-                    linkedServiceId,
-                    domainId);
-                return;
-            }
-
-            if (service.Status != ServiceStatus.Suspended)
-            {
-                _logger.LogInformation(
-                    "Linked service {ServiceId} for domain {DomainId} is in status {Status}, not Suspended. Skipping unsuspend.",
-                    linkedServiceId,
-                    domainId,
-                    service.Status);
-                return;
-            }
-
-            // Only lift what expiry caused: a manual or overdue suspension is not this renewal's to undo.
-            // A null source is a suspension recorded before sources existed; renewal lifted those before,
-            // so it still does.
-            if (service.SuspensionSource is not (null or SuspensionSource.DomainExpired))
-            {
-                _logger.LogInformation(
-                    "Linked service {ServiceId} for domain {DomainId} was suspended by {Source}, not by expiry. Skipping unsuspend.",
-                    linkedServiceId,
-                    domainId,
-                    service.SuspensionSource);
-                return;
-            }
-
-            var outcome = await _bus.InvokeAsync<Result>(new UnsuspendServiceCommand(linkedServiceId), ct);
-
-            if (outcome.IsSuccess)
-            {
-                _logger.LogInformation(
-                    "Unsuspended linked service {ServiceId} after domain {DomainId} renewal.",
-                    linkedServiceId,
-                    domainId);
-            }
-            else
+            if (outcome.IsFailure)
             {
                 _logger.LogWarning(
                     "Failed to unsuspend linked service {ServiceId} for renewed domain {DomainId} ({Code}). The service may need manual reactivation.",
@@ -161,36 +117,29 @@ public sealed class DomainRenewedHandler
     {
         try
         {
-            var client = await _context.Clients
-                .IncludeChildren()
-                .FirstOrDefaultAsync(c => c.Id == evt.ClientId, ct);
+            var client = await _bus.FindClientBriefAsync(evt.ClientId, withEmail: true, ct);
             if (client is null)
             {
                 return;
             }
 
-            var user = await _identity.FindBySubjectAsync(client.UserId, ct);
-            if (user is null)
+            var email = client.Email;
+            if (email is null)
             {
                 return;
             }
 
-            var data = new
-            {
-                domain = new
-                {
-                    id = evt.DomainId,
-                    name = domain?.Name,
-                    newExpiresAt = evt.NewExpiresAt.ToString("yyyy-MM-dd"),
-                }
-            };
+            var data = new DomainRenewedTemplateModel(new RenewedDomainTemplateData(
+                evt.DomainId,
+                domain?.Name,
+                evt.NewExpiresAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
 
-            await _bus.InvokeAsync(new SendEmailCommand(user.Email, "domain-renewed", data), ct);
+            await _bus.InvokeAsync(new SendEmailCommand(email, client.Language, "domain-renewed", data, new ContactCopy(evt.ClientId, ContactNotification.Domain)), ct);
 
             _logger.LogInformation(
                 "Sent domain-renewed notification for domain {DomainId} to {Email}.",
                 evt.DomainId,
-                user.Email);
+                email);
         }
         catch (Exception ex)
         {

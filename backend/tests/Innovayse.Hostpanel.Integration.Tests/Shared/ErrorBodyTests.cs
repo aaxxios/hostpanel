@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Shared;
@@ -95,18 +93,32 @@ public sealed class ErrorBodyTests(IntegrationTestFactory factory) : IClassFixtu
     }
 
     /// <summary>
-    /// The detail follows the request's language: Russian asked, Russian answered. Accept-Language
-    /// until A2's last task puts X-Language in front of it (the frontends send only Accept-Language today).
+    /// The detail follows the request's X-Language: Russian asked, Russian answered.
     /// </summary>
     [Fact]
     public async Task NoSession_WithRussian_AnswersARussianDetailAsync()
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Language", "ru");
+
+        var body = await ReadErrorAsync(await client.GetAsync(AdminOnlyPath), HttpStatusCode.Unauthorized);
+
+        body.GetProperty("detail").GetString().Should().MatchRegex("[А-Яа-яЁё]");
+    }
+
+    /// <summary>
+    /// X-Language is the only culture source: an Accept-Language header alone is ignored and the
+    /// detail stays in the default language.
+    /// </summary>
+    [Fact]
+    public async Task NoSession_WithAcceptLanguageOnly_AnswersTheDefaultLanguageAsync()
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("Accept-Language", "ru");
 
         var body = await ReadErrorAsync(await client.GetAsync(AdminOnlyPath), HttpStatusCode.Unauthorized);
 
-        body.GetProperty("detail").GetString().Should().MatchRegex("[А-Яа-яЁё]");
+        body.GetProperty("detail").GetString().Should().NotMatchRegex("[А-Яа-яЁё]");
     }
 
     /// <summary>The body is the bare ErrorResponse: no legacy <c>error</c> and no <c>code</c> member.</summary>

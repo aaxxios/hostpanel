@@ -135,12 +135,11 @@ describe('useCatalogStore.loadProducts', () => {
 })
 
 describe('useCatalogStore product families', () => {
-  /** The groups the API answers with: hosting, one family, an empty group and a switched-off one. */
+  /** The groups the API answers with: hosting, one family and an empty group. */
   const groups = [
-    { id: 3, name: 'Alpha Suite', isActive: true, productCount: 2 },
-    { id: 4, name: 'Beta Kit', isActive: true, productCount: 0 },
-    { id: 5, name: 'Gamma Tool', isActive: false, productCount: 1 },
-    { id: 1, name: 'Web Hosting', isActive: true, productCount: 3 },
+    { id: 3, name: 'Alpha Suite', productCount: 2 },
+    { id: 4, name: 'Beta Kit', productCount: 0 },
+    { id: 1, name: 'Web Hosting', productCount: 3 },
   ]
 
   beforeEach(() => {
@@ -397,7 +396,7 @@ describe('useCatalogStore keeps what it read when a refresh fails', () => {
   })
 
   it('keeps the groups and the family products after a refused refresh', async () => {
-    api.fetchProductGroups.mockResolvedValueOnce([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
+    api.fetchProductGroups.mockResolvedValueOnce([{ id: 1, name: 'Web Hosting', productCount: 1 }])
     api.fetchProducts.mockResolvedValueOnce([{ id: 10, groupId: 1, name: 'Plan' }])
     const store = useCatalogStore()
     await store.loadFamilies()
@@ -413,7 +412,7 @@ describe('useCatalogStore keeps what it read when a refresh fails', () => {
   })
 
   it('does not hand a caller the read that was started for another currency', async () => {
-    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', isActive: true, productCount: 1 }])
+    api.fetchProductGroups.mockResolvedValue([{ id: 1, name: 'Web Hosting', productCount: 1 }])
     api.fetchProducts.mockResolvedValue([])
     const store = useCatalogStore()
 

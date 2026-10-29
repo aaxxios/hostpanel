@@ -1,12 +1,12 @@
 /**
  * Mount tests for InvoiceOptionsTab: the draft notice, the form filled from the invoice, and the
- * save that sends the two tax rates added together.
+ * save that sends the tax rate, with its outcome shown under the form.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import InvoiceOptionsTab from '@/components/billing/InvoiceOptionsTab.vue'
 import { invoiceFixture } from '../../helpers/billingFixtures'
-import { json } from '../../helpers/fetch'
+import { json, problem } from '../../helpers/fetch'
 import { mountWithApp } from '../../helpers/mount'
 import { stubRoutes } from '../../helpers/routes'
 
@@ -34,15 +34,14 @@ describe('InvoiceOptionsTab', () => {
     expect(quick.join('|')).not.toMatch(/Ago/)
   })
 
-  it('saves the dates, the payment method and the combined tax rate', async () => {
+  it('saves the dates, the payment method and the tax rate', async () => {
     const mock = stubRoutes({
       'PUT /api/billing/1/options': () => new Response(null, { status: 204 }),
       'GET /api/billing/1': () => json(invoiceFixture()),
     })
     const wrapper = mountWithApp(InvoiceOptionsTab, { props: { invoice: invoiceFixture() } })
 
-    await wrapper.get('[data-testid="billing-invoice-tax-1"] input').setValue('10')
-    await wrapper.get('[data-testid="billing-invoice-tax-2"] input').setValue('5')
+    await wrapper.get('[data-testid="billing-invoice-tax"] input').setValue('15')
     await wrapper.get('[data-testid="billing-invoice-options-form"]').trigger('submit')
     await flushPromises()
 
@@ -53,6 +52,17 @@ describe('InvoiceOptionsTab', () => {
       paymentMethod: 'Stripe',
       taxRate: 15,
     })
-    expect(wrapper.emitted('updated')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="billing-invoice-options-feedback"]').text()).toBe('Changes saved successfully.')
+  })
+
+  it('shows the API sentence under the form when the save is refused', async () => {
+    stubRoutes({ 'PUT /api/billing/1/options': () => problem('The due date is before the invoice date.', 400) })
+    const wrapper = mountWithApp(InvoiceOptionsTab, { props: { invoice: invoiceFixture() } })
+
+    await wrapper.get('[data-testid="billing-invoice-options-form"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="billing-invoice-options-feedback"]').text())
+      .toBe('The due date is before the invoice date.')
   })
 })

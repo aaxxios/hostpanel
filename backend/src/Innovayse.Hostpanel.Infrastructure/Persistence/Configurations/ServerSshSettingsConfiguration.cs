@@ -1,6 +1,4 @@
 using Innovayse.Hostpanel.Domain.Servers;
-using Innovayse.Hostpanel.Domain.Ssh;
-using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,14 +21,6 @@ public sealed class ServerSshSettingsConfiguration : IEntityTypeConfiguration<Se
         builder.Property(x => x.AgentPublicKey).HasMaxLength(200);
         builder.Ignore(x => x.IsComplete);
 
-        // The agent's private key is a server credential like Server.AccessHash and is encrypted
-        // the same way. The width is sized for the encrypted form and is the same with or without
-        // a key configured, so the model never depends on the environment it is built in.
-        var privateKey = builder.Property(x => x.AgentPrivateKey).HasMaxLength(8000);
-        var converter = EncryptionServiceHolder.CreateConverter();
-        if (converter is not null)
-        {
-            privateKey.HasConversion(converter);
-        }
+        // AgentPrivateKey is a server credential like Server.AccessHash: encrypted and sized by ProtectedColumns.
     }
 }

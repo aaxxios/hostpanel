@@ -14,6 +14,7 @@ import { ref, toValue } from 'vue'
 import { ofetch } from 'ofetch'
 import { startStubServer } from '../helpers/stubServer'
 import type { StubServer } from '../helpers/stubServer'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The active locale the stubbed i18n instance reports; tests change it to simulate a switch. */
 const locale = ref('en')
@@ -147,7 +148,7 @@ describe('apiFetch', () => {
     // which that plugin never wraps, and the domain check was refused with 403 because of it.
     await arrange('en')
 
-    await apiFetch('/api/portal/public/domain-check', { method: 'POST', body: { domain: 'example.com' } })
+    await apiFetch('/api/portal/public/domain-check', { method: HttpMethod.Post, body: { domain: 'example.com' } })
 
     expect(stub?.requests[0]?.headers['x-requested-with']).toBe('XMLHttpRequest')
   })

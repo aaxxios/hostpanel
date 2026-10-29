@@ -49,7 +49,7 @@
  *
  * Built on <details>/<summary> rather than on JavaScript state, so it is not a kit
  * component: the element is already operable by keyboard, already announces its
- * expanded state, and already works before hydration — three things a hand-rolled
+ * expanded state, and already works before hydration: three things a hand-rolled
  * accordion has to reimplement and usually gets partly wrong. The headings and
  * answers inside it are kit text; the chevron is the only thing scripted, and it
  * is scripted in CSS. The questions come from the storefront store (`GET /api/public/faqs`); with

@@ -15,6 +15,7 @@ import { useCartStore } from '~/stores/cart'
 import { useCheckoutStore } from '~/stores/checkout'
 import { useCurrencyStore } from '~/stores/currency'
 import { CheckoutDestinationKind } from '~/types/checkoutdestinationkind'
+import { redirectToExternal } from '~/utils/externalRedirect'
 
 /** The card form below the method list, as far as the page needs to drive it. */
 export interface CardFormHandle {
@@ -53,9 +54,14 @@ export const useCheckoutPage = async () => {
   const { fetchUser, logout } = authStore
 
   onMounted(async () => {
+    // The store outlives a visit to the page: a hand-off that was started on an earlier visit
+    // must not leave the button disabled.
+    checkout.resetFlow()
     cart.init()
     currencyStore.init()
     currencyStore.load()
+    // Prices in storage may be older than the catalogue's; the payer sees the current ones.
+    await checkout.refreshCartPrices()
     if (isLoggedIn.value) {
       await fetchUser()
     }
@@ -127,13 +133,15 @@ export const useCheckoutPage = async () => {
         }
         return stripeCardFormRef.value.confirmPayment(clientSecret)
       },
+      confirmTotalChange: (shown, charged) => confirm(t('checkout.totalChangedConfirm', { shown, charged })),
       localizePath: localePath
     })
     if (!destination) {
       return
     }
     if (destination.kind === CheckoutDestinationKind.External) {
-      window.location.href = destination.target
+      // The store already refused an unsafe address; this is the last guard before the browser leaves.
+      redirectToExternal(destination.target)
     } else {
       await navigateTo(destination.target)
     }

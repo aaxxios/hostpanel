@@ -1,33 +1,52 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Providers.Inecobank;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace Innovayse.Inecobank.Tests;
+
 /// <summary>Tests for <see cref="InecobankApiClient"/> request encoding and response parsing.</summary>
-public class InecobankApiClientTests
+public class InecobankApiClientTests : IAsyncLifetime
 {
+    /// <summary>The loopback server standing in for the gateway; the client's requests are redirected to it.</summary>
+    private StubHttpServer _http = null!;
+
+    /// <summary>Starts the stub gateway before each test.</summary>
+    /// <returns>A task that completes when the server listens.</returns>
+    public async Task InitializeAsync()
+    {
+        _http = await StubHttpServer.StartAsync();
+    }
+
+    /// <summary>Stops the stub gateway after each test.</summary>
+    /// <returns>A task that completes when the server is down.</returns>
+    public async Task DisposeAsync()
+    {
+        await _http.DisposeAsync();
+    }
+
+    /// <summary>Builds the HTTP client every request of which reaches the stub gateway.</summary>
+    /// <returns>The client.</returns>
+    private HttpClient CreateHttpClient() => new(new RedirectToStubHandler(_http.BaseAddress));
+
     /// <summary>Client options pointing at a non-existent test endpoint.</summary>
     private static readonly InecobankClientOptions Options =
         new("https://testpg.example.am", "merchant-api", "secret-pw");
 
-    /// <summary>Builds a client wired to a fake handler.</summary>
-    /// <returns>The client and the handler whose responses and requests the test controls.</returns>
-    private static (InecobankApiClient Client, FakeHttpMessageHandler Http) CreateClient()
+    /// <summary>Builds a client wired to the stub gateway.</summary>
+    /// <returns>The client under test; the stub gateway's responses and requests are controlled through the test's server.</returns>
+    private InecobankApiClient CreateClient()
     {
-        var handler = new FakeHttpMessageHandler();
-        var client = new InecobankApiClient(new HttpClient(handler), Options, NullLogger.Instance);
-        return (client, handler);
+        return new InecobankApiClient(CreateHttpClient(), Options, NullLogger.Instance);
     }
 
     /// <summary>Register order async, sends credentials amount and explicit currency.</summary>
     [Fact]
     public async Task RegisterOrderAsync_SendsCredentialsAmountAndExplicitCurrency()
     {
-        var (client, http) = CreateClient();
-        http.Enqueue("""{"orderId":"32faa424-858a","formUrl":"https://testpg.example.am/pay?mdOrder=32faa424-858a"}""");
+        var client = CreateClient();
+        _http.Enqueue("""{"orderId":"32faa424-858a","formUrl":"https://testpg.example.am/pay?mdOrder=32faa424-858a"}""");
 
         var result = await client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV42-1755850000", 250000, "051",
@@ -36,14 +55,14 @@ public class InecobankApiClientTests
 
         result.OrderId.Should().Be("32faa424-858a");
         result.FormUrl.Should().Be("https://testpg.example.am/pay?mdOrder=32faa424-858a");
-        http.Requests.Should().ContainSingle();
-        http.Requests[0].Url.Should().Be("https://testpg.example.am/payment/rest/register.do");
-        var body = http.Requests[0].Body;
+        _http.Requests.Should().ContainSingle();
+        _http.Requests[0].PathAndQuery.Should().Be("/payment/rest/register.do");
+        var body = _http.Requests[0].Body;
         body.Should().Contain("userName=merchant-api");
         body.Should().Contain("password=secret-pw");
         body.Should().Contain("orderNumber=INV42-1755850000");
         body.Should().Contain("amount=250000");
-        body.Should().Contain("currency=051"); // gateway defaults to 643 (RUB) when omitted — must always be explicit
+        body.Should().Contain("currency=051"); // gateway defaults to 643 (RUB) when omitted, so it must always be explicit
         body.Should().Contain("language=hy");
     }
 
@@ -51,15 +70,15 @@ public class InecobankApiClientTests
     [Fact]
     public async Task RegisterOrderAsync_SanitizesForbiddenDescriptionCharacters()
     {
-        var (client, http) = CreateClient();
-        http.Enqueue("""{"orderId":"o1","formUrl":"https://x/pay"}""");
+        var client = CreateClient();
+        _http.Enqueue("""{"orderId":"o1","formUrl":"https://x/pay"}""");
 
         await client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV1-1", 100, "051", "https://x/r",
                 "50% off + extras\r\nline2" + new string('x', 120), null),
             CancellationToken.None);
 
-        var body = System.Net.WebUtility.UrlDecode(http.Requests[0].Body);
+        var body = System.Net.WebUtility.UrlDecode(_http.Requests[0].Body);
         var description = body.Split('&').First(p => p.StartsWith("description="))["description=".Length..];
         description.Should().NotContainAny("%", "+", "\r", "\n");
         description.Length.Should().BeLessThanOrEqualTo(99);
@@ -69,8 +88,8 @@ public class InecobankApiClientTests
     [Fact]
     public async Task RegisterOrderAsync_NonZeroErrorCode_ThrowsWithCode()
     {
-        var (client, http) = CreateClient();
-        http.Enqueue("""{"errorCode":"1","errorMessage":"Order already processed"}""");
+        var client = CreateClient();
+        _http.Enqueue("""{"errorCode":"1","errorMessage":"Order already processed"}""");
 
         var act = () => client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV1-1", 100, "051", "https://x/r", null, null),
@@ -92,37 +111,35 @@ public class InecobankApiClientTests
     public async Task GetOrderStatusAsync_ParsesStringAndNumberErrorCodes(
         string json, int expectedError, int? expectedStatus, string? expectedRef)
     {
-        var (client, http) = CreateClient();
-        http.Enqueue(json);
+        var client = CreateClient();
+        _http.Enqueue(json);
 
         var status = await client.GetOrderStatusAsync("some-order", "hy", CancellationToken.None);
 
         status.ErrorCode.Should().Be(expectedError);
         status.OrderStatus.Should().Be(expectedStatus);
         status.AuthRefNum.Should().Be(expectedRef);
-        http.Requests[0].Url.Should().Be("https://testpg.example.am/payment/rest/getOrderStatusExtended.do");
+        _http.Requests[0].PathAndQuery.Should().Be("/payment/rest/getOrderStatusExtended.do");
     }
 
     /// <summary>Refund async, sends order id and minor amount, throws on error.</summary>
     [Fact]
     public async Task RefundAsync_SendsOrderIdAndMinorAmount_ThrowsOnError()
     {
-        var (client, http) = CreateClient();
-        http.Enqueue("""{"errorCode":0}""");
+        var client = CreateClient();
+        _http.Enqueue("""{"errorCode":0}""");
         await client.RefundAsync("order-9", 5000, CancellationToken.None);
-        http.Requests[0].Url.Should().Be("https://testpg.example.am/payment/rest/refund.do");
-        http.Requests[0].Body.Should().Contain("orderId=order-9").And.Contain("amount=5000");
+        _http.Requests[0].PathAndQuery.Should().Be("/payment/rest/refund.do");
+        _http.Requests[0].Body.Should().Contain("orderId=order-9").And.Contain("amount=5000");
 
-        http.Enqueue("""{"errorCode":7,"errorMessage":"System error"}""");
+        _http.Enqueue("""{"errorCode":7,"errorMessage":"System error"}""");
         var act = () => client.RefundAsync("order-9", 5000, CancellationToken.None);
         (await act.Should().ThrowAsync<InecobankApiException>()).Which.ErrorCode.Should().Be(7);
     }
 
-    // This used to assert that any non-2xx status became an InecobankApiException wrapping an
-    // HttpRequestException -- the client called EnsureSuccessStatusCode() before reading anything.
     // The live gateway answers ordinary business outcomes with a 500 and a JSON body that names
-    // the problem, so the status alone can no longer be the verdict and the body is now read
-    // first. What this test protects is unchanged: a response this client cannot make sense of
+    // the problem, so the status alone is not the verdict and the body is read first. What this
+    // test protects: a response this client cannot make sense of
     // must still surface as its own exception type, naming the endpoint, with the underlying
     // failure attached rather than thrown raw at the caller. The status code is asserted too,
     // because when the body explains nothing the status is the only diagnostic left.
@@ -130,8 +147,8 @@ public class InecobankApiClientTests
     [Fact]
     public async Task RegisterOrderAsync_NonSuccessStatusWithAnUnreadableBody_WrapsTheFailureAndReportsTheStatus()
     {
-        var (client, http) = CreateClient();
-        http.EnqueueStatus(HttpStatusCode.BadGateway, "<html>upstream error</html>");
+        var client = CreateClient();
+        _http.Enqueue(HttpStatusCode.BadGateway, "<html>upstream error</html>");
 
         var act = () => client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV1-1", 100, "051", "https://x/r", null, null),
@@ -146,8 +163,8 @@ public class InecobankApiClientTests
     [Fact]
     public async Task RegisterOrderAsync_NonJsonResponseBody_WrapsJsonExceptionRatherThanThrowingItRaw()
     {
-        var (client, http) = CreateClient();
-        http.Enqueue("this is not json");
+        var client = CreateClient();
+        _http.Enqueue("this is not json");
 
         var act = () => client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV1-1", 100, "051", "https://x/r", null, null),
@@ -155,7 +172,7 @@ public class InecobankApiClientTests
 
         var ex = await act.Should().ThrowAsync<InecobankApiException>();
         // JsonDocument.Parse throws JsonReaderException (a JsonException subclass) for
-        // malformed syntax — assert the documented base type, not one specific derived type.
+        // malformed syntax; assert the documented base type, not one specific derived type.
         ex.Which.InnerException.Should().BeAssignableTo<System.Text.Json.JsonException>();
         ex.Which.Message.Should().Contain(InecobankEndpoints.Register);
     }
@@ -166,24 +183,23 @@ public class InecobankApiClientTests
     {
         var options = new InecobankClientOptions(
             "https://testpg.example.am", "very-secret-merchant-username", "very-secret-merchant-password");
-        var handler = new FakeHttpMessageHandler();
         var logger = new CapturingLogger();
-        var client = new InecobankApiClient(new HttpClient(handler), options, logger);
+        var client = new InecobankApiClient(CreateHttpClient(), options, logger);
 
-        handler.Enqueue("""{"orderId":"o1","formUrl":"https://x/pay"}""");
+        _http.Enqueue("""{"orderId":"o1","formUrl":"https://x/pay"}""");
         await client.RegisterOrderAsync(
             new InecobankRegisterRequest("INV1-1", 100, "051", "https://x/r", "Invoice #1", "hy"),
             CancellationToken.None);
 
-        handler.Enqueue("""{"errorCode":0,"orderStatus":2,"authRefNum":"ref-1"}""");
+        _http.Enqueue("""{"errorCode":0,"orderStatus":2,"authRefNum":"ref-1"}""");
         await client.GetOrderStatusAsync("gw-order-1", "hy", CancellationToken.None);
 
-        handler.Enqueue("""{"errorCode":0}""");
+        _http.Enqueue("""{"errorCode":0}""");
         await client.RefundAsync("gw-order-1", 500, CancellationToken.None);
 
-        // Also exercise a failure path (wrapped in InecobankApiException per the tests above) —
+        // Also exercise a failure path (wrapped in InecobankApiException per the tests above):
         // credentials must not leak into an exception message or a log call about it either.
-        handler.EnqueueStatus(HttpStatusCode.InternalServerError, "boom");
+        _http.Enqueue(HttpStatusCode.InternalServerError, "boom");
         await Assert.ThrowsAsync<InecobankApiException>(() => client.RefundAsync(
             "gw-order-1", 500, CancellationToken.None));
 

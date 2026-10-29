@@ -11,6 +11,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import { emptyContact } from '~/utils/domainContacts'
+import { DomainAvailabilityStatus } from '~/types/domainavailabilitystatus'
+import { ProductType } from '~/types/producttype'
+import { makeClientUser } from '~/tests/helpers/clientUser'
+import type { DomainDetail } from '~/types/domaindetail'
 
 /** The mocked domains endpoints, re-created for every test. */
 const domainsApi = {
@@ -19,7 +23,6 @@ const domainsApi = {
   setAutoRenew: vi.fn(),
   setLock: vi.fn(),
   setIdProtect: vi.fn(),
-  fetchNameservers: vi.fn(),
   setNameservers: vi.fn(),
   requestEppCode: vi.fn(),
   fetchWhois: vi.fn(),
@@ -89,7 +92,7 @@ describe('useDomainsStore', () => {
   })
 
   it('stores the availability answer and clears the flag', async () => {
-    catalogApi.checkDomain.mockResolvedValue({ domain: 'a.com', available: true, status: 'available' })
+    catalogApi.checkDomain.mockResolvedValue({ domain: 'a.com', available: true, status: DomainAvailabilityStatus.Available })
     const store = useDomainsStore()
 
     const outcome = await store.checkAvailability('a.com')
@@ -113,7 +116,7 @@ describe('useDomainsStore', () => {
   })
 
   it('returns the domain product id, or null when the catalogue fails', async () => {
-    catalogApi.fetchProducts.mockResolvedValueOnce([{ id: 1, type: 'Hosting' }, { id: 7, type: 'Domain' }])
+    catalogApi.fetchProducts.mockResolvedValueOnce([{ id: 1, type: ProductType.SharedHosting }, { id: 7, type: ProductType.Domain }])
     const store = useDomainsStore()
     expect(await store.fetchDomainProductId()).toBe(7)
 
@@ -176,22 +179,34 @@ describe('useDomainsStore', () => {
     expect(store.toggleError).toBe('')
   })
 
-  it('loads nameservers, falling back to an empty list, and saves them', async () => {
-    domainsApi.fetchNameservers.mockResolvedValueOnce([{ id: 1, host: 'ns1.a.com' }])
+  it('saves nameservers and re-reads the domain, keeping the sentence on refusal', async () => {
     const store = useDomainsStore()
-    expect(await store.loadNameservers('9')).toEqual([{ id: 1, host: 'ns1.a.com' }])
-
-    domainsApi.fetchNameservers.mockRejectedValueOnce(refusal)
-    expect(await store.loadNameservers('9')).toEqual([])
-    expect(store.nsLoading).toBe(false)
 
     domainsApi.setNameservers.mockRejectedValueOnce(refusal)
     expect(await store.saveNameservers('9', ['ns1.a.com'])).toBe(DomainActionOutcome.Failed)
     expect(store.nsError).toBe('Refused by the registrar.')
+    expect(domainsApi.fetchDomain).not.toHaveBeenCalled()
+
+    const saved = { id: 9, management: { nameservers: [{ id: 1, host: 'ns1.a.com' }] } }
     domainsApi.setNameservers.mockResolvedValueOnce(undefined)
+    domainsApi.fetchDomain.mockResolvedValueOnce(saved)
     expect(await store.saveNameservers('9', ['ns1.a.com'])).toBe(DomainActionOutcome.Done)
     expect(store.nsError).toBe('')
     expect(store.nsSaving).toBe(false)
+    expect(store.domain).toEqual(saved)
+  })
+
+  it('still reports a nameserver save as done when only the re-read fails', async () => {
+    const store = useDomainsStore()
+    const loaded = { id: 9, management: { nameservers: [] } }
+    store.domain = loaded as unknown as DomainDetail
+
+    domainsApi.setNameservers.mockResolvedValueOnce(undefined)
+    domainsApi.fetchDomain.mockRejectedValueOnce(refusal)
+    expect(await store.saveNameservers('9', ['ns1.a.com'])).toBe(DomainActionOutcome.Done)
+    expect(store.nsError).toBe('')
+    expect(store.nsSaving).toBe(false)
+    expect(store.domain).toEqual(loaded)
   })
 
   it('keeps the EPP code on success and the sentence on refusal', async () => {
@@ -272,13 +287,13 @@ describe('useDomainsStore storefront lookup', () => {
     const { useCatalogStore } = await import('~/stores/catalog')
     useCatalogStore().tldPricing = {
       currency: { code: 'USD', prefix: '$' },
-      pricing: {
-        com: { sellCurrency: 'USD', register: { 1: '12.5' }, categories: ['popular'] },
-        net: { sellCurrency: 'USD', register: { 1: '10' }, renew: { 1: '11' }, categories: ['popular', 'tech'] },
-        org: { sellCurrency: 'USD', register: { 1: '9' }, categories: [] },
-        io: { sellCurrency: 'USD', register: { 1: '40' }, categories: ['tech'] },
-        am: { sellCurrency: 'AMD', register: { 1: '25' } }
-      }
+      pricing: [
+        { tld: 'com', sellCurrency: 'USD', register: [{ years: 1, amount: 12.5 }], categories: ['popular'] },
+        { tld: 'net', sellCurrency: 'USD', register: [{ years: 1, amount: 10 }], renew: [{ years: 1, amount: 11 }], categories: ['popular', 'tech'] },
+        { tld: 'org', sellCurrency: 'USD', register: [{ years: 1, amount: 9 }], categories: [] },
+        { tld: 'io', sellCurrency: 'USD', register: [{ years: 1, amount: 40 }], categories: ['tech'] },
+        { tld: 'am', sellCurrency: 'AMD', register: [{ years: 1, amount: 25 }] }
+      ]
     }
     return useDomainsStore()
   }
@@ -365,13 +380,14 @@ describe('useDomainsStore detail reads', () => {
   })
 
   it('reads the primary profile once and reuses it', async () => {
-    clientApi.fetchMeOnce.mockResolvedValue({ firstname: 'Ada' })
+    const profile = makeClientUser()
+    clientApi.fetchMeOnce.mockResolvedValue(profile)
     const store = useDomainsStore()
 
     await store.loadPrimaryProfile()
     const again = await store.loadPrimaryProfile()
 
-    expect(again).toEqual({ firstname: 'Ada' })
+    expect(again).toEqual(profile)
     expect(clientApi.fetchMeOnce).toHaveBeenCalledTimes(1)
   })
 

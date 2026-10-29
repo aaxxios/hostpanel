@@ -1,4 +1,4 @@
-using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Innovayse.Hostpanel.Shared.MultiTenancy;
@@ -34,7 +34,7 @@ public sealed class EnableTwoFactorHandler
     /// Success once it is switched on, or <c>TWO_FACTOR_CODE_INVALID</c> when the code did not match.
     /// </returns>
     /// <remarks>
-    /// The code is checked against the secret this account was just issued, so a wrong one means
+    /// The code is checked against the pending secret this account was just issued, so a wrong one means
     /// the app is not holding that secret. Switching two-factor on regardless is how an account
     /// ends up demanding a code nothing can produce.
     /// </remarks>
@@ -42,7 +42,6 @@ public sealed class EnableTwoFactorHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var enabled = await _twoFactor.EnableAsync(_caller.RequireUserId(), cmd.Code, ct);
-        return enabled ? Result.Success() : Result.FailureCode(HostpanelErrorCodes.TWO_FACTOR_CODE_INVALID);
+        return await _twoFactor.EnableAsync(new TwoFactorConfirmation(_caller.RequireUserId(), cmd.Code), ct);
     }
 }

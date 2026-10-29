@@ -1,4 +1,4 @@
-# innovayse-ai — formatting and analyzer settings for every file in this project.
+# hostpanel: formatting and analyzer settings for every file in this project.
 #
 # Everything here is enforced: dotnet build runs the analyzers (EnforceCodeStyleInBuild in
 # Directory.Build.props), dotnet format --verify-no-changes runs in CI, and the frontend's ESLint

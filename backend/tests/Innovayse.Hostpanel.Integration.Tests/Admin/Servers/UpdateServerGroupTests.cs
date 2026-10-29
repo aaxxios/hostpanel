@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Servers.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Servers;
 /// a caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>ServerGroupsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateServerGroupTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

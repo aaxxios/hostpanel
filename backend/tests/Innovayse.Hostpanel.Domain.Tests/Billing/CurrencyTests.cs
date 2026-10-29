@@ -1,8 +1,8 @@
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.SharedKernel.Domain;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Domain.Tests.Billing;
+
 /// <summary>Tests for the <see cref="Currency"/> aggregate's invariants and formatting.</summary>
 public sealed class CurrencyTests
 {
@@ -14,7 +14,7 @@ public sealed class CurrencyTests
         Assert.Equal("USD", c.Code);
     }
 
-    /// <summary>A numeric code keeps its leading zero — "051" is AMD, "51" is nothing.</summary>
+    /// <summary>A numeric code keeps its leading zero: "051" is AMD, "51" is nothing.</summary>
     [Fact]
     public void Create_KeepsTheLeadingZeroOnTheNumericCode()
     {
@@ -37,7 +37,7 @@ public sealed class CurrencyTests
         Assert.Throws<ArgumentOutOfRangeException>(() => c.UpdateRate(0m));
     }
 
-    /// <summary>Formatting uses this currency's own decimals, prefix and suffix — never the locale.</summary>
+    /// <summary>Formatting uses this currency's own decimals, prefix and suffix, never the locale.</summary>
     /// <param name="code">Currency code.</param>
     /// <param name="prefix">Text printed before the number.</param>
     /// <param name="suffix">Text printed after the number.</param>
@@ -64,7 +64,7 @@ public sealed class CurrencyTests
 
     /// <summary>
     /// Disabling the base currency throws <see cref="DomainRuleException"/> with
-    /// <c>CURRENCY_BASE_DISABLE_NOT_ALLOWED</c> — a client's default currency must always resolve.
+    /// <c>CURRENCY_BASE_DISABLE_NOT_ALLOWED</c>: a client's default currency must always resolve.
     /// </summary>
     [Fact]
     public void Disable_OnBaseCurrency_ThrowsWithCurrencyBaseDisableNotAllowed()

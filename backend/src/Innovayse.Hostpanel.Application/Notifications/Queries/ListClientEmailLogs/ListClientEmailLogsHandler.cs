@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Common;
@@ -5,6 +6,7 @@ using Innovayse.Hostpanel.Application.Notifications.Extensions;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Notifications.Queries.ListClientEmailLogs;
 
@@ -20,16 +22,16 @@ public sealed class ListClientEmailLogsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Resolves the client's sign-in address; a log entry is keyed by address, not by id.</summary>
-    private readonly IIdentityProvider _identity;
+    /// <summary>Wolverine bus, used to resolve the client's sign-in address through the Clients module; a log entry is keyed by address, not by id.</summary>
+    private readonly IMessageBus _bus;
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="identity">Resolves the client's sign-in address.</param>
-    public ListClientEmailLogsHandler(IHostpanelDbContext context, IIdentityProvider identity)
+    /// <param name="bus">Wolverine bus, used to resolve the client's sign-in address through the Clients module.</param>
+    public ListClientEmailLogsHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
-        _identity = identity;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
@@ -37,10 +39,9 @@ public sealed class ListClientEmailLogsHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The client's page of log entries, newest first, or an empty page when the client id names
-    /// nobody -- the same answer <c>ListByClientIdAsync</c> gave before this conversion, never a
-    /// refusal.
+    /// nobody, never a refusal.
     /// </returns>
-    public async Task<Result<PagedResult<EmailLogDto>>> HandleAsync(
+    public async Task<Result<PaginatedList<EmailLogDto>>> HandleAsync(
         ListClientEmailLogsQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -48,14 +49,13 @@ public sealed class ListClientEmailLogsHandler
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, MinPageSize, MaxPageSize);
 
-        var client = await _context.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == query.ClientId, ct);
-        var account = client is null ? null : await _identity.FindBySubjectAsync(client.UserId, ct);
-        if (account is null)
+        var client = await _bus.FindClientBriefAsync(query.ClientId, withEmail: true, ct);
+        if (client is not { Email: { } email })
         {
-            return Result<PagedResult<EmailLogDto>>.Success(new PagedResult<EmailLogDto>([], 0, page, pageSize));
+            return Result<PaginatedList<EmailLogDto>>.Success(new PaginatedList<EmailLogDto>([], 0, page, pageSize));
         }
 
-        var baseQuery = _context.EmailLogs.AsNoTracking().Where(l => l.To == account.Email);
+        var baseQuery = _context.EmailLogs.AsNoTracking().Where(l => l.To == email);
         var total = await baseQuery.CountAsync(ct);
         var items = await baseQuery
             .OrderByDescending(l => l.SentAt)
@@ -63,6 +63,6 @@ public sealed class ListClientEmailLogsHandler
             .SelectDto()
             .ToListAsync(ct);
 
-        return Result<PagedResult<EmailLogDto>>.Success(new PagedResult<EmailLogDto>(items, total, page, pageSize));
+        return Result<PaginatedList<EmailLogDto>>.Success(new PaginatedList<EmailLogDto>(items, total, page, pageSize));
     }
 }

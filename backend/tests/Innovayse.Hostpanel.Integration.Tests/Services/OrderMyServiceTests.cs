@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Services;
 
@@ -34,7 +31,7 @@ public sealed class OrderMyServiceTests(IntegrationTestFactory factory) : IClass
         var response = await client.PostAsJsonAsync("/api/me/services", new
         {
             productId,
-            billingCycle = BillingCycleNames.Monthly,
+            billingCycle = nameof(BillingCycle.Monthly),
             firstPaymentAmount = 0m,
             recurringAmount = 0m,
         });
@@ -58,7 +55,7 @@ public sealed class OrderMyServiceTests(IntegrationTestFactory factory) : IClass
         var response = await client.PostAsJsonAsync("/api/me/services", new
         {
             productId = 999999,
-            billingCycle = BillingCycleNames.Monthly,
+            billingCycle = nameof(BillingCycle.Monthly),
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -72,7 +69,7 @@ public sealed class OrderMyServiceTests(IntegrationTestFactory factory) : IClass
         var response = await factory.CreateClient().PostAsJsonAsync("/api/me/services", new
         {
             productId = 1,
-            billingCycle = BillingCycleNames.Monthly,
+            billingCycle = nameof(BillingCycle.Monthly),
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

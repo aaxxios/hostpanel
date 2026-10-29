@@ -2,11 +2,14 @@ using System.Globalization;
 using Innovayse.Hostpanel.Application.Billing.Commands.ApplyPaidRenewals;
 using Innovayse.Hostpanel.Application.Billing.Commands.RaiseClientRenewalInvoices;
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Domains.Extensions;
 using Innovayse.Hostpanel.Application.Services.Commands.UnsuspendService;
+using Innovayse.Hostpanel.Application.Services.Extensions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
-using Innovayse.Hostpanel.Domain.Domains.Enums;
 using Innovayse.Hostpanel.Domain.Domains.Events;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Shared.Infrastructure;
@@ -23,24 +26,24 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 /// paid invoice with a renewal line that is neither applied nor claimed gets an
 /// <see cref="ApplyPaidRenewalsCommand"/> (so a lost payment event is applied within a day); every
 /// service suspended for an overdue invoice that no Overdue invoice references any more is
-/// unsuspended; staff are told about a registrar claim that has stayed unconfirmed for a day; and
+/// unsuspended; staff are told on every run about a registrar claim that has stayed unconfirmed for a day or more; and
 /// one Warning names auto-renewing services that have no renewal date. Then one
-/// <see cref="RaiseClientRenewalInvoicesCommand"/> per candidate client, each in its own message
-/// scope. Nothing is extended here. Re-schedules itself for the next day through <see cref="RecurringJob"/>.
+/// <see cref="RaiseClientRenewalInvoicesCommand"/> per candidate client that is not suspended or closed, each in its own message
+/// scope. Nothing is extended here. Re-schedules itself for the next day through <see cref="RecurringJobs"/>.
 /// </summary>
 public sealed class ProcessRenewalsCronHandler
 {
-    /// <summary>Hour (UTC) at which this job runs daily.</summary>
-    private const int CronHour = 5;
-
     /// <summary>How many service ids the undated-services warning names.</summary>
     private const int UndatedSampleSize = 10;
 
-    /// <summary>The module's data context, for the sweep and the candidate clients.</summary>
+    /// <summary>The invoices the sweep, the heal and the overdue check read.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Message bus, for the per-invoice and per-client commands, staff alerts and re-scheduling.</summary>
+    /// <summary>Message bus, for the per-invoice and per-client commands, the Services and Domains renewal queries, and staff alerts.</summary>
     private readonly IMessageBus _bus;
+
+    /// <summary>Runs the passes under their lease and schedules the next run.</summary>
+    private readonly RecurringJobs _jobs;
 
     /// <summary>The lead time that bounds the candidate clients.</summary>
     private readonly RenewalSettingsReader _settings;
@@ -48,21 +51,30 @@ public sealed class ProcessRenewalsCronHandler
     /// <summary>Structured logger.</summary>
     private readonly ILogger<ProcessRenewalsCronHandler> _logger;
 
+    /// <summary>The clock every moment in this handler is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
-    /// <param name="context">The module's data context, for the sweep and the candidate clients.</param>
-    /// <param name="bus">Message bus, for the per-invoice and per-client commands, staff alerts and re-scheduling.</param>
+    /// <param name="context">The invoices the sweep, the heal and the overdue check read.</param>
+    /// <param name="bus">Message bus, for the per-invoice and per-client commands, the Services and Domains renewal queries, and staff alerts.</param>
+    /// <param name="jobs">Runs the passes under their lease and schedules the next run.</param>
     /// <param name="settings">The lead time that bounds the candidate clients.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The clock the current moment is read from.</param>
     public ProcessRenewalsCronHandler(
         IHostpanelDbContext context,
         IMessageBus bus,
+        RecurringJobs jobs,
         RenewalSettingsReader settings,
-        ILogger<ProcessRenewalsCronHandler> logger)
+        ILogger<ProcessRenewalsCronHandler> logger,
+        IClock clock)
     {
         _context = context;
         _bus = bus;
+        _jobs = jobs;
         _settings = settings;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <summary>
@@ -75,56 +87,36 @@ public sealed class ProcessRenewalsCronHandler
     public Task HandleAsync(ProcessRenewalsCronCommand cmd, CancellationToken ct)
     {
         _ = cmd;
+        var now = _clock.UtcNow;
 
-        // Through RecurringJob so the daily chain survives any failure (a throwing query, a dead
+        // Through RecurringJobs so the daily chain survives any failure (a throwing query, a dead
         // database); a missed day is not retried until tomorrow, but the job never silently stops.
-        return RecurringJob.RunAsync(
-            nameof(ProcessRenewalsCronCommand), () => RunAsync(ct), ScheduleNextAsync, _logger, ct);
-    }
-
-    /// <summary>Schedules the next pass.</summary>
-    /// <returns>A task.</returns>
-    private async Task ScheduleNextAsync()
-    {
-        var nextRun = DailySchedule.NextOccurrence(CronHour, DateTimeOffset.UtcNow);
-        await _bus.ScheduleAsync(new ProcessRenewalsCronCommand(), nextRun);
-        _logger.LogInformation("ProcessRenewalsCronCommand re-scheduled for {NextRun:u}.", nextRun);
+        return _jobs.RunAsync<ProcessRenewalsCronCommand>(
+            _jobs.Schedules.ProcessRenewals, () => RunAsync(now, ct), ct);
     }
 
     /// <summary>The run itself: heal, sweep, lift, alert, raise. Every step is isolated per item.</summary>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    private async Task RunAsync(CancellationToken ct)
+    /// <exception cref="InvalidOperationException">A renewable service or domain names a client that does not exist, so the database is broken.</exception>
+    private async Task RunAsync(DateTimeOffset now, CancellationToken ct)
     {
         // Self-heal before the sweep: a credit-covered renewal invoice is saved, then marked paid in
-        // a second save; a crash between the two leaves it open with nothing to pay. Paying it here
-        // puts its lines in front of the sweep below.
-        var healed = await PayZeroTotalRenewalInvoicesAsync(ct);
-
-        // Two payments saved at the same moment each see only themselves and can leave an invoice
-        // open although together they cover it; it is settled here, before the sweep applies it.
-        healed += await SettleCoveredOpenInvoicesAsync(ct);
+        // a second save; a crash between the two leaves it open with nothing to pay. Two payments
+        // saved together can also cover an invoice that neither settled. Paying it here puts its
+        // lines in front of the sweep below.
+        var healed = await PayOwedNothingInvoicesAsync(now, ct);
 
         // Sweep first: a paid renewal whose PaymentReceivedEvent was lost is applied here, within a
         // day, before anything new is raised. A claimed line (RenewalAttemptAt set) belongs to a
         // registrar call whose outcome a person must confirm; ApplyPaidRenewals would skip it, so
         // an invoice whose only pending lines are claimed is not dispatched at all.
-        var unapplied = await _context.Invoices.AsNoTracking()
-            .Where(i => i.Status == InvoiceStatus.Paid
-                        && i.Items.Any(l => l.RenewalPeriodStart != null && l.RenewalAppliedAt == null && l.RenewalAttemptAt == null))
-            .Select(i => i.Id)
-            .ToListAsync(ct);
-        foreach (var invoiceId in unapplied)
-        {
-            await DispatchAsync(
-                $"ApplyPaidRenewals(invoice {invoiceId})",
-                () => _bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoiceId), ct),
-                ct);
-        }
+        var unapplied = await SweepUnappliedRenewalsAsync(ct);
 
         var lifted = await LiftStaleOverdueSuspensionsAsync(ct);
 
-        await AlertStaleClaimsAsync(ct);
+        await AlertStaleClaimsAsync(now, ct);
 
         await WarnUndatedServicesAsync(ct);
 
@@ -133,15 +125,21 @@ public sealed class ProcessRenewalsCronHandler
         // configured lead time, read once per run, so a client with nothing due inside it is not
         // dispatched at all (each dispatch is a scope, a client load and a pricing pass).
         var settings = await _settings.ReadAsync(ct);
-        var horizon = DateTimeOffset.UtcNow.AddDays(settings.InvoiceDaysBefore);
-        var clientIds = await _context.ClientServices.AsNoTracking()
-            .Where(s => s.Status == ServiceStatus.Active && s.AutoRenew && s.NextRenewalAt != null && s.NextRenewalAt <= horizon)
-            .Select(s => s.ClientId)
-            .Union(_context.Domains.AsNoTracking()
-                .Where(d => d.Status == DomainStatus.Active && d.AutoRenew && d.ExpiresAt <= horizon)
-                .Select(d => d.ClientId))
-            .ToListAsync(ct);
-        foreach (var clientId in clientIds)
+        var horizon = now.AddDays(settings.InvoiceDaysBefore);
+        var services = await _bus.GetRenewableServicesAsync(null, horizon, ct);
+        var domains = await _bus.GetRenewableDomainsAsync(null, horizon, ct);
+        var clientIds = services.Select(s => s.ClientId)
+            .Union(domains.Select(d => d.ClientId))
+            .Order()
+            .ToList();
+        // A suspended or closed account is not billed: its renewals are left out here (the raise
+        // command refuses them too) so the run does not log a refusal for it every day. The
+        // restricting client keys on services and domains keep every owner alive.
+        var accounts = await _bus.GetRequiredClientBriefsByIdAsync(clientIds, ct);
+        var billable = clientIds
+            .Where(id => accounts[id].Status.MayTransact())
+            .ToList();
+        foreach (var clientId in billable)
         {
             await DispatchAsync(
                 $"RaiseClientRenewalInvoices(client {clientId})",
@@ -150,13 +148,52 @@ public sealed class ProcessRenewalsCronHandler
         }
 
         _logger.LogInformation(
-            "ProcessRenewalsCron settled {Healed} open invoices with nothing owed, swept {Swept} invoices, lifted {Lifted} suspensions and checked {Clients} clients.",
-            healed, unapplied.Count, lifted, clientIds.Count);
+            "ProcessRenewalsCron paid {Healed} open invoices with nothing owed, swept {Swept} invoices, lifted {Lifted} suspensions and checked {Clients} clients.",
+            healed, unapplied, lifted, billable.Count);
+    }
+
+    /// <summary>
+    /// Dispatches an <see cref="ApplyPaidRenewalsCommand"/> for every paid invoice that still has a
+    /// renewal line neither applied nor claimed, reading the invoice ids in keyset batches so a long
+    /// backlog is never loaded at once and an invoice that fails is not read again this pass.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>How many invoices were dispatched.</returns>
+    private async Task<int> SweepUnappliedRenewalsAsync(CancellationToken ct)
+    {
+        var swept = 0;
+        var lastId = 0;
+        while (true)
+        {
+            var invoiceIds = await _context.Invoices.AsNoTracking()
+                .Where(i => i.Id > lastId
+                            && i.Status == InvoiceStatus.Paid
+                            && i.Items.Any(l => l.RenewalPeriodStart != null && l.RenewalAppliedAt == null && l.RenewalAttemptAt == null))
+                .OrderBy(i => i.Id)
+                .Select(i => i.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (invoiceIds.Count == 0)
+            {
+                return swept;
+            }
+
+            foreach (var invoiceId in invoiceIds)
+            {
+                await DispatchAsync(
+                    $"ApplyPaidRenewals(invoice {invoiceId})",
+                    () => _bus.InvokeAsync<Result>(new ApplyPaidRenewalsCommand(invoiceId), ct),
+                    ct);
+            }
+
+            swept += invoiceIds.Count;
+            lastId = invoiceIds[^1];
+        }
     }
 
     /// <summary>
     /// Unsuspends every service this billing engine suspended (<see cref="SuspensionSource.Overdue"/>)
-    /// that no Overdue invoice references any more -- the durable half of "payment lifts an overdue
+    /// that no Overdue invoice references any more: the durable half of "payment lifts an overdue
     /// suspension". The payment path lifts it at once; this catches what that path cannot: a lost
     /// payment event on a legacy (non-renewal) invoice, an unsuspend that failed or was refused, an
     /// overdue invoice an operator cancelled, or a payment that landed while the suspend run was
@@ -166,11 +203,20 @@ public sealed class ProcessRenewalsCronHandler
     /// <returns>How many services were unsuspended.</returns>
     private async Task<int> LiftStaleOverdueSuspensionsAsync(CancellationToken ct)
     {
-        var serviceIds = await _context.ClientServices.AsNoTracking()
-            .Where(s => s.Status == ServiceStatus.Suspended && s.SuspensionSource == SuspensionSource.Overdue
-                        && !_context.Invoices.Any(i => i.Status == InvoiceStatus.Overdue && i.Items.Any(l => l.ClientServiceId == s.Id)))
-            .Select(s => s.Id)
+        var suspended = await _bus.ListOverdueSuspendedServicesAsync(ct);
+        if (suspended.Count == 0)
+        {
+            return 0;
+        }
+
+        var stillOverdue = await _context.Invoices.AsNoTracking()
+            .Where(i => i.Status == InvoiceStatus.Overdue)
+            .SelectMany(i => i.Items)
+            .Where(l => l.ClientServiceId != null && suspended.Contains(l.ClientServiceId!.Value))
+            .Select(l => l.ClientServiceId!.Value)
+            .Distinct()
             .ToListAsync(ct);
+        var serviceIds = suspended.Except(stillOverdue).ToList();
 
         var lifted = 0;
         foreach (var serviceId in serviceIds)
@@ -188,7 +234,7 @@ public sealed class ProcessRenewalsCronHandler
                     _logger.LogInformation("Service {ServiceId} was suspended for an overdue invoice that is no longer overdue; unsuspended.", serviceId);
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
             {
                 _logger.LogError(ex, "Lifting the overdue suspension of service {ServiceId} failed; the next run retries it.", serviceId);
             }
@@ -206,14 +252,7 @@ public sealed class ProcessRenewalsCronHandler
     /// <returns>A task.</returns>
     private async Task WarnUndatedServicesAsync(CancellationToken ct)
     {
-        var undated = await _context.ClientServices.AsNoTracking()
-            .Where(s => s.Status == ServiceStatus.Active && s.AutoRenew && s.NextRenewalAt == null)
-            .OrderBy(s => s.Id)
-            .Select(s => new { s.Id, s.BillingCycle })
-            .ToListAsync(ct);
-
-        var probe = DateTimeOffset.UtcNow;
-        var renewable = undated.Where(s => RenewalPeriod.EndOf(probe, s.BillingCycle, probe.Day) is not null).Select(s => s.Id).ToList();
+        var renewable = await _bus.ListUndatedRenewingServicesAsync(ct);
         if (renewable.Count == 0)
         {
             return;
@@ -226,117 +265,124 @@ public sealed class ProcessRenewalsCronHandler
     }
 
     /// <summary>
-    /// Settles open invoices whose recorded payments, less refunds and reversals, already cover the
-    /// total. Each is saved on its own, so one failure leaves the rest to be settled.
+    /// Marks paid every Unpaid or Overdue invoice that owes nothing and was left open: one that
+    /// carries a renewal line and has a zero total, paid with the credit-balance method and no
+    /// ledger row, as <c>RaiseClientRenewalInvoicesHandler</c> would have done had its second save
+    /// landed; and one whose recorded payments cover its total, paid under the reference of its
+    /// last payment. Two payments saved at the same moment each see only themselves, so together
+    /// they can cover an invoice that neither one settled.
     /// </summary>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>How many invoices were settled.</returns>
-    private async Task<int> SettleCoveredOpenInvoicesAsync(CancellationToken ct)
-    {
-        var covered = await _context.Invoices
-            .Where(i => (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
-                        && i.Total > 0
-                        && i.Transactions.Where(t => t.Type == InvoiceTransactionType.Payment).Sum(t => t.Amount)
-                           - i.Transactions.Where(t => t.Type == InvoiceTransactionType.Refund).Sum(t => t.Amount)
-                           >= i.Total)
-            .Include(i => i.Transactions)
-            .ToListAsync(ct);
-
-        var settled = 0;
-        foreach (var invoice in covered)
-        {
-            try
-            {
-                if (invoice.SettleIfCovered())
-                {
-                    await _context.SaveChangesAsync(ct);
-                    settled++;
-                    _logger.LogWarning("Invoice {InvoiceId} was open although its payments cover it; marked paid.", invoice.Id);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogError(ex, "Could not settle covered invoice {InvoiceId}; the next run retries it.", invoice.Id);
-            }
-        }
-
-        return settled;
-    }
-
-    /// <summary>
-    /// Marks paid every Unpaid or Overdue invoice that carries a renewal line and owes nothing
-    /// (<c>Total == 0</c>), with the credit-balance method and no ledger row, as
-    /// <c>RaiseClientRenewalInvoicesHandler</c> would have done had its second save landed.
-    /// </summary>
+    /// <param name="now">The moment this pass started, stamped as the payment time.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>How many invoices were paid.</returns>
-    private async Task<int> PayZeroTotalRenewalInvoicesAsync(CancellationToken ct)
+    private async Task<int> PayOwedNothingInvoicesAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var invoices = await _context.Invoices
-            .Where(i => (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.Overdue)
-                        && i.Total == 0
-                        && i.Items.Any(l => l.RenewalPeriodStart != null))
-            .ToListAsync(ct);
-
         var paid = 0;
-        foreach (var invoice in invoices)
+        var lastId = 0;
+        while (true)
         {
-            try
+            // Tracked, not AsNoTracking: each invoice is marked paid and saved below. Keyset batches,
+            // so a long backlog is never loaded at once and a failing invoice is not read again this pass.
+            var invoices = await _context.Invoices
+                .Where(Invoice.PayableFilter)
+                .Where(i => i.Id > lastId
+                            && ((i.Total == 0 && i.Items.Any(l => l.RenewalPeriodStart != null))
+                                || (i.Total > 0
+                                    && i.Transactions.Where(t => t.Type == InvoiceTransactionType.Payment).Sum(t => t.Amount) >= i.Total)))
+                .OrderBy(i => i.Id)
+                .Include(i => i.Transactions)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (invoices.Count == 0)
             {
-                invoice.MarkPaid(PaymentMethodNames.CreditBalance);
-                await _context.SaveChangesAsync(ct);
-                paid++;
-                _logger.LogWarning("Renewal invoice {InvoiceId} was open with nothing owed; marked paid.", invoice.Id);
+                return paid;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogError(ex, "Could not mark zero-total renewal invoice {InvoiceId} paid; the next run retries it.", invoice.Id);
-            }
-        }
 
-        return paid;
+            foreach (var invoice in invoices)
+            {
+                try
+                {
+                    // Covered by its recorded payments: settled under the latest one's reference. Otherwise
+                    // it is the zero-total renewal the credit balance paid.
+                    if (!invoice.SettleIfCovered(now))
+                    {
+                        invoice.MarkPaid(PaymentMethodNames.CreditBalance, now);
+                    }
+
+                    await _context.SaveChangesAsync(ct);
+                    paid++;
+                    _logger.LogWarning("Invoice {InvoiceId} was open with nothing owed; marked paid.", invoice.Id);
+                }
+                catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+                {
+                    // The failed change is still tracked and would ride along with, and fail, every later
+                    // save in this loop; detaching it isolates this invoice, and the next run retries it.
+                    _context.Invoices.Entry(invoice).State = EntityState.Detached;
+                    _logger.LogError(ex, "Could not mark invoice {InvoiceId} paid; the next run retries it.", invoice.Id);
+                }
+            }
+
+            lastId = invoices[^1].Id;
+            _context.DetachAll();
+        }
     }
 
     /// <summary>
-    /// Tells staff about every domain renewal line claimed for a registrar call between one day and
-    /// two days plus an hour ago and still not applied: the call's outcome was never recorded (a
-    /// timeout, or a save that failed after the registrar renewed) and nothing retries it. The window
-    /// is an hour wider than a day so a run that starts a little late (a slow sweep before it, a
-    /// restart) cannot let a claim slip between two runs unreported; the price is that a claim in
-    /// that hour may be reported on two consecutive runs.
+    /// Tells staff about every domain renewal line claimed for a registrar call at least a day ago
+    /// and still not applied: the call's outcome was never recorded (a timeout, or a save that
+    /// failed after the registrar renewed) and nothing retries it. The alert repeats on every daily
+    /// run, so once per claim per day, until a person resolves the line (applies or releases it);
+    /// a single alert that was missed or lost would otherwise leave the paid renewal stuck silently.
     /// </summary>
+    /// <param name="now">The moment this pass started.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A task.</returns>
-    private async Task AlertStaleClaimsAsync(CancellationToken ct)
+    private async Task AlertStaleClaimsAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-        var from = now.AddDays(-2).AddHours(-1);
-        var to = now.AddDays(-1);
-        var stale = await _context.Invoices.AsNoTracking()
-            .SelectMany(i => i.Items
-                .Where(l => l.RegisteredDomainId != null && l.RenewalAppliedAt == null
-                            && l.RenewalAttemptAt != null && l.RenewalAttemptAt > from && l.RenewalAttemptAt <= to)
-                .Select(l => new { InvoiceId = i.Id, i.ClientId, DomainId = l.RegisteredDomainId!.Value, AttemptAt = l.RenewalAttemptAt!.Value }))
-            .ToListAsync(ct);
-        if (stale.Count == 0)
+        var staleBefore = now.AddDays(-1);
+        var lastInvoiceId = 0;
+        while (true)
         {
-            return;
-        }
+            // Batched by invoice, so every stale line of an invoice is alerted in the same batch.
+            var invoiceIds = await _context.Invoices.AsNoTracking()
+                .Where(i => i.Id > lastInvoiceId
+                            && i.Items.Any(l => l.RegisteredDomainId != null && l.RenewalAppliedAt == null
+                                                && l.RenewalAttemptAt != null && l.RenewalAttemptAt <= staleBefore))
+                .OrderBy(i => i.Id)
+                .Select(i => i.Id)
+                .Take(JobBatch.Size)
+                .ToListAsync(ct);
+            if (invoiceIds.Count == 0)
+            {
+                return;
+            }
 
-        var domainIds = stale.Select(s => s.DomainId).Distinct().ToList();
-        var names = await _context.Domains.AsNoTracking()
-            .Where(d => domainIds.Contains(d.Id))
-            .ToDictionaryAsync(d => d.Id, d => d.Name, ct);
+            var stale = await _context.Invoices.AsNoTracking()
+                .Where(i => invoiceIds.Contains(i.Id))
+                .SelectMany(i => i.Items
+                    .Where(l => l.RegisteredDomainId != null && l.RenewalAppliedAt == null
+                                && l.RenewalAttemptAt != null && l.RenewalAttemptAt <= staleBefore)
+                    .Select(l => new { InvoiceId = i.Id, i.ClientId, DomainId = l.RegisteredDomainId!.Value, AttemptAt = l.RenewalAttemptAt!.Value }))
+                .ToListAsync(ct);
 
-        foreach (var line in stale)
-        {
-            var name = names.GetValueOrDefault(line.DomainId, "(deleted)");
-            _logger.LogWarning(
-                "Renewal of domain {DomainId} (invoice {InvoiceId}) was attempted at {AttemptAt:u} and never confirmed.",
-                line.DomainId, line.InvoiceId, line.AttemptAt);
-            await _bus.PublishAsync(new DomainRenewalFailedEvent(line.DomainId, line.ClientId, name, line.InvoiceId,
-                string.Create(CultureInfo.InvariantCulture,
-                    $"Renewal attempted on {line.AttemptAt:yyyy-MM-dd HH:mm} UTC but not confirmed; verify at the registrar.")));
+            var domainIds = stale.Select(s => s.DomainId).Distinct().ToList();
+            var states = await _bus.GetDomainRenewalStatesAsync(domainIds, ct);
+
+            foreach (var line in stale)
+            {
+                var name = states.TryGetValue(line.DomainId, out var state) ? state.Name : "(deleted)";
+                _logger.LogWarning(
+                    "Renewal of domain {DomainId} (invoice {InvoiceId}) was attempted at {AttemptAt:u} and never confirmed.",
+                    line.DomainId, line.InvoiceId, line.AttemptAt);
+                await _bus.PublishAsync(new DomainRenewalFailedEvent(line.DomainId, line.ClientId, name, line.InvoiceId,
+                    string.Create(CultureInfo.InvariantCulture,
+                        $"Renewal attempted on {line.AttemptAt:yyyy-MM-dd HH:mm} UTC but not confirmed; verify at the registrar."))
+                {
+                    OccurredAt = now,
+                });
+            }
+
+            lastInvoiceId = invoiceIds[^1];
         }
     }
 
@@ -360,7 +406,7 @@ public sealed class ProcessRenewalsCronHandler
                 _logger.LogWarning("Renewal step {Step} refused ({Code}); the next run retries it.", label, result.ErrorCode);
             }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
         {
             _logger.LogError(ex, "Renewal step {Step} failed; the next run retries it.", label);
         }

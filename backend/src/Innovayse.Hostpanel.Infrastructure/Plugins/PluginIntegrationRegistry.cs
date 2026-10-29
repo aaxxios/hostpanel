@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Admin.Integrations.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Infrastructure.Plugins;
+
 /// <summary>In-memory registry of plugins that expose themselves as integrations.</summary>
 public sealed class PluginIntegrationRegistry : IPluginIntegrationRegistry
 {

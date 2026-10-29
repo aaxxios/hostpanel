@@ -4,14 +4,14 @@
  * The suite drives a real browser against the real Nuxt server (Nitro, with its BFF routes under
  * `server/api/portal/**`). Only the outermost hop is replaced: `e2e/support/stub-backend.mjs`
  * stands in for the C# API. A stub *server* rather than `page.route` because the storefront is
- * server-rendered -- plans, settings and the TLD table are fetched by Nitro, which a browser-side
+ * server-rendered: plans, settings and the TLD table are fetched by Nitro, which a browser-side
  * route handler never sees. See `e2e/README.md` for how to run it.
  *
  * Playwright starts both processes itself, so a run is one command (`yarn e2e`):
  * 1. the stub backend, on `E2E_STUB_PORT` (default 5999);
  * 2. the client, on `E2E_PORT` (default 3100), in local auth mode and pointed at the stub.
  *
- * The client is served from the production build by default (`nuxt build` first -- what the
+ * The client is served from the production build by default (`nuxt build` first: what the
  * deployment ships, and where SSR crashes show up). `E2E_DEV=1` serves `nuxt dev` instead, which
  * needs no build but is slower on first render.
  *
@@ -80,7 +80,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // The stand-in for the C# API -- first, because the client fetches from it while rendering.
+      // The stand-in for the C# API: first, because the client fetches from it while rendering.
       command: 'node e2e/support/stub-backend.mjs',
       port: STUB_PORT,
       reuseExistingServer: !process.env.CI,

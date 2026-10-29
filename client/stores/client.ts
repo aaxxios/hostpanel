@@ -1,7 +1,7 @@
 /**
- * Pinia store for the legacy client area.
+ * Pinia store for the client area.
  *
- * Used **only** on `/client/*` pages — these pages are behind authentication
+ * Used **only** on `/client/*` pages: these pages are behind authentication
  * and do not require SSR / SEO, so a client-side store is appropriate. `nuxt.config.ts` makes
  * the split concrete: `routeRules` sets `ssr: false` and `X-Robots-Tag: noindex` for
  * `/client/**`, `/cart/**` and `/checkout/**`. The public pages read their data through
@@ -47,7 +47,7 @@ const isClientProfileMissing = (err: unknown): boolean => {
  *
  * A 401 does not reach here until the BFF has already tried to refresh the token and failed,
  * so it means the session is genuinely gone. `apiFetch` has by then called the auth guard,
- * which clears state and starts the trip to the login page — and the reader is on their way
+ * which clears state and starts the trip to the login page, and the reader is on their way
  * out, so a red "this section failed" beside it describes nothing they can act on. The status
  * is read rather than a code because a bare 401 carries no body to put one in.
  *
@@ -64,7 +64,7 @@ const isSessionExpired = (err: unknown): boolean => {
 // ---------------------------------------------------------------------------
 
 /**
- * Central store for all legacy client area data.
+ * Central store for all client area data.
  *
  * Each section (user, services, invoices, domains, tickets) has:
  * - A state array / object
@@ -75,7 +75,7 @@ const isSessionExpired = (err: unknown): boolean => {
 export const useClientStore = defineStore('client', {
   state: () => ({
     // Every section carries an error beside its list. Without one, a failed fetch left the
-    // list empty and the screens above read that as "you have nothing yet" — the dashboard
+    // list empty and the screens above read that as "you have nothing yet": the dashboard
     // showed 0/0/0/0 and "no products/services with us yet" to an account whose four calls
     // had all answered 400. A failure and an empty account must not look the same.
 
@@ -86,7 +86,7 @@ export const useClientStore = defineStore('client', {
 
     // The API's own explanation of the flag above, kept because it is what the notice
     // renders. The backend resolves it from its resources in the language Accept-Language
-    // asked for, so this is already Russian or Armenian where the caller is — the portal no
+    // asked for, so this is already Russian or Armenian where the caller is: the portal no
     // longer keeps a translation of its own for it. Null only when the refusal carried no
     // body at all, which means the request never reached the API.
     clientProfileMessage: null as string | null,
@@ -97,15 +97,15 @@ export const useClientStore = defineStore('client', {
     userLoaded: false,
     userError: null as string | null,
 
-    // The identity request currently on the wire, or null when none is. Not data — the
-    // request itself — so that the several callers who all ask for the identity at once
+    // The identity request currently on the wire, or null when none is. Not data, the
+    // request itself, so that the several callers who all ask for the identity at once
     // share one round trip instead of racing. Vue leaves a Promise in reactive state
     // untouched (`reactive()` only proxies Object/Array/Map/Set), so this is a plain
     // reference, not a proxied thenable. See {@link useClientStore.fetchUser}.
     userInflight: null as Promise<void> | null,
 
     // Bumped by {@link useClientStore.reset}. An identity request captures it when it starts
-    // and refuses to write its answer if it has moved on since — otherwise a sign-out during
+    // and refuses to write its answer if it has moved on since, otherwise a sign-out during
     // a request in flight would be undone by that request landing a moment later, and the
     // next sign-in would open on the previous customer's name.
     userEpoch: 0,
@@ -144,7 +144,7 @@ export const useClientStore = defineStore('client', {
     /** Full name from first + last name fields */
     fullName: (state): string =>
       state.user
-        ? `${state.user.firstname} ${state.user.lastname}`.trim()
+        ? `${state.user.firstName} ${state.user.lastName}`.trim()
         : '',
 
     /**
@@ -162,14 +162,14 @@ export const useClientStore = defineStore('client', {
       if (!state.user) {
         return '?'
       }
-      const name = `${state.user.firstname} ${state.user.lastname}`.trim()
+      const name = `${state.user.firstName} ${state.user.lastName}`.trim()
       return (name || state.user.email || '?').charAt(0).toUpperCase()
     },
 
     /**
      * Count of invoices still awaiting payment.
      *
-     * Overdue counts too — see {@link isInvoiceOutstanding} for why reading `Unpaid` alone
+     * Overdue counts too: see {@link isInvoiceOutstanding} for why reading `Unpaid` alone
      * put two different numbers for this on one screen.
      */
     unpaidCount: (state): number =>
@@ -190,8 +190,8 @@ export const useClientStore = defineStore('client', {
     /**
      * Fetch the authenticated client's profile from the API.
      *
-     * No-ops if already loaded unless `force` is true, and — the part `userLoaded` alone
-     * cannot do — collapses *concurrent* callers onto a single request. Three layers ask for
+     * No-ops if already loaded unless `force` is true, and, the part `userLoaded` alone
+     * cannot do, collapses *concurrent* callers onto a single request. Three layers ask for
      * the identity on one client-area page load: the `client-auth` plugin (through
      * {@link useAuthStore.fetchUser}, which delegates here), the `client` layout's
      * `onMounted`, and the page's own fetch. All three start before the first answer comes
@@ -200,7 +200,7 @@ export const useClientStore = defineStore('client', {
      *
      * What is held is the request, not a cached result: the promise is dropped as soon as it
      * settles. So the 404 a staff identity gets for having no client record is neither asked
-     * for three times over nor remembered forever — a later navigation is free to ask again.
+     * for three times over nor remembered forever: a later navigation is free to ask again.
      *
      * @param force - Set true to bypass the loaded cache. A forced call also refuses to join
      * a request already in flight: it is asking for data newer than that request can carry.
@@ -238,7 +238,7 @@ export const useClientStore = defineStore('client', {
           if (this.userEpoch !== epoch) {
             return
           }
-          // "Not a customer account" is a state, not a fault — it gets its own flag so
+          // "Not a customer account" is a state, not a fault: it gets its own flag so
           // nothing renders it in red, and the API's own sentence is kept beside the flag
           // because that sentence is the explanation the notice shows, already in the
           // caller's language. Anything else is kept too, not swallowed: the screens read it
@@ -261,7 +261,7 @@ export const useClientStore = defineStore('client', {
         await request
       } finally {
         // Only clear the slot if a forced call has not already claimed it for a newer
-        // request — otherwise the older one finishing would hide the newer one from joiners.
+        // request, otherwise the older one finishing would hide the newer one from joiners.
         if (this.userInflight === request) {
           this.userInflight = null
         }
@@ -309,7 +309,7 @@ export const useClientStore = defineStore('client', {
         this.services = await useClientApi().fetchServices()
         this.servicesLoaded = true
       } catch (err) {
-        // "Not a customer account" is a state, not a fault — it gets its own flag and no
+        // "Not a customer account" is a state, not a fault: it gets its own flag and no
         // error string, so nothing renders it in red. Anything else is kept, not swallowed:
         // the screens read it to say the section failed instead of rendering it as empty.
         if (isClientProfileMissing(err)) {
@@ -348,7 +348,7 @@ export const useClientStore = defineStore('client', {
         this.invoices = await useClientApi().fetchInvoices()
         this.invoicesLoaded = true
       } catch (err) {
-        // "Not a customer account" is a state, not a fault — it gets its own flag and no
+        // "Not a customer account" is a state, not a fault: it gets its own flag and no
         // error string, so nothing renders it in red. Anything else is kept, not swallowed:
         // the screens read it to say the section failed instead of rendering it as empty.
         if (isClientProfileMissing(err)) {
@@ -387,7 +387,7 @@ export const useClientStore = defineStore('client', {
         this.domains = await useClientApi().fetchDomains()
         this.domainsLoaded = true
       } catch (err) {
-        // "Not a customer account" is a state, not a fault — it gets its own flag and no
+        // "Not a customer account" is a state, not a fault: it gets its own flag and no
         // error string, so nothing renders it in red. Anything else is kept, not swallowed:
         // the screens read it to say the section failed instead of rendering it as empty.
         if (isClientProfileMissing(err)) {
@@ -426,7 +426,7 @@ export const useClientStore = defineStore('client', {
         this.tickets = await useClientApi().fetchTickets()
         this.ticketsLoaded = true
       } catch (err) {
-        // "Not a customer account" is a state, not a fault — it gets its own flag and no
+        // "Not a customer account" is a state, not a fault: it gets its own flag and no
         // error string, so nothing renders it in red. Anything else is kept, not swallowed:
         // the screens read it to say the section failed instead of rendering it as empty.
         if (isClientProfileMissing(err)) {

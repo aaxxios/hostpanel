@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsCron;
 
 /// <summary>
@@ -5,4 +7,4 @@ namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessBillableItemsC
 /// Handles both one-time cron items and recurring items.
 /// Dispatched daily by <c>BillingScheduledJobsStartup</c>.
 /// </summary>
-public record ProcessBillableItemsCronCommand;
+public sealed record ProcessBillableItemsCronCommand : IRecurringJob;

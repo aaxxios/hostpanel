@@ -24,7 +24,7 @@ const { t } = useI18n()
 const props = defineProps<{
   /** CWP version string to display in the badge, or null while loading. */
   version: string | null
-  /** Connection status — controls the badge tone and caption. */
+  /** Connection status: controls the badge tone and caption. */
   status: ProviderConnectionState
 }>()
 

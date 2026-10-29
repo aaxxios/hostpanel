@@ -4,23 +4,14 @@ using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Infrastructure.Plugins;
+
 /// <summary>
 /// Reads and validates <c>plugin.json</c> manifest files from the plugins directory.
 /// </summary>
 internal sealed class PluginManifestReader
 {
-    /// <summary>The logger this class uses.</summary>
-    private readonly ILogger<PluginManifestReader> _logger;
-
-    /// <summary>Initializes a new instance of the <see cref="PluginManifestReader"/> class.</summary>
-    /// <param name="logger">The logger this class uses.</param>
-    public PluginManifestReader(ILogger<PluginManifestReader> logger)
-    {
-        _logger = logger;
-    }
-
-    /// <summary>Supported SDK version. Plugins with a different version are skipped.</summary>
-    private const string SupportedSdkVersion = "1.0";
+    /// <summary>Supported SDK version. Plugins with a different version are skipped at startup and refused on upload.</summary>
+    internal const string SupportedSdkVersion = "1.0";
 
     /// <summary>JSON options used to deserialise manifests.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -28,6 +19,25 @@ internal sealed class PluginManifestReader
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
+
+    /// <summary>Records a manifest that is refused and why.</summary>
+    private readonly ILogger<PluginManifestReader> _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="PluginManifestReader"/> class.</summary>
+    /// <param name="logger">Records a manifest that is refused and why.</param>
+    public PluginManifestReader(ILogger<PluginManifestReader> logger)
+    {
+        _logger = logger;
+    }
+
+    /// <summary>Parses the text of a <c>plugin.json</c> file, without checking the SDK version.</summary>
+    /// <param name="json">The manifest text.</param>
+    /// <returns>The manifest, or <see langword="null"/> when the text is the JSON literal <c>null</c>.</returns>
+    /// <exception cref="JsonException">The text is not a well-formed manifest.</exception>
+    internal static PluginManifest? Deserialize(string json)
+    {
+        return JsonSerializer.Deserialize<PluginManifest>(json, JsonOptions);
+    }
 
     /// <summary>
     /// Attempts to read and validate a <c>plugin.json</c> file.
@@ -48,7 +58,7 @@ internal sealed class PluginManifestReader
         try
         {
             var json = File.ReadAllText(manifestPath);
-            var manifest = JsonSerializer.Deserialize<PluginManifest>(json, JsonOptions);
+            var manifest = Deserialize(json);
 
             if (manifest is null)
             {

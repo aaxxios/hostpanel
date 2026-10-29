@@ -66,6 +66,35 @@ describe('IntegrationDetailView', () => {
 
     const put = mock.mock.calls.find(([, init]) => init?.method === 'PUT')
     expect(JSON.parse(String(put?.[1]?.body)).config.secretKey).toBe('sk_new')
+    expect(wrapper.get('[data-testid="integration-feedback"]').text()).toBe('Settings saved.')
+  })
+
+  it('shows the API sentence above the form when the save is refused and keeps the form', async () => {
+    stubRoutes({
+      'GET /api/admin/integrations/stripe': () => json(integrationDetail()),
+      'PUT /api/admin/integrations/stripe': () => problem('Required field missing.', 422),
+    })
+    const wrapper = await mountDetail('stripe')
+
+    await wrapper.get('[data-testid="integration-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="integration-feedback"]').text()).toBe('Required field missing.')
+    expect(wrapper.find('[data-testid="integration-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="integration-config-form"]').exists()).toBe(true)
+  })
+
+  it('reloads the integration from the Retry of a refused load', async () => {
+    let refused = true
+    stubRoutes({ 'GET /api/admin/integrations/stripe': () => (refused ? problem('Not available.', 503) : json(integrationDetail())) })
+    const wrapper = await mountDetail('stripe')
+
+    refused = false
+    await wrapper.get('[data-testid="integration-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="integration-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="integration-config-form"]').exists()).toBe(true)
   })
 
   it('shows the verdict after a connection test', async () => {
@@ -83,7 +112,7 @@ describe('IntegrationDetailView', () => {
 
   it('renders the CWP page for the cwp slug', { timeout: LAZY_PAGE_TIMEOUT + 5000 }, async () => {
     stubRoutes({
-      'GET /api/admin/integrations/cwp/server-info': () => json({ connected: true, accountsCount: 3, cwpVersion: '0.9', lastTestedAt: null, errorMessage: null }),
+      'GET /api/admin/integrations/cwp/server-info': () => json({ connected: true, accountsCount: 3, version: '0.9', lastTestedAt: null, errorMessage: null }),
       'GET /api/admin/integrations/cwp': () => json(integrationDetail({ slug: 'cwp', name: 'CWP' })),
     })
     const wrapper = await mountDetail('cwp')

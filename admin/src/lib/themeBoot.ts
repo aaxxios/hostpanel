@@ -1,15 +1,17 @@
 /**
- * Applies the operator's theme to the document — before first paint and on every later change.
+ * Applies the operator's theme to the document: before first paint and on every later change.
  *
  * {@link bootTheme} is the one implementation: `vite.config.ts` serialises it into an inline
  * `<script>` at the end of `<head>` (so the page never flashes dark before switching to light),
  * and the theme store calls the same function after a choice or a system-scheme change. Because
  * it is turned into source text with `toString()`, it must stay self-contained: no imports, no
- * closure over module values — everything it needs arrives in its {@link ThemeBootConfig}.
+ * closure over module values: everything it needs arrives in its {@link ThemeBootConfig}.
  */
 // vite.config.ts imports this module under the Node tsconfig, which has no DOM types of its own.
 /// <reference lib="dom" />
-import { AdminTheme } from '../types/admintheme'
+// Relative and with its extension, not through the `@/` alias: Node loads this file for vite.config.ts
+// and knows neither the alias nor an extensionless relative import.
+import { AdminTheme } from '../types/admintheme.ts'
 
 /** Everything {@link bootTheme} needs, passed in so the function can run as an inline script. */
 export interface ThemeBootConfig {

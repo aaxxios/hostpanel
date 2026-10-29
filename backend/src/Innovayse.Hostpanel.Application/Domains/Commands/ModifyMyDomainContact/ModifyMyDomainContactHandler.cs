@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.ModifyMyDomainContact;
+
 /// <summary>
 /// Modifies the registrant contact on one of the calling client's own domains, refusing every
 /// domain that is not theirs.
@@ -49,8 +50,8 @@ public sealed class ModifyMyDomainContactHandler
             return ownershipOutcome;
         }
 
-        // ModifyDomainContactCommand carries the contact fields flat (A6 Task 7A), not as this
-        // command's own nested DomainContact — spread it out so the shared use case still binds.
+        // ModifyDomainContactCommand carries the contact fields flat, not as this
+        // command's own nested DomainContact: spread it out so the shared use case still binds.
         var contact = cmd.Contact;
         return await _bus.InvokeAsync<Result>(
             new ModifyDomainContactCommand(

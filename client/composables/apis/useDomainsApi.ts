@@ -1,5 +1,5 @@
 /**
- * Endpoints under `/api/portal/client/domains` — one domain and everything that can be
+ * Endpoints under `/api/portal/client/domains`: one domain and everything that can be
  * changed about it.
  *
  * The public availability check is *not* here: it lives in `useCatalogApi` with the rest of
@@ -16,6 +16,7 @@ import type { DomainContactFields } from '~/types/domaincontactfields'
 import type { DomainDetail } from '~/types/domaindetail'
 import type { RegistrantContact } from '~/types/registrantcontact'
 import type { WhoisRecord } from '~/types/whoisrecord'
+import { HttpMethod } from '~/types/httpmethod'
 
 /**
  * The client-domain surface, one function per endpoint.
@@ -43,14 +44,14 @@ export const useDomainsApi = () => {
    */
   const setAutoRenew = (id: string, enabled: boolean): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/autorenew`, {
-      method: 'PUT',
+      method: HttpMethod.Put,
       body: { enabled }
     })
 
   /**
    * Locks or unlocks the domain against transfer away.
    *
-   * The field is `enabled`, not `locked` — the three toggles on a domain share one request
+   * The field is `enabled`, not `locked`: the three toggles on a domain share one request
    * shape, and this endpoint reads the same key as the other two.
    *
    * @param id - Domain id.
@@ -60,7 +61,7 @@ export const useDomainsApi = () => {
    */
   const setLock = (id: string, enabled: boolean): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/lock`, {
-      method: 'PUT',
+      method: HttpMethod.Put,
       body: { enabled }
     })
 
@@ -74,7 +75,7 @@ export const useDomainsApi = () => {
    */
   const setIdProtect = (id: string, enabled: boolean): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/idprotect`, {
-      method: 'PUT',
+      method: HttpMethod.Put,
       body: { enabled }
     })
 
@@ -89,7 +90,7 @@ export const useDomainsApi = () => {
    */
   const setNameservers = (id: string, nameservers: string[]): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/nameservers`, {
-      method: 'PUT',
+      method: HttpMethod.Put,
       body: { nameservers }
     })
 
@@ -104,19 +105,9 @@ export const useDomainsApi = () => {
    */
   const setWhois = (id: string, contact: DomainContactFields): Promise<unknown> =>
     apiFetch(`/api/portal/client/domains/${id}/whois`, {
-      method: 'PUT',
+      method: HttpMethod.Put,
       body: { contact }
     })
-
-  /**
-   * Reads the domain's current nameservers.
-   *
-   * @param id - Domain id.
-   * @returns The nameservers, in the order the registrar holds them.
-   * @throws Whatever `apiFetch` throws.
-   */
-  const fetchNameservers = <T>(id: string): Promise<T[]> =>
-    apiFetch<T[]>(`/api/portal/client/domains/${id}/nameservers`)
 
   /**
    * Reads the registry's WHOIS record of the domain.
@@ -149,7 +140,7 @@ export const useDomainsApi = () => {
    * @throws Whatever `apiFetch` throws.
    */
   const requestEppCode = (id: string): Promise<{ eppCode: string }> =>
-    apiFetch<{ eppCode: string }>(`/api/portal/client/domains/${id}/epp`, { method: 'POST' })
+    apiFetch<{ eppCode: string }>(`/api/portal/client/domains/${id}/epp`, { method: HttpMethod.Post })
 
   /**
    * Raises a renewal order for the domain.
@@ -167,7 +158,7 @@ export const useDomainsApi = () => {
   ): Promise<{ orderId: number, invoiceId: number }> =>
     apiFetch<{ orderId: number, invoiceId: number }>(
       `/api/portal/client/domains/${id}/renew-order`,
-      { method: 'POST', body: { years, paymentmethod: paymentMethod } }
+      { method: HttpMethod.Post, body: { years, paymentmethod: paymentMethod } }
     )
 
   /**
@@ -182,7 +173,7 @@ export const useDomainsApi = () => {
   ): Promise<{ orderId: number, invoiceId: number }> =>
     apiFetch<{ orderId: number, invoiceId: number }>(
       '/api/portal/client/domains/transfer-order',
-      { method: 'POST', body: transfer }
+      { method: HttpMethod.Post, body: transfer }
     )
 
   return {
@@ -190,7 +181,6 @@ export const useDomainsApi = () => {
     setAutoRenew,
     setLock,
     setIdProtect,
-    fetchNameservers,
     setNameservers,
     fetchWhois,
     fetchContact,

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 /**
- * Full-page admin notification feed — the destination of the top bar bell's "View all" link.
+ * Full-page admin notification feed: the destination of the top bar bell's "View all" link.
  *
  * Shows every event type the feed carries (client registrations, overdue invoices, domain
  * expiries), not just invoices. Reads `stores/activity`; each row links to the record it is about.
+ * A refused load shows the API's sentence with a retry.
  */
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
@@ -40,9 +41,13 @@ onMounted(() => activity.fetchActivity(FEED_LIMIT))
       data-testid="notifications-header"
     />
 
-    <UiAlert v-if="activity.error" variant="error" data-testid="notifications-error">
-      {{ activity.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="activity.error"
+      :message="activity.error"
+      :loading="activity.loading"
+      testid="notifications-error"
+      @retry="activity.fetchActivity(FEED_LIMIT)"
+    />
 
     <UiSkeleton v-else-if="activity.loading && activity.events.length === 0" :lines="4" />
 

@@ -5,4 +5,4 @@ namespace Innovayse.Hostpanel.Application.Support.Commands.CreateKbCategory;
 /// <param name="Description">The category description text.</param>
 /// <param name="IsHidden">Whether the category should be hidden from clients.</param>
 /// <param name="ParentCategoryId">Optional parent category ID for nesting.</param>
-public record CreateKbCategoryCommand(string Name, string Description, bool IsHidden, int? ParentCategoryId = null);
+public sealed record CreateKbCategoryCommand(string Name, string Description, bool IsHidden, int? ParentCategoryId = null);

@@ -1,6 +1,7 @@
 /**
- * Tests of VatMossView: it mounts, shows its title and data, and shows the refusal sentence when the API
- * refuses.
+ * Tests of VatMossView: it mounts, names the country from its code in the reader's language, shows
+ * the quarter's bounds and each amount in its row currency, and shows the refusal sentence with
+ * Retry when the API refuses.
  */
 import { vi } from 'vitest'
 import VatMossView from '@/views/VatMossView.vue'
@@ -14,9 +15,11 @@ runReportCase({
   view: VatMossView,
   routes: {
     'GET /reports/vat-moss': () => json({
-      periodLabel: 'Q1 2024',
-      rows: [{ countryName: 'Germany', countryCode: 'DE', vatRate: 19, numberOfInvoices: 2, totalExclVat: 100, totalVatCollected: 19, currency: 'EUR' }],
+      periodStart: '2024-01-01',
+      periodEnd: '2024-03-31',
+      rows: [{ countryCode: 'DE', vatRate: 19, numberOfInvoices: 2, totalExclVat: 100, totalVatCollected: 19, currency: 'EUR' }],
     }),
   },
-  expected: ['VAT MOSS Settlement Data', 'Q1 2024', 'Germany', '19%'],
+  expected: ['VAT MOSS Settlement Data', 'For the period 01/01/2024 to 31/03/2024', 'Germany', '19%', '€100.00', '€19.00'],
+  retryable: true,
 })

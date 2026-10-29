@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Support.Commands.SendContactMessage;
 /// <remarks>
 /// Unauthenticated: this is the form a visitor who has no account fills in, so nothing here is
 /// resolved from a credential. <see cref="Email"/> is the visitor's own claim about how to reach
-/// them and is not verified -- it is rendered into the mail as text and used as the
+/// them and is not verified: it is rendered into the mail as text and used as the
 /// <c>Reply-To</c> hint in the body, never as an identity.
 /// </remarks>
 /// <param name="Name">The sender's name, as typed.</param>

@@ -1,6 +1,3 @@
-using FluentAssertions;
-using Xunit;
-
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
 /// <summary>A closed value set is an enum, and every enum sits in an <c>Enums</c> folder and namespace.</summary>
@@ -12,7 +9,7 @@ public sealed class EnumPlacementTests
     {
         var offenders = new[]
             {
-                Layers.SharedKernel, Layers.Domain, Layers.Application, Layers.Shared, Layers.Api,
+                Layers.SharedKernel, Layers.Domain, Layers.Application, Layers.Shared, Layers.Infrastructure, Layers.Api,
                 Layers.Sdk, Layers.ProviderCwp, Layers.ProviderCwp7, Layers.ProviderInecobank,
             }
             .SelectMany(Layers.AuthoredTypesOf)

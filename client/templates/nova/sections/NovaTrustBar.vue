@@ -17,7 +17,7 @@
  *
  * Qualitative by design. Every line states something the platform does rather
  * than how well it does it, which is the only kind of claim this codebase can
- * stand behind — with the single exception of the uptime figure, which is the
+ * stand behind: with the single exception of the uptime figure, which is the
  * operator's to publish and stays hidden until they do.
  */
 import { PortalSettingKey } from '~/constants/portalSettingKey'

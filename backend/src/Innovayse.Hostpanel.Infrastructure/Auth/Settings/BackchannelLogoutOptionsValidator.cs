@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth.Settings;
 
-/// <summary>Refuses startup under SSO mode when no backchannel key is configured.</summary>
+/// <summary>Refuses startup under single sign-on mode when no backchannel key is configured.</summary>
 public sealed class BackchannelLogoutOptionsValidator : IValidateOptions<BackchannelLogoutOptions>
 {
     /// <summary>Which sign-in mechanism this deployment runs.</summary>

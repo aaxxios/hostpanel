@@ -1,4 +1,4 @@
-# Vue.js Code Style Rules — Innovayse Frontend
+# Vue.js code style rules for the HostPanel frontend
 
 ## General
 
@@ -127,10 +127,16 @@ export function useInvoices() {
 ```vue
 <main class="relative flex-1 min-h-0 overflow-auto">
   <div class="flex min-h-full w-full flex-col p-4 sm:p-6 lg:p-8">
-    <RouterView />
+    <RoutedView />
   </div>
 </main>
 ```
+
+`RoutedView` (`components/layout/RoutedView.vue`) is the `<RouterView>` every shell uses. Route
+records hold plain `() => import()` loaders, never `defineAsyncComponent`, so the router keeps the
+old screen until the next one has downloaded; `RoutedView` reads the navigation store and stands
+the skeleton (or the load error) in for the one level the navigation replaces, so a click is
+answered at once.
 
 A routed view therefore starts at its own content — no `p-4 sm:p-6 lg:p-8` on a view
 root, and no re-padding further down. This was previously repeated on 63 view roots,

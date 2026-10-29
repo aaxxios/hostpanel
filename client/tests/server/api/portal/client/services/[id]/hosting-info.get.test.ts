@@ -1,7 +1,6 @@
 /**
- * Tests for `GET /api/portal/client/services/:id/hosting-info`: it resolves the service from the
- * client's list. The name-server and certificate probes reach the public internet, so only the
- * paths that decide before probing are exercised here.
+ * Tests for `GET /api/portal/client/services/:id/hosting-info`: a pass-through to the backend read
+ * of the same name. The route resolves nothing and opens no connection itself.
  *
  * @module tests/server/api/portal/client/services/[id]/hosting-info.get.test
  */
@@ -27,30 +26,43 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/services/:id/hosting-info', () => {
-  it('answers empty name servers and no certificate for a service without a domain, without probing', async () => {
-    backend.respondWith(() => ({ body: [{ id: 7 }] }))
+  it('returns the backend reading untouched and forwards the bearer and the reader language', async () => {
+    const reading = {
+      nameservers: ['ns1.example.net'],
+      ssl: { valid: true, issuer: 'Some CA', startDate: '2026-01-01T00:00:00+00:00', expiryDate: '2027-01-01T00:00:00+00:00' }
+    }
+    backend.respondWith(() => ({ body: reading }))
 
     const result = await route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
-    expect(result).toEqual({ nameservers: [], ssl: null })
-    expect(backend.requests[0]?.url).toBe('/api/me/services')
+    expect(result).toEqual(reading)
+    expect(backend.requests).toHaveLength(1)
+    expect(backend.requests[0]?.method).toBe('GET')
+    expect(backend.requests[0]?.url).toBe('/api/me/services/7/hosting-info')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
   })
 
-  it('refuses with 404 and the not-found code when the service is not in the list', async () => {
-    backend.respondWith(() => ({ body: [{ id: 3, domain: 'a.test' }] }))
+  it('does not load the services list or look at any domain itself', async () => {
+    backend.respondWith(() => ({ body: { nameservers: [], ssl: null } }))
 
-    const error = await refusal(async () => route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })))
+    await route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') }))
 
-    expect(error).toMatchObject({ statusCode: 404, data: { code: 'SERVICE_NOT_FOUND' } })
+    expect(backend.requests.map(request => request.url)).toEqual(['/api/me/services/7/hosting-info'])
+  })
+
+  it('refuses a malformed id with the coded 400 before calling the backend', async () => {
+    const error = await refusal(async () => route.default(makeEvent({ params: { id: '7/../x' }, cookies: await signedIn('jwt') })))
+
+    expect(error).toMatchObject({ statusCode: 400, data: { code: 'BAD_ROUTE_PARAM' } })
+    expect(backend.requests).toHaveLength(0)
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {
-    backend.respondWith(() => ({ status: 403, body: { type: 'FORBIDDEN', detail: 'No access.' } }))
+    backend.respondWith(() => ({ status: 404, body: { type: 'SERVICE_NOT_FOUND', detail: 'Not found.' } }))
 
     const error = await refusal(async () => route.default(makeEvent({ params: { id: '7' }, cookies: await signedIn('jwt') })))
 
-    expect(error).toMatchObject({ statusCode: 403, statusMessage: 'No access.', data: { code: 'FORBIDDEN' } })
+    expect(error).toMatchObject({ statusCode: 404, statusMessage: 'Not found.', data: { code: 'SERVICE_NOT_FOUND' } })
   })
 })

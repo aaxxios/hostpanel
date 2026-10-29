@@ -12,6 +12,7 @@ import { expectLastRequest, startTransport } from '../../helpers/stubTransport'
 import type { ExpectedRequest } from '../../helpers/stubTransport'
 import type { StubServer } from '../../helpers/stubServer'
 import { useCatalogApi } from '~/composables/apis/useCatalogApi'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -26,17 +27,17 @@ const api = useCatalogApi()
 
 /** Every endpoint function with the request it must send. */
 const rows: ExpectedRequest[] = [
-  { name: 'fetchProducts sends the filters as a query', call: () => api.fetchProducts({ gid: 1, currency: 'USD' }), method: 'GET', url: '/api/portal/public/products?gid=1&currency=USD' },
-  { name: 'fetchProducts drops an undefined filter and sends no query at all', call: () => api.fetchProducts({ currency: undefined }), method: 'GET', url: '/api/portal/public/products' },
-  { name: 'fetchProducts sends the group list as one comma-separated value', call: () => api.fetchProducts({ gids: '1,3,4' }), method: 'GET', url: '/api/portal/public/products?gids=1,3,4' },
-  { name: 'fetchProductGroups reads the list', call: () => api.fetchProductGroups(), method: 'GET', url: '/api/portal/public/product-groups' },
-  { name: 'fetchProductFeatures asks for one group', call: () => api.fetchProductFeatures(7), method: 'GET', url: '/api/portal/public/product-features?gid=7' },
-  { name: 'fetchCurrencies reads the list', call: () => api.fetchCurrencies(), method: 'GET', url: '/api/portal/public/currencies' },
-  { name: 'fetchTldPricing quotes in the payer currency', call: () => api.fetchTldPricing('AMD'), method: 'GET', url: '/api/portal/public/tld-pricing?currency=AMD' },
-  { name: 'fetchTldPricing sends no query without a currency', call: () => api.fetchTldPricing(), method: 'GET', url: '/api/portal/public/tld-pricing' },
-  { name: 'fetchSlides asks for the language', call: () => api.fetchSlides('hy'), method: 'GET', url: '/api/portal/public/slides?lang=hy' },
-  { name: 'fetchCountries reads the list', call: () => api.fetchCountries(), method: 'GET', url: '/api/portal/public/countries' },
-  { name: 'checkDomain posts one domain', call: () => api.checkDomain('a.am'), method: 'POST', url: '/api/portal/public/domain-check', body: { domain: 'a.am' } },
+  { name: 'fetchProducts sends the filters as a query', call: () => api.fetchProducts({ gid: 1, currency: 'USD' }), method: HttpMethod.Get, url: '/api/portal/public/products?gid=1&currency=USD' },
+  { name: 'fetchProducts drops an undefined filter and sends no query at all', call: () => api.fetchProducts({ currency: undefined }), method: HttpMethod.Get, url: '/api/portal/public/products' },
+  { name: 'fetchProducts sends the group list as one comma-separated value', call: () => api.fetchProducts({ gids: '1,3,4' }), method: HttpMethod.Get, url: '/api/portal/public/products?gids=1,3,4' },
+  { name: 'fetchProductGroups reads the list', call: () => api.fetchProductGroups(), method: HttpMethod.Get, url: '/api/portal/public/product-groups' },
+  { name: 'fetchProductFeatures asks for one group', call: () => api.fetchProductFeatures(7), method: HttpMethod.Get, url: '/api/portal/public/product-features?gid=7' },
+  { name: 'fetchCurrencies reads the list', call: () => api.fetchCurrencies(), method: HttpMethod.Get, url: '/api/portal/public/currencies' },
+  { name: 'fetchTldPricing quotes in the payer currency', call: () => api.fetchTldPricing('AMD'), method: HttpMethod.Get, url: '/api/portal/public/tld-pricing?currency=AMD' },
+  { name: 'fetchTldPricing sends no query without a currency', call: () => api.fetchTldPricing(), method: HttpMethod.Get, url: '/api/portal/public/tld-pricing' },
+  { name: 'fetchSlides asks for the language', call: () => api.fetchSlides('hy'), method: HttpMethod.Get, url: '/api/portal/public/slides?lang=hy' },
+  { name: 'fetchCountries reads the list', call: () => api.fetchCountries(), method: HttpMethod.Get, url: '/api/portal/public/countries' },
+  { name: 'checkDomain posts one domain', call: () => api.checkDomain('a.am'), method: HttpMethod.Post, url: '/api/portal/public/domain-check', body: { domain: 'a.am' } },
 ]
 
 describe('useCatalogApi', () => {
@@ -82,6 +83,6 @@ describe('useCatalogApi', () => {
     }
 
     expect(runWithContext).toHaveBeenCalledTimes(2)
-    expectLastRequest(stub, { name: 'last read', call: () => scoped.fetchProducts(), method: 'GET', url: '/api/portal/public/products?gids=1,2' })
+    expectLastRequest(stub, { name: 'last read', call: () => scoped.fetchProducts(), method: HttpMethod.Get, url: '/api/portal/public/products?gids=1,2' })
   })
 })

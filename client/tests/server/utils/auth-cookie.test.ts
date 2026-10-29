@@ -4,7 +4,7 @@
  * @module tests/server/utils/auth-cookie.test
  */
 
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ACCESS_TOKEN_FALLBACK_MAX_AGE,
   AUTHED_FLAG_MAX_AGE,
@@ -12,6 +12,7 @@ import {
   SSO_FLOW_COOKIE_MAX_AGE,
   SSO_SILENT_COOKIE_MAX_AGE,
   authCookieMaxAge,
+  cookieOptions,
   readTokenExpiry,
   readTokenPayload
 } from '~/server/utils/auth-cookie'
@@ -76,5 +77,36 @@ describe('authCookieMaxAge', () => {
   it('gives a session cookie when exp is missing or the token is not a JWT', () => {
     expect(authCookieMaxAge(tokenWith({ sub: 'x' }), 1_000_000)).toBeUndefined()
     expect(authCookieMaxAge('opaque', 1_000_000)).toBeUndefined()
+  })
+})
+
+describe('cookieOptions', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('is httpOnly, SameSite=Lax, site-wide and Secure, with the lifetime given', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+
+    expect(cookieOptions(300)).toEqual({ maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
+  })
+
+  it('stays Secure in every environment but development', () => {
+    for (const environment of ['production', 'test', 'staging']) {
+      vi.stubEnv('NODE_ENV', environment)
+
+      expect(cookieOptions(1).secure, environment).toBe(true)
+    }
+    vi.stubEnv('NODE_ENV', 'development')
+
+    expect(cookieOptions(1).secure).toBe(false)
+  })
+
+  it('is readable by page scripts only when asked, for the authed hint', () => {
+    expect(cookieOptions(AUTHED_FLAG_MAX_AGE, false)).toMatchObject({ httpOnly: false, secure: true, sameSite: 'lax', path: '/' })
+  })
+
+  it('clears a cookie with the attributes it was written with', () => {
+    expect(cookieOptions(0)).toMatchObject({ maxAge: 0, httpOnly: true, secure: true, path: '/' })
   })
 })

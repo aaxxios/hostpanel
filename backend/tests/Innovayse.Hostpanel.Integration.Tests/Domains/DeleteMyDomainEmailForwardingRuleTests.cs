@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>DeleteMyDomainEmailForwardingRule</c> use case —
+/// Integration tests for the client-facing <c>DeleteMyDomainEmailForwardingRule</c> use case:
 /// <c>DELETE /api/me/domains/{id}/email-forwarding/{ruleId}</c>. The admin equivalent is
 /// <c>DeleteEmailForwardingRule</c>; the sibling client-facing use cases in the same lifecycle
 /// are <c>AddMyDomainEmailForwardingRule</c> and <c>UpdateMyDomainEmailForwardingRule</c>.
@@ -29,7 +26,7 @@ public sealed class DeleteMyDomainEmailForwardingRuleTests(IntegrationTestFactor
 
         var domainAfterAdd = await owner.GetAsync($"/api/me/domains/{domainId}");
         using var domainBody = JsonDocument.Parse(await domainAfterAdd.Content.ReadAsStringAsync());
-        var ruleId = domainBody.RootElement.GetProperty("emailForwardingRules")[0].GetProperty("id").GetInt32();
+        var ruleId = domainBody.RootElement.GetProperty("management").GetProperty("emailForwardingRules")[0].GetProperty("id").GetInt32();
 
         var strangersDelete = await stranger.DeleteAsync($"/api/me/domains/{domainId}/email-forwarding/{ruleId}");
         strangersDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);

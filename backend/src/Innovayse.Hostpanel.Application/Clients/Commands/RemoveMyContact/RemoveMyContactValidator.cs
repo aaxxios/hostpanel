@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Clients.Commands.RemoveMyContact;
 /// <summary>
 /// Validator for <see cref="RemoveMyContactCommand"/>. Declares no rules: the handler forwards the
 /// id to <c>RemoveContactCommand</c>, whose validator owns the id rule and which only runs once the
-/// caller's profile has been found -- so a caller with no profile still answers 404.
+/// caller's profile has been found, so a caller with no profile still answers 404.
 /// </summary>
 public sealed class RemoveMyContactValidator : LocalizedValidator<RemoveMyContactCommand>
 {

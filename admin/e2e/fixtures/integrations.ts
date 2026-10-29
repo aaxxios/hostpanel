@@ -3,28 +3,31 @@
  * detail with a field list, and one installed plugin.
  */
 import type { IntegrationDetailDto, IntegrationDto } from '../../src/types/integration'
+import { IntegrationFieldType } from '../../src/types/integration'
 import type { PluginListItemDto } from '../../src/types/plugin'
 
 /** A disabled payment integration as the list endpoint returns it. */
 export const stripe: IntegrationDto = {
   slug: 'stripe',
   name: 'Stripe',
-  description: 'Card payments',
   category: 'payments',
   isEnabled: false,
-  lastTestedAt: null,
+  isConfigured: false,
+  isPlugin: false,
 }
 
 /** The same integration with the fields its configuration form renders. */
 export const stripeDetail: IntegrationDetailDto = {
-  ...stripe,
+  slug: stripe.slug,
+  name: stripe.name,
+  isEnabled: stripe.isEnabled,
   config: {
     secretKey: { value: null, isSecret: true, hasValue: false },
     publishableKey: { value: '', isSecret: false, hasValue: false },
   },
   fieldDefinitions: [
-    { key: 'secretKey', label: 'Secret key', type: 'password', required: true },
-    { key: 'publishableKey', label: 'Publishable key', type: 'text', required: false },
+    { key: 'secretKey', label: 'Secret key', type: IntegrationFieldType.Password, required: true },
+    { key: 'publishableKey', label: 'Publishable key', type: IntegrationFieldType.Text, required: false },
   ],
 }
 
@@ -39,4 +42,5 @@ export const cwpPlugin: PluginListItemDto = {
   category: 'Hosting / Provisioning',
   color: '#1a73e8',
   isLoaded: true,
+  isBuiltIn: false,
 }

@@ -23,26 +23,13 @@ public static class PartnerExtensions
             x.Translations.ToDictionary(t => t.Locale, t => new PartnerTranslationDto(t.Name)));
     }
 
-    /// <summary>
-    /// Makes the partner's translations exactly the given set: locales that are no longer sent are
-    /// removed, the rest are added or updated in place.
-    /// </summary>
-    /// <param name="x">The partner to change.</param>
-    /// <param name="translations">The complete set of translations, keyed by locale code.</param>
-    public static void ApplyTranslations(this Partner x, IReadOnlyDictionary<string, PartnerTranslationDto> translations)
+    /// <summary>Turns the translations a command carries into the text the partner keeps per locale.</summary>
+    /// <param name="translations">The translations as sent, keyed by locale code.</param>
+    /// <returns>The same set, keyed by locale code, ready for <see cref="Partner.ReplaceTranslations"/>.</returns>
+    public static IReadOnlyDictionary<string, PartnerTranslationContent> ToContent(this IReadOnlyDictionary<string, PartnerTranslationDto> translations)
     {
-        ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(translations);
 
-        var stale = x.Translations.Select(t => t.Locale).Where(locale => !translations.ContainsKey(locale)).ToList();
-        foreach (var locale in stale)
-        {
-            x.RemoveTranslation(locale);
-        }
-
-        foreach (var (locale, translation) in translations)
-        {
-            x.SetTranslation(locale, translation.Name);
-        }
+        return translations.ToDictionary(t => t.Key, t => new PartnerTranslationContent(t.Value.Name));
     }
 }

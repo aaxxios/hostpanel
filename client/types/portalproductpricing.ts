@@ -7,7 +7,7 @@
 /**
  * The product's price in the caller's own currency, as `ProductPricingDto` sends it.
  *
- * Both fields are `null` when the product carries no price in that currency at all — the
+ * Both fields are `null` when the product carries no price in that currency at all: the
  * storefront hides such a product for the cycle that is null (`GET /products` without
  * `includeUnsellable` already excludes a product with no price in any currency, but a product
  * priced only annually, say, still needs the monthly card hidden).

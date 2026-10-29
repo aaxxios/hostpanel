@@ -23,6 +23,7 @@ public sealed class CreatePartnerValidator : LocalizedValidator<CreatePartnerCom
             .MustBeWebLink(L["ContentUrlInvalid"]);
         RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0).WithMessage(L["ContentSortOrderInvalid"]);
         RuleFor(x => x.Translations).NotEmpty().WithMessage(L["ContentTranslationsRequired"]);
+        RuleFor(x => x.Translations).MustIncludeDefaultLocale(L["ContentDefaultTranslationRequired"]);
         RuleForEach(x => x.Translations).SetValidator(new PartnerTranslationValidator(localizer));
     }
 }

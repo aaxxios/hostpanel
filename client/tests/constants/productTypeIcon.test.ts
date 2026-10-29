@@ -46,6 +46,7 @@ describe('productTypeIcon', () => {
   it('falls back to the default for a missing or unknown type', () => {
     expect(productTypeIcon(null)).toBe(DEFAULT_PRODUCT_ICON)
     expect(productTypeIcon(undefined)).toBe(DEFAULT_PRODUCT_ICON)
-    expect(productTypeIcon('Mystery')).toBe(DEFAULT_PRODUCT_ICON)
+    // A value a newer backend may send that this build's enum does not know yet.
+    expect(productTypeIcon('Mystery' as ProductType)).toBe(DEFAULT_PRODUCT_ICON)
   })
 })

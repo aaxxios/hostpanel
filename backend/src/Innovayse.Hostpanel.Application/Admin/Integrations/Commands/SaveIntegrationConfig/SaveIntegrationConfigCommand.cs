@@ -6,10 +6,8 @@ namespace Innovayse.Hostpanel.Application.Admin.Integrations.Commands.SaveIntegr
 /// Command that upserts all configuration settings for one integration.
 /// </summary>
 /// <param name="Slug">
-/// URL-safe integration identifier, e.g. "card". Nullable because the controller overlays it
-/// from the route (<c>command with { Slug = slug }</c>): a non-nullable member of a bound body is
-/// implicitly required, so the request would be refused before the overlay could run -- the admin
-/// panel's body carries only <paramref name="IsEnabled"/> and <paramref name="Config"/>.
+/// URL-safe integration identifier, e.g. "card". The controller overlays it from the route
+/// (<c>command with { Slug = slug }</c>); the admin panel's body carries only <paramref name="IsEnabled"/> and <paramref name="Config"/>.
 /// </param>
 /// <param name="IsEnabled">Whether the integration should be active after saving.</param>
 /// <param name="Config">
@@ -21,7 +19,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Integrations.Commands.SaveIntegr
 /// apart from "leave it as it is", which an empty value means for a secret.
 /// </param>
 public sealed record SaveIntegrationConfigCommand(
-    string? Slug,
+    string Slug,
     bool IsEnabled,
     Dictionary<string, string?> Config,
     IReadOnlyList<string>? ClearFields = null) : IDemoRestricted;

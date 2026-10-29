@@ -17,7 +17,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Commands.UpdateSetting;
 /// </summary>
 /// <remarks>
 /// The vocabulary check lives here and not in a FluentValidation validator because the rule
-/// depends on the row's <c>Key</c>, which the command does not carry — a validator would have
+/// depends on the row's <c>Key</c>, which the command does not carry: a validator would have
 /// to load the row this handler loads a moment later. The admin panel constrains
 /// <c>portal.template</c> to a dropdown, but the raw settings table on the same page and the
 /// API itself accept any string, and a value the storefront does not recognise makes it fall
@@ -28,11 +28,14 @@ public sealed class UpdateSettingHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work for persisting changes.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Encrypts a secret value before it is stored.</summary>
+    private readonly ISecretSettingCipher _cipher;
 
     /// <summary>Loaded plugins, whose manifests declare which of their fields are secret.</summary>
     private readonly IPluginRegistry _plugins;
+
+    /// <summary>Removes the branding upload a replaced image setting pointed at.</summary>
+    private readonly IBrandingStorage _branding;
 
     /// <summary>The acting admin, named in the audit line of a secret change.</summary>
     private readonly ICurrentUserService _currentUser;
@@ -42,20 +45,23 @@ public sealed class UpdateSettingHandler
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    /// <param name="uow">Unit of work for persisting changes.</param>
+    /// <param name="cipher">Encrypts a secret value before it is stored.</param>
     /// <param name="plugins">Loaded plugins, whose manifests declare which of their fields are secret.</param>
+    /// <param name="branding">Removes the branding upload a replaced image setting pointed at.</param>
     /// <param name="currentUser">The acting admin, named in the audit line of a secret change.</param>
     /// <param name="logger">Receives the audit line of a secret change.</param>
     public UpdateSettingHandler(
         IHostpanelDbContext context,
-        IUnitOfWork uow,
+        ISecretSettingCipher cipher,
         IPluginRegistry plugins,
+        IBrandingStorage branding,
         ICurrentUserService currentUser,
         ILogger<UpdateSettingHandler> logger)
     {
         _context = context;
-        _uow = uow;
+        _cipher = cipher;
         _plugins = plugins;
+        _branding = branding;
         _currentUser = currentUser;
         _logger = logger;
     }
@@ -68,12 +74,11 @@ public sealed class UpdateSettingHandler
     /// <returns>
     /// Success, or <c>SETTING_NOT_FOUND</c> when the id names no setting, or
     /// <c>INVALID_SETTING_VALUE</c> when the key has a fixed vocabulary or shape and the value does
-    /// not match it — <c>errors[key]</c> then carries what the key does accept.
+    /// not match it: <c>errors[key]</c> then carries what the key does accept.
     /// </returns>
     public async Task<Result> HandleAsync(UpdateSettingCommand command, CancellationToken ct)
     {
-        // Was ISettingRepository.FindByIdAsync. Tracked, not AsNoTracking: the setting is mutated
-        // and saved further down.
+        // Tracked, not AsNoTracking: the setting is mutated and saved further down.
         var setting = await _context.Settings.FirstOrDefaultAsync(s => s.Id == command.Id, ct);
         if (setting is null)
         {
@@ -92,8 +97,8 @@ public sealed class UpdateSettingHandler
         // operator meant, and for a URL or a handle it is the difference between working and not.
         var value = (requested ?? string.Empty).Trim();
 
-        // Empty means "unset" for a key that seeds empty — the storefront then uses its
-        // built-in default — and skips both checks below. A key that seeds with a value never
+        // Empty means "unset" for a key that seeds empty, the storefront then uses its
+        // built-in default, and skips both checks below. A key that seeds with a value never
         // had an empty state and goes through them, where the empty string is refused.
         var allowsEmpty = PortalSettingKeys.AllowsEmpty(setting.Key) || BillingSettingKeys.AllowsEmpty(setting.Key);
         if (value.Length > 0 || !allowsEmpty)
@@ -130,8 +135,19 @@ public sealed class UpdateSettingHandler
             }
         }
 
+        var previous = setting.Value;
         setting.UpdateValue(value);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
+
+        // A replaced branding image leaves its old upload referenced by nothing; it is removed once
+        // the new value is saved, never before, so a failed save keeps the live files in place.
+        if (PortalSettingKeys.BrandingImages.Contains(setting.Key)
+            && previous.Length > 0
+            && !string.Equals(previous, value, StringComparison.Ordinal))
+        {
+            await _branding.RemoveAsync(previous, ct);
+        }
+
         return Result.Success();
     }
 
@@ -154,7 +170,7 @@ public sealed class UpdateSettingHandler
         }
         else if (!string.IsNullOrWhiteSpace(command.Value))
         {
-            setting.UpdateValue(command.Value.Trim());
+            setting.UpdateValue(_cipher.Protect(command.Value.Trim()));
             change = SecretSettingChange.Replaced;
         }
         else
@@ -162,7 +178,7 @@ public sealed class UpdateSettingHandler
             return Result.Success();
         }
 
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         SecretSettingAudit.Record(_logger, setting.Key, change, _currentUser.UserId);
         return Result.Success();
     }

@@ -6,7 +6,7 @@ namespace Innovayse.Hostpanel.Shared.Localization;
 
 /// <summary>
 ///     Resolves the request culture (validation messages, IStringLocalizer output) from the
-///     platform's <c>X-Language</c> header — the same single language source used for content.
+///     platform's <c>X-Language</c> header: the same single language source used for content.
 ///     Validation goes through the configuration-backed language policy resolved
 ///     from the request's service scope. Replaces the default ASP.NET provider chain, whose
 ///     Accept-Language step made message language diverge from content language.

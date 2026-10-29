@@ -12,14 +12,14 @@ describe('toPaymentMethod', () => {
     })
 
     expect(method).toMatchObject({
-      id: 'pm_1', description: 'Visa •••• 4242', card_last_four: '4242', card_expiry: '08/30', card_type: 'visa', bank_name: null, is_default: true
+      id: 'pm_1', description: 'Visa •••• 4242', cardLastFour: '4242', cardExpiry: '08/30', cardType: 'visa', bankName: null, isDefault: true
     })
   })
 
   it('reads a bank account brand as the bank name', () => {
     const method = toPaymentMethod({ id: 'pm_2', type: PaymentMethodType.BankAccount, brand: 'First Bank', last4: '6789', isDefault: false })
 
-    expect(method).toMatchObject({ description: 'First Bank •••• 6789', bank_name: 'First Bank', card_type: null, card_expiry: null })
+    expect(method).toMatchObject({ description: 'First Bank •••• 6789', bankName: 'First Bank', cardType: null, cardExpiry: null })
   })
 })
 

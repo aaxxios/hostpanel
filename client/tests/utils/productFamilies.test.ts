@@ -10,7 +10,8 @@ import { familyColor } from '~/utils/catalogGroups'
 import type { ProductFamily } from '~/types/productfamily'
 import type { ProductFeature } from '~/types/productfeature'
 import type { ProductPlan } from '~/types/productplan'
-import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, familyCardBullets, familyProductType, findProductDetail, firstOfferedPrice, recommendedPlanPid, representativePlan, specificationBullets } from '~/utils/productFamilies'
+import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, familyCardBullets, familyProductType, findProductDetail, firstOfferedPrice, recommendedPlanId, representativePlan, specificationBullets } from '~/utils/productFamilies'
+import { ProductType } from '~/types/producttype'
 
 /**
  * Builds a catalogue product.
@@ -19,14 +20,18 @@ import { buildPricingRows, buildProductFamilies, cycleAmount, familyBullets, fam
  * @returns The product.
  */
 const product = (overrides: Partial<PortalProduct> & Pick<PortalProduct, 'id' | 'groupId' | 'name'>): PortalProduct => ({
-  pid: overrides.id,
   description: '',
   slug: null,
   pricing: null,
   ...overrides,
 })
 
-/** Formats an amount the way the tests expect to read it. */
+/**
+ * Formats an amount the way the tests expect to read it.
+ *
+ * @param amount Amount in dollars.
+ * @returns The amount with a dollar sign.
+ */
 const dollars = (amount: number): string => `$${amount}`
 
 /**
@@ -41,7 +46,6 @@ const group = (id: number, name: string, overrides: Partial<PortalProductGroup> 
   id,
   name,
   description: null,
-  isActive: true,
   productCount: 1,
   ...overrides,
 })
@@ -81,8 +85,8 @@ describe('buildPricingRows', () => {
     const rows = buildPricingRows(learnGroup.slice(1), dollars, 'USD')
 
     expect(rows).toHaveLength(2)
-    expect(rows[0]).toMatchObject({ pid: 11, tier: 'Starter', price: '$10', amount: 10, currency: 'USD', billingCycle: PricingCycle.Monthly, features: ['One site'] })
-    expect(rows[1]).toMatchObject({ pid: 12, price: '$200', billingCycle: PricingCycle.Annual })
+    expect(rows[0]).toMatchObject({ id: 11, tier: 'Starter', price: '$10', amount: 10, currency: 'USD', billingCycle: PricingCycle.Monthly, features: ['One site'] })
+    expect(rows[1]).toMatchObject({ id: 12, price: '$200', billingCycle: PricingCycle.Annual })
   })
 
   it('leaves the price empty for a plan without one, and the currency empty while it resolves', () => {
@@ -139,7 +143,7 @@ describe('buildProductFamilies', () => {
 
     expect(families).toHaveLength(1)
     expect(families[0]).toMatchObject({ id: 'alpha-suite', gid: 3, tagline: '', description: 'Learn online' })
-    expect(families[0]?.pricing.map((row) => row.pid)).toEqual([11, 12])
+    expect(families[0]?.pricing.map((row) => row.id)).toEqual([11, 12])
     // Bullets come from ONE plan (the cheapest, Starter), never a mix of every plan's lines.
     expect(families[0]?.features).toEqual(['One site'])
   })
@@ -153,7 +157,7 @@ describe('buildProductFamilies', () => {
     )
 
     expect(families[0]?.pricing).toHaveLength(1)
-    expect(families[0]?.pricing[0]).toMatchObject({ pid: 20, price: '$7' })
+    expect(families[0]?.pricing[0]).toMatchObject({ id: 20, price: '$7' })
   })
 
   it('leaves out a group that has no products, and puts the leading entries first', () => {
@@ -175,7 +179,7 @@ describe('buildProductFamilies', () => {
 
     const families = buildProductFamilies(
       [...groups, group(9, 'Domains')],
-      [...learnGroup, product({ id: 90, groupId: 9, name: 'Domain Registration', type: 'Domain' })],
+      [...learnGroup, product({ id: 90, groupId: 9, name: 'Domain Registration', type: ProductType.Domain })],
       dollars,
       'USD',
       [leading],
@@ -187,7 +191,7 @@ describe('buildProductFamilies', () => {
   it('derives the icon of a family from the type of its products', () => {
     const families = buildProductFamilies(
       [group(7, 'Epsilon Line')],
-      [product({ id: 70, groupId: 7, name: 'Basic', type: 'Vps' })],
+      [product({ id: 70, groupId: 7, name: 'Basic', type: ProductType.Vps })],
       dollars,
       'USD',
     )
@@ -206,9 +210,9 @@ describe('buildProductFamilies', () => {
     expect(without[0]?.features).toEqual([])
   })
 
-  it('leaves out an inactive group, an empty group and a group with no products in the list', () => {
+  it('leaves out an empty group and a group with no products in the list', () => {
     const families = buildProductFamilies(
-      [group(3, 'Alpha Suite'), group(4, 'Beta Kit', { isActive: false }), group(5, 'Gamma Tool', { productCount: 0 }), group(6, 'Delta Pack')],
+      [group(3, 'Alpha Suite'), group(5, 'Gamma Tool', { productCount: 0 }), group(6, 'Delta Pack')],
       [...learnGroup, product({ id: 60, groupId: 4, name: 'Hidden', slug: 'hidden' }), product({ id: 61, groupId: 5, name: 'Stray' })],
       dollars,
       'USD',
@@ -226,7 +230,7 @@ describe('buildProductFamilies', () => {
     )
 
     expect(families[0]).toMatchObject({ id: 'epsilon-line', gid: 7, learnMoreUrl: '/products/epsilon-line' })
-    expect(families[0]?.pricing.map((row) => row.pid)).toEqual([70, 71])
+    expect(families[0]?.pricing.map((row) => row.id)).toEqual([70, 71])
   })
 
   it('caps the family card bullets at three lines', () => {
@@ -245,7 +249,7 @@ describe('findProductDetail', () => {
 
     expect(detail).toMatchObject({ id: 'alpha-suite', gid: 3, name: 'Alpha Suite', color: familyColor('alpha-suite'), description: 'Learn online' })
     expect(detail?.plans.map((plan) => plan.tier)).toEqual(['Starter', 'Pro'])
-    expect(detail?.plans[0]).toMatchObject({ id: 11, pid: 11, pricing: { monthly: 10, annual: 100 }, features: ['One site'], description: '', isFeatured: false })
+    expect(detail?.plans[0]).toMatchObject({ id: 11, pricing: { monthly: 10, annual: 100 }, features: ['One site'], description: '', isFeatured: false })
   })
 
   it('names the page after the family, never after the plan the address matched', () => {
@@ -311,40 +315,36 @@ describe('findProductDetail', () => {
   it('ignores products that are not in a family group', () => {
     expect(findProductDetail(groups, [product({ id: 50, groupId: 99, name: 'Stray', slug: 'stray' })], 'stray')).toBeNull()
   })
-
-  it('does not match a family whose group is switched off', () => {
-    expect(findProductDetail([group(3, 'Alpha Suite', { isActive: false })], learnGroup, 'alpha-suite')).toBeNull()
-  })
 })
 
-describe('recommendedPlanPid', () => {
+describe('recommendedPlanId', () => {
   /**
    * Builds a plan.
    *
-   * @param pid Order id.
+   * @param id Product id.
    * @param overrides Fields that differ from the defaults.
    * @returns The plan.
    */
-  const plan = (pid: number, overrides: Partial<ProductPlan> = {}): ProductPlan => ({
-    id: pid, pid, tier: `Plan ${pid}`, pricing: { monthly: pid, annual: null }, description: '', features: [], isFeatured: false, ...overrides,
+  const plan = (id: number, overrides: Partial<ProductPlan> = {}): ProductPlan => ({
+    id, tier: `Plan ${id}`, pricing: { monthly: id, annual: null }, description: '', features: [], isFeatured: false, ...overrides,
   })
 
   it('prefers the plan the operator featured', () => {
-    expect(recommendedPlanPid([plan(1), plan(2), plan(3, { isFeatured: true })])).toBe(3)
+    expect(recommendedPlanId([plan(1), plan(2), plan(3, { isFeatured: true })])).toBe(3)
   })
 
   it('never recommends a free plan as the featured one', () => {
-    expect(recommendedPlanPid([plan(1, { isFeatured: true, pricing: { monthly: 0, annual: null } }), plan(2), plan(3)])).toBe(2)
+    expect(recommendedPlanId([plan(1, { isFeatured: true, pricing: { monthly: 0, annual: null } }), plan(2), plan(3)])).toBe(2)
   })
 
   it('points at the middle plan of three or more when nobody featured one', () => {
-    expect(recommendedPlanPid([plan(1), plan(2), plan(3)])).toBe(2)
-    expect(recommendedPlanPid([plan(1), plan(2), plan(3), plan(4)])).toBe(2)
+    expect(recommendedPlanId([plan(1), plan(2), plan(3)])).toBe(2)
+    expect(recommendedPlanId([plan(1), plan(2), plan(3), plan(4)])).toBe(2)
   })
 
   it('has no middle to point at with fewer than three plans', () => {
-    expect(recommendedPlanPid([plan(1), plan(2)])).toBeNull()
-    expect(recommendedPlanPid([])).toBeNull()
+    expect(recommendedPlanId([plan(1), plan(2)])).toBeNull()
+    expect(recommendedPlanId([])).toBeNull()
   })
 })
 
@@ -383,7 +383,7 @@ describe('familyCardBullets', () => {
 
 describe('family cover data', () => {
   it('reads the family type from its products, and hosting from its group', () => {
-    const vps = product({ id: 1, groupId: 2, name: 'V', type: 'Vps' })
+    const vps = product({ id: 1, groupId: 2, name: 'V', type: ProductType.Vps })
 
     expect(familyProductType(group(2, 'Cloud'), [vps])).toBe('Vps')
     expect(familyProductType(group(1, 'Web Hosting'), [vps])).toBe('SharedHosting')
@@ -392,13 +392,13 @@ describe('family cover data', () => {
 
   it('carries the type, the operator image and the featured flag onto the family', () => {
     const plans = [
-      product({ id: 11, groupId: 3, name: 'Starter', slug: 'starter', type: 'Vps', pricing: { monthly: 10, annual: null } }),
-      product({ id: 12, groupId: 3, name: 'Pro', slug: 'pro', type: 'Vps', isFeatured: true, pricing: { monthly: 20, annual: null } }),
+      product({ id: 11, groupId: 3, name: 'Starter', slug: 'starter', type: ProductType.Vps, pricing: { monthly: 10, annual: null } }),
+      product({ id: 12, groupId: 3, name: 'Pro', slug: 'pro', type: ProductType.Vps, isFeatured: true, pricing: { monthly: 20, annual: null } }),
     ]
     const withImage = buildProductFamilies([group(3, 'Alpha Suite', { imageUrl: ' /uploads/a.webp ', productCount: 2 })], plans, dollars, 'USD')
     const without = buildProductFamilies([group(3, 'Alpha Suite', { productCount: 2 })], plans.slice(0, 1), dollars, 'USD')
 
-    expect(withImage[0]).toMatchObject({ type: 'Vps', image: '/uploads/a.webp', featured: true })
-    expect(without[0]).toMatchObject({ type: 'Vps', image: null, featured: false })
+    expect(withImage[0]).toMatchObject({ type: ProductType.Vps, image: '/uploads/a.webp', featured: true })
+    expect(without[0]).toMatchObject({ type: ProductType.Vps, image: null, featured: false })
   })
 })

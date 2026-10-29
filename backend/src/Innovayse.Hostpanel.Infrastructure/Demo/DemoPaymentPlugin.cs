@@ -1,3 +1,4 @@
+using System.Globalization;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 
@@ -6,7 +7,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// <summary>
 /// Hosted-page payment gateway for the public demo. The "hosted page" is the shop's own return
 /// address: the customer is sent straight back, and the session then reads as paid, so the whole
-/// redirect flow can be walked without a bank.
+/// redirect flow can be walked without a bank. The session id carries the amount it was opened
+/// for, so the paid status reports what was taken the way a real gateway does.
 /// </summary>
 internal sealed class DemoPaymentPlugin : IPaymentPlugin
 {
@@ -32,14 +34,24 @@ internal sealed class DemoPaymentPlugin : IPaymentPlugin
     public Task<PaymentSession> CreatePaymentAsync(PaymentRequest request, CancellationToken ct)
     {
         var separator = request.ReturnUrl.Contains('?', StringComparison.Ordinal) ? '&' : '?';
-        var gatewayOrderId = $"demo-{request.OrderNumber}";
+        var gatewayOrderId = string.Create(CultureInfo.InvariantCulture, $"demo-{request.OrderNumber}-{request.AmountMinor}");
 
         return Task.FromResult(new PaymentSession(gatewayOrderId, $"{request.ReturnUrl}{separator}demo=1"));
     }
 
     /// <inheritdoc/>
-    public Task<GatewayPaymentStatus> GetStatusAsync(string gatewayOrderId, CancellationToken ct) =>
-        Task.FromResult(new GatewayPaymentStatus(GatewayPaymentState.Paid, $"demo-txn-{gatewayOrderId}", "demo:paid"));
+    public Task<GatewayPaymentStatus> GetStatusAsync(string gatewayOrderId, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(gatewayOrderId);
+
+        // The amount is the last segment of the session id; one without it reports no amount.
+        long? amountMinor = long.TryParse(
+            gatewayOrderId[(gatewayOrderId.LastIndexOf('-') + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+        return Task.FromResult(new GatewayPaymentStatus(
+            GatewayPaymentState.Paid, $"demo-txn-{gatewayOrderId}", "demo:paid", amountMinor));
+    }
 
     /// <inheritdoc/>
     public Task<string> RefundAsync(string gatewayOrderId, long amountMinor, CancellationToken ct) =>

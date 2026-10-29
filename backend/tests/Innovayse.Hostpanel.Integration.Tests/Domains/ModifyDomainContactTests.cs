@@ -1,18 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Commands.ModifyDomainContact;
 using Innovayse.Hostpanel.Domain.Domains;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>ModifyDomainContact</c> use case —
+/// Integration tests for the admin <c>ModifyDomainContact</c> use case:
 /// <c>POST /api/domains/{id}/modify-contact</c>. The client-facing equivalent is
 /// <c>ModifyMyDomainContact</c>.
 /// </summary>
@@ -20,8 +17,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 public sealed class ModifyDomainContactTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// POST .../modify-contact with the flat body <c>DomainContactModal.vue</c> emits — no nested
-    /// <c>contact</c> wrapper — succeeds. <see cref="ModifyDomainContactCommand"/> is flattened to
+    /// <c>POST /api/domains/{id}/modify-contact</c> with the flat body <c>DomainContactModal.vue</c>
+    /// emits, with no nested <c>contact</c> wrapper, succeeds. <see cref="ModifyDomainContactCommand"/> is flattened to
     /// these top-level fields for exactly this wire.
     /// </summary>
     [Fact]
@@ -112,8 +109,8 @@ public sealed class ModifyDomainContactTests(IntegrationTestFactory factory) : I
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var clientId = await DomainsTestSeeds.SeedClientAsync(context);
         var domain = RegisteredDomain.Register(
-            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow.AddYears(1),
-            autoRenew: false, whoisPrivacy: false);
+            clientId, $"{Guid.NewGuid():N}.test", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1),
+            autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
         context.Domains.Add(domain);
         await context.SaveChangesAsync(CancellationToken.None);
 

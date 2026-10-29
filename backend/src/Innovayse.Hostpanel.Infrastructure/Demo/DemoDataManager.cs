@@ -20,10 +20,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// roles and the migration-seeded reference tables, then seeds again, all inside one transaction so a failure leaves yesterday's data
 /// standing instead of an empty database.
 /// </summary>
-internal sealed class DemoDataManager : IDemoDataManager
+public sealed class DemoDataManager : IDemoDataManager
 {
-    /// <summary>Identity role tables kept across a reset: roles are configuration, not demo data. Tables seeded by migrations (<c>HasData</c>) are kept too, derived from the model.</summary>
-    private static readonly HashSet<string> KeptTables = ["AspNetRoles", "AspNetRoleClaims"];
+    /// <summary>Identity role tables kept across a reset (roles are configuration, not demo data) and the recurring jobs' run records (the reset runs under its own lease, and the record of when each job last succeeded is not demo data). Tables seeded by migrations (<c>HasData</c>) are kept too, derived from the model.</summary>
+    private static readonly HashSet<string> KeptTables = ["AspNetRoles", "AspNetRoleClaims", "JobRuns"];
 
     /// <summary>The data context the seeders write through and the reset truncates.</summary>
     private readonly AppDbContext _db;
@@ -33,9 +33,6 @@ internal sealed class DemoDataManager : IDemoDataManager
 
     /// <summary>Discards the domain events the seeded rows would raise.</summary>
     private readonly IDomainEventGate _eventGate;
-
-    /// <summary>Unit of work the shared deployment seeders save through.</summary>
-    private readonly IUnitOfWork _unitOfWork;
 
     /// <summary>The demo switch and the published accounts.</summary>
     private readonly IOptions<DemoOptions> _options;
@@ -49,33 +46,36 @@ internal sealed class DemoDataManager : IDemoDataManager
     /// <summary>Structured logger.</summary>
     private readonly ILogger<DemoDataManager> _logger;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Creates the manager.</summary>
     /// <param name="db">The data context the seeders write through and the reset truncates.</param>
     /// <param name="users">Creates the demo accounts.</param>
     /// <param name="eventGate">Discards the domain events the seeded rows would raise.</param>
-    /// <param name="unitOfWork">Unit of work the shared deployment seeders save through.</param>
     /// <param name="options">The demo switch and the published accounts.</param>
     /// <param name="departmentOptions">The configured contact addresses of the default support departments.</param>
     /// <param name="cardState">What visitors changed on the sample payment methods; forgotten on a reset.</param>
     /// <param name="logger">Structured logger.</param>
+    /// <param name="clock">The source of the current moment.</param>
     public DemoDataManager(
         AppDbContext db,
         UserManager<AppUser> users,
         IDomainEventGate eventGate,
-        IUnitOfWork unitOfWork,
         IOptions<DemoOptions> options,
         IOptions<DefaultDepartmentsOptions> departmentOptions,
         DemoCardState cardState,
-        ILogger<DemoDataManager> logger)
+        ILogger<DemoDataManager> logger,
+        IClock clock)
     {
         _db = db;
         _users = users;
         _eventGate = eventGate;
-        _unitOfWork = unitOfWork;
         _options = options;
         _departmentOptions = departmentOptions;
         _cardState = cardState;
         _logger = logger;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -125,13 +125,13 @@ internal sealed class DemoDataManager : IDemoDataManager
     {
         // The two deployment-wide seeders every environment runs; both are idempotent and a reset
         // has just emptied the tables they fill.
-        await DefaultDepartmentsSeeder.EnsureSeededAsync(_db, _unitOfWork, _departmentOptions.Value, ct);
-        await PortalSettingsSeeder.EnsureSeededAsync(_db, _unitOfWork, ct);
+        await DefaultDepartmentsSeeder.EnsureSeededAsync(_db, _departmentOptions.Value, ct);
+        await PortalSettingsSeeder.EnsureSeededAsync(_db, ct);
 
         // One anchor for the whole run, so every date in every seeder is counted from the same day.
-        var today = DemoAnchor.Today();
+        var today = DemoAnchor.Today(_clock.UtcNow);
 
-        await new DemoCatalogueSeeder(_db).SeedAsync(ct);
+        await new DemoCatalogueSeeder(_db, today).SeedAsync(ct);
         var demoClientId = await new DemoPeopleSeeder(_db, _users, _options.Value, today).SeedAsync(ct);
         await new DemoServerSeeder(_db, today).SeedAsync(ct);
         await new DemoServiceSeeder(_db, today).SeedAsync(ct);
@@ -146,7 +146,7 @@ internal sealed class DemoDataManager : IDemoDataManager
         await new DemoPortalSettingsSeeder(_db, _options.Value).SeedAsync(ct);
 
         // The hook the storefront content (testimonials, partners, projects, FAQs) is filled through.
-        await new DemoStorefrontSeeder(_db).SeedAsync(ct);
+        await new DemoStorefrontSeeder(_db, today).SeedAsync(ct);
     }
 
     /// <summary>Empties every mapped table except the kept identity role tables and the tables the migrations seed through <c>HasData</c> (email templates among them), which nothing would restore.</summary>

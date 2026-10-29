@@ -2,16 +2,13 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// Seeding and assertion helpers shared by every <c>Admin/&lt;UseCase&gt;Tests.cs</c> class --
-/// dashboard, reports, settings and branding -- so each per-use-case file states only what makes
-/// it different rather than re-deriving an admin token or a client-role forbidden check. Moved out
-/// of the endpoint-grouped files this batch dissolved (<c>DashboardEndpointTests</c>,
-/// <c>SettingsEndpointTests</c>) rather than duplicated into each file that replaced them.
+/// Seeding and assertion helpers shared by every <c>Admin/&lt;UseCase&gt;Tests.cs</c> class
+/// (dashboard, reports, settings and branding) so each per-use-case file states only what makes
+/// it different rather than re-deriving an admin token or a client-role forbidden check.
 /// </summary>
 internal static class AdminTestSeeds
 {
@@ -31,7 +28,7 @@ internal static class AdminTestSeeds
 
     /// <summary>
     /// Registers a brand-new client user and returns an authenticated <see cref="HttpClient"/>
-    /// carrying only the Client role -- the caller every admin-only boundary test refuses.
+    /// carrying only the Client role: the caller every admin-only boundary test refuses.
     /// </summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <param name="label">A short label folded into the unique email, for readable test failures.</param>

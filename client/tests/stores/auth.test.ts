@@ -75,6 +75,8 @@ vi.mock('~/stores/client', () => ({
 }))
 
 const { useAuthStore } = await import('~/stores/auth')
+const { useCartStore } = await import('~/stores/cart')
+const { PricingCycle } = await import('~/types/pricingcycle')
 const { SignInOutcome } = await import('~/types/signinoutcome')
 const { ActionOutcome } = await import('~/types/actionoutcome')
 const { EmailConfirmationStatus } = await import('~/types/emailconfirmationstatus')
@@ -463,5 +465,59 @@ describe('useAuthStore.signOut', () => {
     await store.signOut()
 
     expect(navigate).toHaveBeenCalledWith('/client/login')
+  })
+})
+
+describe('useAuthStore cart on sign-out', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    logoutMock.mockReset().mockResolvedValue(undefined)
+    vi.stubGlobal('useRuntimeConfig', () => ({ public: { authMode: 'local' } }))
+  })
+
+  it('empties the cart when the client logs out', async () => {
+    const cart = useCartStore()
+    cart.items = [{ pid: 1, name: 'Plan', billingcycle: PricingCycle.Monthly, cycleLabel: 'Monthly', amount: 5, currency: 'USD' }]
+
+    await useAuthStore().logout()
+
+    expect(cart.items).toEqual([])
+  })
+
+  it('empties the cart when the local session ends', async () => {
+    const cart = useCartStore()
+    cart.items = [{ pid: 1, name: 'Plan', billingcycle: PricingCycle.Monthly, cycleLabel: 'Monthly', amount: 5, currency: 'USD' }]
+
+    await useAuthStore().endLocalSession()
+
+    expect(cart.items).toEqual([])
+  })
+})
+
+describe('useAuthStore.endLocalSession', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    logoutMock.mockReset()
+  })
+
+  it('clears the session cookies and the signed-in account without leaving the page', async () => {
+    logoutMock.mockResolvedValue(undefined)
+    const store = useAuthStore()
+    store.user = { id: 1, email: 'ada@example.com' } as never
+
+    await store.endLocalSession()
+
+    expect(logoutMock).toHaveBeenCalledTimes(1)
+    expect(store.user).toBeNull()
+  })
+
+  it('still ends the session on this side when the clear is refused', async () => {
+    logoutMock.mockRejectedValue(new Error('offline'))
+    const store = useAuthStore()
+    store.user = { id: 1, email: 'ada@example.com' } as never
+
+    await store.endLocalSession()
+
+    expect(store.user).toBeNull()
   })
 })

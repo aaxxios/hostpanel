@@ -1,19 +1,19 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Shared.Constants;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>POST /api/me/users/invite</c>: a client invites someone to their own account.</summary>
-/// <remarks>New coverage: this use case had no test before A7 Task 5.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Inviting a fresh address with the portal's permission keys succeeds.</summary>
+    /// <summary>Inviting a fresh address with a chosen permission list succeeds.</summary>
     [Fact]
     public async Task InviteSendsTheInvitation()
     {
@@ -24,10 +24,109 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = $"invitee-{Guid.NewGuid():N}@example.test",
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts,invoices",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts", "ViewPayInvoices" },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>An invitation sent from the portal leaves an activity line on the caller's own client, free of the invited address.</summary>
+    [Fact]
+    public async Task InviteWritesAnAuditLine()
+    {
+        var (client, clientId, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-invite-audit");
+
+        var response = await client.PostAsJsonAsync("/api/me/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissionMode = "All",
+            permissions = Array.Empty<string>(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+        var lines = await db.ActivityLogs.AsNoTracking().Where(l => l.ClientId == clientId).ToListAsync();
+        var line = lines.Should().ContainSingle(l => l.Description.StartsWith("Invited User", StringComparison.Ordinal)).Subject;
+        line.Description.Should().NotContain("@");
+    }
+
+    /// <summary>Inviting with every permission sends the mode and an empty list, and succeeds.</summary>
+    [Fact]
+    public async Task InviteWithAllPermissionsSendsTheInvitation()
+    {
+        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-invite-all");
+
+        var response = await client.PostAsJsonAsync("/api/me/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissionMode = "All",
+            permissions = Array.Empty<string>(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>Choosing permissions but listing none is a validation error.</summary>
+    [Fact]
+    public async Task InviteRefusesAnEmptyChosenList()
+    {
+        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-invite-empty");
+
+        var response = await client.PostAsJsonAsync("/api/me/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissionMode = "Choose",
+            permissions = Array.Empty<string>(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await ClientsTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>A list entry that combines permissions is a validation error, not a wider grant.</summary>
+    [Fact]
+    public async Task InviteRefusesACombinedListEntry()
+    {
+        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-invite-combined");
+
+        var response = await client.PostAsJsonAsync("/api/me/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissionMode = "Choose",
+            permissions = new[] { "All" },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await ClientsTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>Granting every permission while also listing some is a validation error.</summary>
+    [Fact]
+    public async Task InviteRefusesAListWithAllMode()
+    {
+        var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "my-invite-all-list");
+
+        var response = await client.PostAsJsonAsync("/api/me/users/invite", new
+        {
+            email = $"invitee-{Guid.NewGuid():N}@example.test",
+            firstName = "Invitee",
+            lastName = "Person",
+            permissionMode = "All",
+            permissions = new[] { "ViewDomains" },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await ClientsTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 
     /// <summary>Inviting the caller's own address answers <c>CANNOT_INVITE_ACCOUNT_OWNER</c>.</summary>
@@ -43,7 +142,8 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = ownEmail,
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts" },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -61,7 +161,8 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = inviteeEmail,
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts" },
         });
         first.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
@@ -70,7 +171,8 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = inviteeEmail,
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts" },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -86,7 +188,8 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = "invitee@example.test",
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts" },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -105,7 +208,8 @@ public sealed class InviteMyUserTests(IntegrationTestFactory factory) : IClassFi
             email = "invitee@example.test",
             firstName = "Invitee",
             lastName = "Person",
-            permissions = "contacts",
+            permissionMode = "Choose",
+            permissions = new[] { "ViewManageContacts" },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

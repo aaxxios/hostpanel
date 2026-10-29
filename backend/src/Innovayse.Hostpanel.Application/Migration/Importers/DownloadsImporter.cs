@@ -5,85 +5,86 @@ using Innovayse.Hostpanel.Application.Migration.Importers.Records;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Innovayse.Hostpanel.Domain.Support;
-using Microsoft.Extensions.Logging;
+
 namespace Innovayse.Hostpanel.Application.Migration.Importers;
 
 /// <summary>
 /// Imports download categories, then downloadable files placed into the imported category (or the
-/// first available one, or none). Split out of <c>MigrationPullWorker</c> (A6 Task 6).
+/// first available one; a file is skipped when there is no category at all).
 /// </summary>
-/// <param name="context">The module's data context.</param>
-/// <param name="uow">Unit of work the imported category or file is saved through.</param>
-/// <param name="pager">Pages through the source plugin's download datasets.</param>
-/// <param name="logWriter">Writes one migration log row per file record.</param>
-/// <param name="logger">Logs a failed record.</param>
-public sealed class DownloadsImporter(
-    IHostpanelDbContext context,
-    IUnitOfWork uow,
-    MigrationRecordPager pager,
-    MigrationLogWriter logWriter,
-    ILogger<DownloadsImporter> logger) : IMigrationEntityImporter
+public sealed class DownloadsImporter : IMigrationEntityImporter
 {
+    /// <summary>The module's data context.</summary>
+    private readonly IHostpanelDbContext _context;
+
+    /// <summary>Pages through the source plugin's download datasets.</summary>
+    private readonly MigrationRecordPager _pager;
+
+    /// <summary>Pages through each record dataset and records each record's outcome.</summary>
+    private readonly MigrationRecordRunner _runner;
+
+    /// <summary>Initializes a new instance of the <see cref="DownloadsImporter"/> class.</summary>
+    /// <param name="context">The module's data context.</param>
+    /// <param name="pager">Pages through the source plugin's download datasets.</param>
+    /// <param name="runner">Pages through each record dataset and records each record's outcome.</param>
+    public DownloadsImporter(IHostpanelDbContext context, MigrationRecordPager pager, MigrationRecordRunner runner)
+    {
+        _context = context;
+        _pager = pager;
+        _runner = runner;
+    }
+
+    /// <inheritdoc/>
+    public MigrationEntityType EntityType => MigrationEntityType.Downloads;
+
     /// <inheritdoc/>
     public async Task ImportAsync(MigrationJob job, CancellationToken ct)
     {
         // Step 1: categories
         var catIdMap = new Dictionary<int, int>(); // sourceCatId → localCatId
 
-        await foreach (var page in pager.PagesAsync<DownloadCategoryRecord>(job, "download_categories", ct))
+        await foreach (var page in _pager.PagesAsync<DownloadCategoryRecord>(job, "download_categories", ct))
         {
             foreach (var cat in page)
             {
                 var newCat = DownloadCategory.Create(cat.Name, cat.Description ?? string.Empty, cat.Hidden, null);
-                // Was IDownloadRepository.AddCategory.
-                context.DownloadCategories.Add(newCat);
-                await uow.SaveChangesAsync(ct);
+                _context.DownloadCategories.Add(newCat);
+                await _context.SaveChangesAsync(ct);
                 catIdMap[cat.Id] = newCat.Id;
             }
         }
 
         // Step 2: files
-        int imported = 0, skipped = 0;
+        await _runner.RunAsync(new MigrationRecordRun<DownloadRecord>(job, EntityType, "downloads", ImportDownloadAsync), ct);
 
-        await foreach (var page in pager.PagesAsync<DownloadRecord>(job, "downloads", ct))
+        // One record of the dataset; the runner counts, logs and isolates its outcome.
+        async Task<RecordImportResult> ImportDownloadAsync(DownloadRecord rec, CancellationToken ct)
         {
-            foreach (var rec in page)
+            int? catId = rec.CategoryId.HasValue && catIdMap.TryGetValue(rec.CategoryId.Value, out var localCatId)
+                ? localCatId
+                : catIdMap.Values.Select(id => (int?)id).FirstOrDefault();
+            if (catId is null)
             {
-                try
-                {
-                    var catId = rec.CategoryId.HasValue && catIdMap.TryGetValue(rec.CategoryId.Value, out var localCatId)
-                        ? localCatId
-                        : catIdMap.Values.FirstOrDefault();
-
-                    var resolvedTitle = !string.IsNullOrWhiteSpace(rec.Title) ? rec.Title
-                        : !string.IsNullOrWhiteSpace(rec.Filename) ? rec.Filename
-                        : "Untitled";
-
-                    var download = Download.Create(
-                        resolvedTitle,
-                        rec.Description ?? string.Empty,
-                        rec.Type,
-                        rec.Filename,
-                        catId,
-                        rec.ClientsOnly,
-                        false,
-                        rec.Hidden);
-
-                    // Was IDownloadRepository.Add.
-                    context.Downloads.Add(download);
-                    await uow.SaveChangesAsync(ct);
-                    imported++;
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Downloads, rec.Title, ImportOutcome.Imported, null, ct);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Skipped download '{Title}' during migration", rec.Title);
-                    await logWriter.WriteLogAsync(job.Id, MigrationEntityType.Downloads, rec.Title, ImportOutcome.Failed, ex.Message, ct);
-                }
+                return RecordImportResult.Skipped(MigrationSkipReason.DownloadCategoryNotFound);
             }
 
-            job.UpdateProgress(MigrationEntityType.Downloads, imported, skipped);
-            await uow.SaveChangesAsync(ct);
+            var resolvedTitle = !string.IsNullOrWhiteSpace(rec.Title) ? rec.Title
+                : !string.IsNullOrWhiteSpace(rec.Filename) ? rec.Filename
+                : MigrationDefaults.DownloadTitle;
+
+            var download = Download.Create(
+                resolvedTitle,
+                rec.Description ?? string.Empty,
+                rec.Type,
+                rec.Filename,
+                catId.Value,
+                rec.ClientsOnly,
+                false,
+                rec.Hidden);
+
+            _context.Downloads.Add(download);
+            await _context.SaveChangesAsync(ct);
+            return RecordImportResult.Imported;
         }
     }
 }

@@ -9,10 +9,8 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 public interface ISshHostKeyScanner
 {
     /// <summary>Connects far enough to receive the host key, then aborts.</summary>
-    /// <param name="host">Host.</param>
-    /// <param name="port">SSH port.</param>
-    /// <param name="timeout">Connect timeout.</param>
+    /// <param name="endpoint">The endpoint to read, with its connect timeout.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The presented key, or how the endpoint failed to present one.</returns>
-    public Task<SshHostKeyProbe> ScanAsync(string host, int port, TimeSpan timeout, CancellationToken ct);
+    public Task<SshHostKeyProbe> ScanAsync(SshEndpoint endpoint, CancellationToken ct);
 }

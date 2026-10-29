@@ -1,10 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 
@@ -14,7 +11,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Integrations;
 /// caller with only the Client role is refused, and the route is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>IntegrationsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetIntegrationTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -32,6 +28,7 @@ public sealed class GetIntegrationTests(IntegrationTestFactory factory) : IClass
         save.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var get = await client.GetFromJsonAsync<JsonElement>("/api/admin/integrations/stripe");
+        get.GetProperty("name").GetString().Should().Be("Stripe");
         get.GetProperty("isEnabled").GetBoolean().Should().BeTrue();
         get.GetRawText().Should().NotContain("sk_live_should_never_be_echoed_back");
         var secret = get.GetProperty("config").GetProperty("secret_key");

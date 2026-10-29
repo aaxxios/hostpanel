@@ -1,7 +1,7 @@
 /**
  * Playwright flows against `vite preview` of a real production build. The Hostpanel API is
  * never running: every spec stubs it with `page.route` (see `e2e/support/stubApi.ts`), so the
- * panel is exercised exactly as the browser sees it — same-origin `/api/*` calls — and the suite
+ * panel is exercised exactly as the browser sees it, same-origin `/api/*` calls, and the suite
  * runs without a backend, a database or a sign-on service.
  */
 import { defineConfig, devices } from '@playwright/test'

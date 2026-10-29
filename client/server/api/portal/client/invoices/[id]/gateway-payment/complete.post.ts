@@ -7,17 +7,12 @@
  * @module server/api/portal/client/invoices/[id]/gateway-payment/complete.post
  */
 
-import type { GatewayPaymentState } from '~/types/gatewaypaymentstate'
-
-/** What the backend answers a gateway verification with. */
-interface GatewayPaymentResult {
-  /** Where the payment stands, as the bank reported it. */
-  state: GatewayPaymentState.Paid | GatewayPaymentState.Pending | GatewayPaymentState.Declined
-}
+import type { GatewayCompletion } from '~/types/gatewaycompletion'
+import { HttpMethod } from '~/types/httpmethod'
 
 export default defineEventHandler(async (event) => {
   const id = requireRouteParam(event, 'id')
 
-  return await internalApiCall<GatewayPaymentResult>(
-    event, `/me/invoices/${id}/gateway-payment/complete`, { method: 'POST' })
+  return await internalApiCall<GatewayCompletion>(
+    event, `/me/invoices/${id}/gateway-payment/complete`, { method: HttpMethod.Post })
 })

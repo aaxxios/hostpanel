@@ -60,6 +60,22 @@ export interface TicketReply {
   createdAt: string
 }
 
+/** The department a ticket is filed under. */
+export interface TicketDepartment {
+  /** Department FK, null when unassigned. */
+  id: number | null
+  /** Department name, null when unassigned. */
+  name: string | null
+}
+
+/** The staff member a ticket is assigned to. */
+export interface TicketAssignee {
+  /** Staff member FK, null when unassigned. */
+  id: number | null
+  /** Staff member name, null when unassigned. */
+  name: string | null
+}
+
 /** Full DTO representing a single support ticket with all its replies. */
 export interface Ticket {
   /** Unique ticket identifier. */
@@ -74,14 +90,10 @@ export interface Ticket {
   status: TicketStatus
   /** Priority level. */
   priority: TicketPriority
-  /** Department FK, if assigned. */
-  departmentId: number | null
-  /** Department name, if assigned. */
-  departmentName: string | null
-  /** Assigned staff member FK, if any. */
-  assignedToStaffId: number | null
-  /** Assigned staff member name, if any. */
-  assignedToStaffName: string | null
+  /** The department the ticket is filed under. */
+  department: TicketDepartment
+  /** The staff member the ticket is assigned to. */
+  assignee: TicketAssignee
   /** ISO 8601 creation timestamp. */
   createdAt: string
   /** All replies on this ticket. */
@@ -108,8 +120,8 @@ export interface TicketListItem {
   lastReplyAt: string | null
   /** Whether this ticket has been flagged by staff. */
   isFlagged: boolean
-  /** Full name of the client who opened the ticket; absent when the API did not resolve it. */
-  clientName?: string | null
+  /** Full name of the client who opened the ticket; every ticket has one, since its client cannot be deleted. */
+  clientName: string
   /** FK to the client who opened the ticket. */
   clientId: number
 }

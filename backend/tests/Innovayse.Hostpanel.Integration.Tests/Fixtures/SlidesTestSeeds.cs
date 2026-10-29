@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Slides.Enums;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
@@ -12,6 +11,9 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 /// </summary>
 internal static class SlidesTestSeeds
 {
+    /// <summary>An id no seed or prior test in this fixture ever creates.</summary>
+    public const int NoSuchId = 999_999_999;
+
     /// <summary>A client carrying the seeded admin's bearer token.</summary>
     /// <param name="factory">The shared API + PostgreSQL host.</param>
     /// <returns>An authenticated client.</returns>
@@ -37,16 +39,17 @@ internal static class SlidesTestSeeds
     /// <param name="sortOrder">Display order.</param>
     /// <param name="isActive">Whether the slide is created active.</param>
     /// <param name="audience">Which visitors see the slide.</param>
+    /// <param name="productId">The product the slide promotes, or <see langword="null"/> for none.</param>
     /// <returns>The request body.</returns>
     public static object CreateBody(
-        int sortOrder = 0, bool isActive = true, SlideAudience audience = SlideAudience.All) => new
+        int sortOrder = 0, bool isActive = true, SlideAudience audience = SlideAudience.All, int? productId = null) => new
         {
             iconName = "cloud-check",
             brandColor = "#0ea5e9",
             imageUrl = "/uploads/slides/seed.png",
             demoUrl = (string?)null,
             learnMoreUrl = (string?)null,
-            productId = (int?)null,
+            productId,
             sortOrder,
             isActive,
             targetAudience = audience,

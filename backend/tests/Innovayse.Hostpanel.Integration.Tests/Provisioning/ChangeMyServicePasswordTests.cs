@@ -1,10 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Provisioning;
 
@@ -24,16 +21,10 @@ public sealed class ChangeMyServicePasswordTests(IntegrationTestFactory factory)
         var ownerServiceId = await ProvisioningTestSeeds.SeedServiceAsync(factory, http, adminToken);
         (await http.PostAsync($"/api/provisioning/{ownerServiceId}/provision", null)).EnsureSuccessStatusCode();
 
-        var strangerEmail = $"change-pwd-stranger-{Guid.NewGuid():N}@example.com";
-        var registerResponse = await http.PostAsJsonAsync("/api/auth/register", new
-        {
-            email = strangerEmail,
-            password = "Pass@123!",
-            firstName = "Stranger",
-            lastName = "User"
-        });
-        registerResponse.EnsureSuccessStatusCode();
-        var strangerToken = await factory.GetClientTokenAsync(strangerEmail, "Pass@123!");
+        // The stranger's client row is written inline, so the refusal is the ownership check and never
+        // the permission check of a caller whose client row a queued handler has not written yet.
+        var stranger = await ClientsTestSeeds.RegisterRealClientAsync(factory, "change-pwd-stranger");
+        var strangerToken = await factory.GetClientTokenAsync(stranger.Email, ClientsTestSeeds.TestPassword);
         http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", strangerToken);
 

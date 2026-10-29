@@ -5,7 +5,7 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Support.Queries.ListKbArticles;
 
 /// <summary>Validator for <see cref="ListKbArticlesQuery"/>.</summary>
-/// <remarks>No rule: a boolean flag has no invalid shape. Kept so the pattern is uniform.</remarks>
+/// <remarks>No rule: the query carries no input. Kept so the pattern is uniform.</remarks>
 public sealed class ListKbArticlesValidator : LocalizedValidator<ListKbArticlesQuery>
 {
     /// <summary>Initializes validator with localization service.</summary>

@@ -2,19 +2,21 @@
 /**
  * Import report of a finished migration job: one row per imported, skipped or failed source row,
  * filterable by entity group and outcome, paged. The log comes from the migration store, which
- * owns the request and the refusal sentence.
+ * owns the request and the refusal sentence; a refused read shows that sentence with a Retry
+ * button instead of the "no records" state.
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useMigrationStore } from '@/stores/migration'
 import { formatClock } from '@/lib/format'
-import { migrationActionLabelKey } from '@/lib/migrationStatus'
+import { migrationActionLabelKey, migrationSkipReasonLabelKey } from '@/lib/migrationStatus'
 import { migrationActionTone } from '@/lib/tones'
-import { MIGRATION_ENTITY_KEYS, MigrationLogAction } from '@/types/migration'
+import { MigrationEntityType, MigrationLogAction } from '@/types/migration'
 import type { MigrationLogEntry } from '@/types/migration'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
 import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
@@ -48,22 +50,17 @@ const totalCount = ref(0)
 /** True while a page is being fetched. */
 const loading = ref(false)
 
+/** The API's sentence for the last refused read, null when the last read succeeded. */
+const loadError = ref<string | null>(null)
+
 /** Selected outcome filter; empty means all. */
-const filterAction = ref('')
+const filterAction = ref<MigrationLogAction | ''>('')
 
 /** Selected entity-group filter; empty means all. */
-const filterEntityType = ref('')
+const filterEntityType = ref<MigrationEntityType | ''>('')
 
 /** Current one-based page. */
 const page = ref(1)
-
-/**
- * Converts an entity key to the PascalCase name the log filter and rows use.
- *
- * @param key - Camel-case entity key such as `ticketReplies`.
- * @returns The PascalCase name such as `TicketReplies`.
- */
-const toLogEntityType = (key: string): string => `${key.charAt(0).toUpperCase()}${key.slice(1)}`
 
 /**
  * Converts a log entity name to the camel-case key of the locale catalogue.
@@ -71,7 +68,7 @@ const toLogEntityType = (key: string): string => `${key.charAt(0).toUpperCase()}
  * @param type - PascalCase name such as `TicketReplies`.
  * @returns The camel-case key such as `ticketReplies`.
  */
-const toEntityKey = (type: string): string => `${type.charAt(0).toLowerCase()}${type.slice(1)}`
+const toEntityKey = (type: MigrationEntityType): string => `${type.charAt(0).toLowerCase()}${type.slice(1)}`
 
 /** Outcome filter options. */
 const actionOptions = computed(() => [
@@ -85,13 +82,26 @@ const actionOptions = computed(() => [
 /** Entity-group filter options. */
 const entityTypeOptions = computed(() => [
   { value: '', label: t('migration.migrationReportTable.allTypes') },
-  ...MIGRATION_ENTITY_KEYS.map(key => ({
-    value: toLogEntityType(key),
-    label: t(`migrationEntities.${key}`),
+  ...Object.values(MigrationEntityType).map(type => ({
+    value: type,
+    label: t(`migrationEntities.${toEntityKey(type)}`),
   })),
 ])
 
-/** Fetches the current page of the log. */
+/**
+ * Caption of a row's reason: the translated skip reason, else the failure detail, else a dash.
+ *
+ * @param entry - The log row.
+ * @returns The text shown in the reason column.
+ */
+const reasonText = (entry: MigrationLogEntry): string =>
+  entry.skipReason ? t(migrationSkipReasonLabelKey[entry.skipReason]) : (entry.reason ?? '—')
+
+/**
+ * Fetches the current page of the log; a refusal keeps its sentence for the error state.
+ *
+ * @returns Resolves when the request has settled.
+ */
 const load = async (): Promise<void> => {
   loading.value = true
   const result = await store.fetchLogs(props.jobId, {
@@ -101,10 +111,13 @@ const load = async (): Promise<void> => {
     pageSize: DEFAULT_PAGE_SIZE,
   })
   loading.value = false
-  if (result) {
-    items.value = result.items
-    totalCount.value = result.totalCount
+  if (result === null) {
+    loadError.value = store.jobError ?? t('errors.noAnswer')
+    return
   }
+  loadError.value = null
+  items.value = result.items
+  totalCount.value = result.totalCount
 }
 
 // A filter change restarts from the first page; the first run loads the report.
@@ -146,8 +159,17 @@ watch(page, () => {
         />
       </UiStack>
 
+      <UiErrorState
+        v-if="loadError !== null"
+        :message="loadError"
+        :loading="loading"
+        testid="migration-report-error"
+        @retry="load"
+      />
+
       <!-- Table -->
       <UiTable
+        v-else
         density="compact"
         :loading="loading && items.length === 0"
         :empty="!loading && items.length === 0"
@@ -172,7 +194,7 @@ watch(page, () => {
                 {{ t(migrationActionLabelKey[entry.action]) }}
               </UiBadge>
             </UiTableCell>
-            <UiTableCell muted>{{ entry.reason ?? '—' }}</UiTableCell>
+            <UiTableCell muted>{{ reasonText(entry) }}</UiTableCell>
             <UiTableCell muted class="font-mono">{{ formatClock(entry.createdAt, locale) }}</UiTableCell>
           </UiTableRow>
         </UiTableBody>

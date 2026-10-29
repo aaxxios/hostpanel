@@ -26,12 +26,12 @@ afterEach(async () => {
 })
 
 describe('POST /api/portal/client/invoices/:id/pay', () => {
-  it('posts the pay method to the signed-in invoice endpoint with the bearer', async () => {
+  it('posts the pay method and the attempt to the signed-in invoice endpoint with the bearer', async () => {
     backend.respondWith(() => ({ body: { paid: true } }))
 
     const result = await route.default(makeEvent({
       params: { id: '9' },
-      body: { paymethodid: 4 },
+      body: { paymentMethodId: 'pm_4', attemptId: 'attempt-1' },
       cookies: await signedIn('jwt'),
     }))
 
@@ -39,7 +39,7 @@ describe('POST /api/portal/client/invoices/:id/pay', () => {
     expect(backend.requests[0]?.method).toBe('POST')
     expect(backend.requests[0]?.url).toBe('/api/me/invoices/9/pay')
     expect(backend.requests[0]?.headers['authorization']).toBe('Bearer jwt')
-    expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ paymethodid: 4 })
+    expect(JSON.parse(backend.requests[0]?.body ?? '{}')).toEqual({ paymentMethodId: 'pm_4', attemptId: 'attempt-1' })
   })
 
   it('refreshes an expired access token once and retries with the new one', async () => {

@@ -1,9 +1,8 @@
 /**
  * Typography vocabulary for `UiText`, `UiHeading` and `UiLabel`.
  *
- * Each set is closed. `plain` is the compatibility member: it adds no classes, so a screen that
- * still passes its own typography classes renders exactly as before while screens migrate to the
- * named looks.
+ * Each set is closed. `plain` adds no classes, so a screen that passes its own typography classes
+ * keeps them.
  */
 
 /** Closed set of text colours. */

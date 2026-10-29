@@ -4,36 +4,34 @@ using Innovayse.Hostpanel.Application.Migration.Importers;
 using Innovayse.Hostpanel.Application.Migration.Pull;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration.Importers;
 
 /// <summary>
 /// <see cref="TicketsImporter"/>, driven end to end through <c>MigrationPullWorker.RunAsync</c>
-/// against a <see cref="FakeMigrationSource"/> -- moved unchanged from the former
-/// <c>MigrationPullWorkerTests</c> (A7 Task 7), which exercised two of the fifteen importers
-/// before every one of them had its own test file.
+/// against a <see cref="FakeMigrationSource"/>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class TicketsImporterTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
     /// Two ticket records for the same client with the same subject: <see cref="TicketsImporter"/>
-    /// creates the first and skips the second as an in-run duplicate -- the dedup
-    /// <c>ITicketRepository.FindByClientAndSubjectAsync</c> performed before it was dissolved.
+    /// creates the first and skips the second as an in-run duplicate, matched on client and subject.
     /// </summary>
     [Fact]
     public async Task RunAsync_Tickets_CreatesFirstRecordAndSkipsTheInRunDuplicateAsync()
     {
-        var source = new FakeMigrationSource { Totals = new MigrationSourceTotals(0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) };
+        var source = new FakeMigrationSource { Totals = MigrationSourceTotals.Empty with { Support = new MigrationSupportTotals(Tickets: 2) } };
         using var host = MigrationTestSeeds.HostWithFakeSource(factory, source);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
         var email = await MigrationTestSeeds.SeedClientAsync(scope.ServiceProvider, context);
-        var job = await MigrationTestSeeds.SeedJobSelectingOnlyAsync(context, MigrationEntityType.Tickets);
+
+        // A record that names no department goes to one of this install's departments, so one must exist.
+        await SupportTestSeeds.SeedDepartmentAsync(context);
+        var job =await MigrationTestSeeds.SeedJobSelectingOnlyAsync(context, MigrationEntityType.Tickets);
         source.SetDatasetJson("tickets", $$"""
             [
                 {"ClientEmail":"{{email}}","Subject":"Duplicate Subject","Message":"First","Status":"Open","Priority":"Medium","DepartmentName":null,"CreatedAt":"2025-01-01T00:00:00Z"},
@@ -53,7 +51,7 @@ public sealed class TicketsImporterTests(IntegrationTestFactory factory) : IClas
             .ToListAsync();
         Assert.Equal(2, logs.Count);
         Assert.Single(logs, l => l.Action == MigrationLogAction.Imported);
-        Assert.Single(logs, l => l.Action == MigrationLogAction.Skipped);
+        Assert.Single(logs, l => l.Action == MigrationLogAction.Skipped && l.SkipReason == MigrationSkipReason.AlreadyExists && l.Reason == null);
 
         var reloaded = await context.MigrationJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id);
         Assert.Equal(MigrationJobStatus.Completed, reloaded.Status);

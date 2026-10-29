@@ -1,5 +1,5 @@
 using FluentValidation;
-using Innovayse.Hostpanel.Application.Billing.Commands.RefundInvoicePayment.Enums;
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
 using Microsoft.Extensions.Localization;
@@ -15,35 +15,28 @@ public sealed class RefundInvoicePaymentValidator : LocalizedValidator<RefundInv
     /// <summary>Maximum length of the notes field.</summary>
     private const int NotesMaxLength = 1000;
 
-    /// <summary>Valid refund type values.</summary>
-    private static readonly string[] ValidRefundTypes = Enum.GetNames<RefundType>();
-
     /// <summary>Initializes validator with localization service.</summary>
     /// <param name="localizer">String localizer for validation messages.</param>
     public RefundInvoicePaymentValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
         RuleFor(x => x.InvoiceId).MustBePositiveId(L["InvoiceIdInvalid"]);
-        RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).WithMessage(L["InvoiceRefundAmountInvalid"]);
-        RuleFor(x => x.RefundType)
-            .Must(t => ValidRefundTypes.Contains(t))
-            .WithMessage(L["InvoiceRefundTypeInvalid"]);
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage(L["InvoiceRefundAmountInvalid"]);
+        RuleFor(x => x.RefundType).IsInEnum().WithMessage(L["InvoiceRefundTypeInvalid"]);
 
-        // Required only where the handler reads it. RefundInvoicePaymentHandler overwrites
-        // Gateway with the literal "Credit Balance" when RefundType is CreditBalance, so demanding
-        // a non-empty value for that branch would refuse a request over a field that is discarded.
+        // Only a Manual refund records the gateway the caller names; the other types take it from
+        // the original payment or the credit balance.
         RuleFor(x => x.Gateway)
             .NotEmpty()
-            .When(x => x.RefundType != nameof(RefundType.CreditBalance))
+            .When(x => x.RefundType == RefundType.Manual)
             .WithMessage(L["InvoiceRefundGatewayInvalid"]);
-
         RuleFor(x => x.Gateway)
             .MaximumLength(GatewayMaxLength)
             .When(x => x.Gateway is not null)
             .WithMessage(L["InvoiceRefundGatewayMaxLengthInvalid", GatewayMaxLength]);
         RuleFor(x => x.RefundTransactionId)
             .NotEmpty()
-            .When(x => x.RefundType == nameof(RefundType.Manual))
+            .When(x => x.RefundType == RefundType.Manual)
             .WithMessage(L["InvoiceRefundTransactionIdRequiredInvalid"]);
         RuleFor(x => x.Notes)
             .MaximumLength(NotesMaxLength)

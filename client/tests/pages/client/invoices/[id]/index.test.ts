@@ -7,6 +7,7 @@ import { flushPromises } from '@vue/test-utils'
 import { mountPage, stubClientRuntime } from '~/tests/helpers/mountClient'
 import InvoicePage from '~/pages/client/invoices/[id]/index.vue'
 import { InvoiceStatus } from '~/types/invoicestatus'
+import { InvoiceTransactionType } from '~/types/invoicetransactiontype'
 
 /** The mocked billing endpoints the store reaches. */
 const billingApi = vi.hoisted(() => ({
@@ -28,7 +29,7 @@ vi.mock('~/utils/saveBlob', () => ({ saveBlob }))
  */
 const invoice = (overrides: Record<string, unknown> = {}) => ({
   id: 41, status: InvoiceStatus.Unpaid, currency: 'USD', invoiceDate: '2026-01-01', dueDate: '2099-01-15', paidAt: null, paymentMethod: 'card',
-  subTotal: 90, tax: 10, credit: 0, total: 100,
+  subTotal: 90, tax: 10, credit: 0, total: 100, amountDue: 100,
   items: [{ id: 1, description: 'Hosting', amount: 90 }], transactions: [],
   ...overrides
 })
@@ -54,7 +55,7 @@ describe('invoice page', () => {
   it('shows the amounts in the invoice currency, with tax only when there is some', async () => {
     billingApi.fetchInvoice.mockResolvedValue(invoice())
     const taxed = await mountPage(InvoicePage)
-    billingApi.fetchInvoice.mockResolvedValue(invoice({ tax: 0, total: 90 }))
+    billingApi.fetchInvoice.mockResolvedValue(invoice({ tax: 0, total: 90, amountDue: 90 }))
     const untaxed = await mountPage(InvoicePage)
 
     expect(taxed.find('[data-testid="invoice-items"]').text()).toContain('$100.00')
@@ -69,6 +70,14 @@ describe('invoice page', () => {
 
     expect(wrapper.find('[data-testid="invoice-pay-now"]').attributes('href')).toBe('/client/invoices/41/pay')
     expect(wrapper.find('[data-testid="invoice-unpaid-banner"]').exists()).toBe(true)
+  })
+
+  it('puts what is still owed on the pay button of a part-paid invoice, not the whole total', async () => {
+    billingApi.fetchInvoice.mockResolvedValue(invoice({ amountDue: 60, transactions: [{ id: 1, amount: 40, type: InvoiceTransactionType.Payment }] }))
+
+    const wrapper = await mountPage(InvoicePage)
+
+    expect(wrapper.find('[data-testid="invoice-pay-amount"]').text()).toContain('$60.00')
   })
 
   it('offers no payment for a paid invoice', async () => {

@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Projects;
 
 /// <summary>
-/// Integration tests for the <c>CreateProject</c> use case — <c>POST /api/admin/projects</c>.
+/// Integration tests for the <c>CreateProject</c> use case: <c>POST /api/admin/projects</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateProjectTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -79,6 +76,26 @@ public sealed class CreateProjectTests(IntegrationTestFactory factory) : IClassF
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         await StorefrontContentTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.PROJECT_SLUG_EXISTS);
+    }
+
+    /// <summary>
+    /// Two creates racing for one slug end as one success and one slug refusal, never a server error:
+    /// when both pass the existence check, the unique index refuses the loser and the handler maps it.
+    /// </summary>
+    [Fact]
+    public async Task Create_ConcurrentSameSlug_OneWinsTheOtherIsRefusedWithSlugExists()
+    {
+        var client = await StorefrontContentTestSeeds.AdminClientAsync(factory);
+        var slug = $"race-{Guid.NewGuid():n}";
+
+        var responses = await Task.WhenAll(
+            client.PostAsJsonAsync("/api/admin/projects", StorefrontContentTestSeeds.ProjectBody(slug: slug)),
+            client.PostAsJsonAsync("/api/admin/projects", StorefrontContentTestSeeds.ProjectBody(slug: slug)));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.Created).Should().Be(1);
+        var loser = responses.Single(r => r.StatusCode != HttpStatusCode.Created);
+        loser.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await StorefrontContentTestSeeds.AssertCodeAsync(loser, HostpanelErrorCodes.PROJECT_SLUG_EXISTS);
     }
 
     /// <summary>The route is not for anonymous callers.</summary>

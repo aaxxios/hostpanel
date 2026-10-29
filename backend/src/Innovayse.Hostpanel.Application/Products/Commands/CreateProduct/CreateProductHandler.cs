@@ -1,7 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Products.Common;
-using Innovayse.Hostpanel.Application.Products.Constants;
 using Innovayse.Hostpanel.Application.Products.Extensions;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Shared.Models;
@@ -18,15 +17,20 @@ public sealed class CreateProductHandler
     /// <summary>Resolves the base currency the legacy price fields and columns are in.</summary>
     private readonly IPayerCurrencyResolver _payerCurrency;
 
+    /// <summary>Reads the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>
     ///     Initializes the handler.
     /// </summary>
     /// <param name="context">The module's data context.</param>
     /// <param name="payerCurrency">Resolves the base currency the legacy price fields and columns are in.</param>
-    public CreateProductHandler(IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency)
+    /// <param name="clock">Reads the current moment.</param>
+    public CreateProductHandler(IHostpanelDbContext context, IPayerCurrencyResolver payerCurrency, IClock clock)
     {
         _context = context;
         _payerCurrency = payerCurrency;
+        _clock = clock;
     }
 
     /// <summary>
@@ -47,15 +51,15 @@ public sealed class CreateProductHandler
             return Result<int>.FailureCode(HostpanelErrorCodes.PRODUCT_GROUP_NOT_FOUND);
         }
 
-        var prices = await ProductPriceDtos.ResolveAsync(
-            cmd.Prices, cmd.MonthlyPrice, cmd.AnnualPrice, _payerCurrency, ct);
+        var prices = await _payerCurrency.ResolveProductPricesAsync(
+            cmd.Prices, cmd.MonthlyPrice, cmd.AnnualPrice, ct);
 
         // The legacy single-currency columns are kept one release so a rollback and the admin
         // services grid still read real numbers: they mirror the base-currency prices.
         var product = Product.Create(
             cmd.GroupId, cmd.Name, cmd.Description, cmd.Website, cmd.Slug, cmd.PackageName, cmd.Type,
-            prices.BaseMonthly, prices.BaseAnnual, cmd.ServerGroupId, cmd.IsFeatured, cmd.SortOrder);
-        prices.ApplyTo(product);
+            prices.BaseMonthly, prices.BaseAnnual, _clock.UtcNow, cmd.ServerGroupId, cmd.IsFeatured, cmd.SortOrder);
+        product.ReplacePrices(prices.CurrencyPrices, prices.ReplaceAllCurrencies);
 
         if (cmd.IsFeatured)
         {

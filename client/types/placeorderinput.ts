@@ -20,6 +20,14 @@ export interface PlaceOrderInput {
    */
   confirmCard: (clientSecret: string) => Promise<ConfirmedPayment>
   /**
+   * Asks the payer whether to pay a total that differs from the one the cart showed.
+   *
+   * @param shown - The total the cart showed, formatted.
+   * @param charged - The total the backend billed, formatted.
+   * @returns True when the payer agrees to pay the billed total.
+   */
+  confirmTotalChange: (shown: string, charged: string) => boolean
+  /**
    * Turns a site path into the visitor's localised path; a store has no router.
    *
    * @param path - A path such as `/client/invoices`, optionally with a query string.

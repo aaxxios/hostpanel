@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Migration;
@@ -11,7 +10,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
@@ -91,10 +89,10 @@ public static class MigrationTestSeeds
     /// <returns>The isolated host.</returns>
     public static WebApplicationFactory<Program> HostWithFakeSource(IntegrationTestFactory factory, IMigrationSource source) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddScoped<IMigrationSource>(_ => source)));
+            builder.ConfigureTestServices(services => services.AddSingleton<IMigrationSource>(source)));
 
     /// <summary>
-    /// Seeds a client backed by a genuine ASP.NET Identity user -- <c>ResolveClientIdAsync</c>
+    /// Seeds a client backed by a genuine ASP.NET Identity user: <c>ResolveClientIdAsync</c>
     /// looks the client up by the identity subject <see cref="IIdentityProvider.FindByEmailAsync"/>
     /// resolves.
     /// </summary>
@@ -109,7 +107,7 @@ public static class MigrationTestSeeds
         var created = await userManager.CreateAsync(user, "Pass@123!");
         Assert.True(created.Succeeded);
 
-        context.Clients.Add(Client.Create(user.Id, "Jane", "Doe", email));
+        context.Clients.Add(Client.Create(user.Id, "Jane", "Doe", email, DateTimeOffset.UtcNow));
         await context.SaveChangesAsync(CancellationToken.None);
         return email;
     }
@@ -129,8 +127,9 @@ public static class MigrationTestSeeds
     }
 
     /// <summary>
-    /// Creates a pending job that selects exactly one entity type for export -- the shape every
+    /// Creates a queued job that selects exactly one entity type for export, the shape every
     /// single-importer test needs, so the worker it drives runs only the importer under test.
+    /// Queued, because the worker pulls only a job whose pull was requested.
     /// </summary>
     /// <param name="context">The data context to seed the job into.</param>
     /// <param name="only">The one entity type the job selects.</param>
@@ -138,24 +137,26 @@ public static class MigrationTestSeeds
     public static async Task<MigrationJob> SeedJobSelectingOnlyAsync(
         IHostpanelDbContext context, Domain.Migration.Enums.MigrationEntityType only)
     {
-        var job = MigrationJob.Create(
-            label: "test",
-            sourceUrl: "http://fake-source.invalid",
-            exportClients: only == Domain.Migration.Enums.MigrationEntityType.Clients,
-            exportInvoices: only == Domain.Migration.Enums.MigrationEntityType.Invoices,
-            exportServices: only == Domain.Migration.Enums.MigrationEntityType.Services,
-            exportDomains: only == Domain.Migration.Enums.MigrationEntityType.Domains,
-            exportTickets: only == Domain.Migration.Enums.MigrationEntityType.Tickets,
-            exportProducts: only == Domain.Migration.Enums.MigrationEntityType.Products,
-            exportOrders: only == Domain.Migration.Enums.MigrationEntityType.Orders,
-            exportTransactions: only == Domain.Migration.Enums.MigrationEntityType.Transactions,
-            exportQuotes: only == Domain.Migration.Enums.MigrationEntityType.Quotes,
-            exportKnowledgebase: only == Domain.Migration.Enums.MigrationEntityType.Knowledgebase,
-            exportContacts: only == Domain.Migration.Enums.MigrationEntityType.Contacts,
-            exportTicketReplies: only == Domain.Migration.Enums.MigrationEntityType.TicketReplies,
-            exportAnnouncements: only == Domain.Migration.Enums.MigrationEntityType.Announcements,
-            exportDownloads: only == Domain.Migration.Enums.MigrationEntityType.Downloads,
-            exportNetworkIssues: only == Domain.Migration.Enums.MigrationEntityType.NetworkIssues);
+        var job = MigrationJob.Create(new MigrationJobSetup(
+            Label: "test",
+            SourceUrl: "http://fake-source.invalid",
+            Selection: new MigrationExportSelection(
+                Clients: only == Domain.Migration.Enums.MigrationEntityType.Clients,
+                Invoices: only == Domain.Migration.Enums.MigrationEntityType.Invoices,
+                Services: only == Domain.Migration.Enums.MigrationEntityType.Services,
+                Domains: only == Domain.Migration.Enums.MigrationEntityType.Domains,
+                Tickets: only == Domain.Migration.Enums.MigrationEntityType.Tickets,
+                Products: only == Domain.Migration.Enums.MigrationEntityType.Products,
+                Orders: only == Domain.Migration.Enums.MigrationEntityType.Orders,
+                Transactions: only == Domain.Migration.Enums.MigrationEntityType.Transactions,
+                Quotes: only == Domain.Migration.Enums.MigrationEntityType.Quotes,
+                Knowledgebase: only == Domain.Migration.Enums.MigrationEntityType.Knowledgebase,
+                Contacts: only == Domain.Migration.Enums.MigrationEntityType.Contacts,
+                TicketReplies: only == Domain.Migration.Enums.MigrationEntityType.TicketReplies,
+                Announcements: only == Domain.Migration.Enums.MigrationEntityType.Announcements,
+                Downloads: only == Domain.Migration.Enums.MigrationEntityType.Downloads,
+                NetworkIssues: only == Domain.Migration.Enums.MigrationEntityType.NetworkIssues)));
+        job.Queue(DateTimeOffset.UtcNow);
         context.MigrationJobs.Add(job);
         await context.SaveChangesAsync(CancellationToken.None);
         return job;

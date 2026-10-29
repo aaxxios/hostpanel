@@ -1,7 +1,6 @@
 /**
- * Tests for the fallback labels: a resolved name passes through, an unresolved one becomes
- * "Client #id" / "Product #id" / "Unknown", an empty value becomes "N/A", and the registration
- * period is pluralised, with "N/A" for 0 or less.
+ * Tests for the fallback labels: a present value passes through, a missing one becomes "Unknown"
+ * or "N/A", and the registration period is pluralised, with "N/A" for 0 or less.
  */
 import { describe, expect, it } from 'vitest'
 import { defineComponent } from 'vue'
@@ -33,18 +32,10 @@ const labels = (): FallbackLabels => {
 }
 
 describe('useFallbackLabels', () => {
-  it('passes a resolved name through', () => {
-    const { clientLabel, productLabel } = labels()
-    expect(clientLabel('Ada Lovelace', 7)).toBe('Ada Lovelace')
-    expect(productLabel('VPS', 3)).toBe('VPS')
-  })
-
-  it('falls back to the id, then to Unknown', () => {
-    const { clientLabel, productLabel, orUnknown } = labels()
-    expect(clientLabel(null, 7)).toBe('Client #7')
-    expect(clientLabel(null)).toBe('Unknown')
-    expect(productLabel(null, 3)).toBe('Product #3')
-    expect(productLabel('  ')).toBe('Unknown')
+  it('passes a present value through and shows Unknown for a missing one', () => {
+    const { orUnknown } = labels()
+    expect(orUnknown('Ada')).toBe('Ada')
+    expect(orUnknown('  ')).toBe('Unknown')
     expect(orUnknown('')).toBe('Unknown')
     expect(orUnknown(null)).toBe('Unknown')
   })

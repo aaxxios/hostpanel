@@ -1,15 +1,12 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>GetMyDomainWhois</c> use case —
+/// Integration tests for the client-facing <c>GetMyDomainWhois</c> use case:
 /// <c>GET /api/me/domains/{id}/whois</c>. The admin equivalent is <c>GetWhois</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -19,7 +16,7 @@ public sealed class GetMyDomainWhoisTests(IntegrationTestFactory factory) : ICla
     /// A WHOIS lookup on somebody else's domain refuses with <c>DOMAIN_NOT_FOUND</c> before the
     /// registrar is ever asked; on the owner's own domain the registrar is asked and, because
     /// <see cref="StubRegistrarProvider.GetWhoisAsync"/> always answers <see langword="null"/>,
-    /// answers a <em>different</em> 404 -- <c>DOMAIN_WHOIS_NOT_FOUND</c>. The two land on the same
+    /// answers a <em>different</em> 404: <c>DOMAIN_WHOIS_NOT_FOUND</c>. The two land on the same
     /// status but are distinguishable by code, which is the point of a code at all.
     /// </summary>
     [Fact]

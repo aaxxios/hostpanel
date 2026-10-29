@@ -1,12 +1,9 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Migration;
 using Innovayse.Hostpanel.Domain.Migration.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 
@@ -38,9 +35,9 @@ public sealed class GetMigrationLogsTests(IntegrationTestFactory factory) : ICla
     }
 
     /// <summary>
-    /// A request with no <c>page</c>/<c>pageSize</c> in the query string still returns the entry —
-    /// the two now carry the same defaults the controller's own parameters used to, since a record
-    /// bound from the query string has no method signature left to hang them on.
+    /// A request with no <c>page</c>/<c>pageSize</c> in the query string still returns the entry:
+    /// the query record carries its own defaults for both, since a record bound from the query
+    /// string has no method signature to hang them on.
     /// </summary>
     [Fact]
     public async Task LogsWithNoPagingParametersUseTheDefaultsAndReturnTheEntry()
@@ -60,9 +57,33 @@ public sealed class GetMigrationLogsTests(IntegrationTestFactory factory) : ICla
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("totalCount").GetInt32().Should().Be(1);
-        body.RootElement.GetProperty("page").GetInt32().Should().Be(1);
+        body.RootElement.GetProperty("pageNumber").GetInt32().Should().Be(1);
+        body.RootElement.GetProperty("totalPages").GetInt32().Should().Be(1);
         body.RootElement.GetProperty("pageSize").GetInt32().Should().Be(50);
         body.RootElement.GetProperty("items").EnumerateArray().Should().ContainSingle();
+    }
+
+    /// <summary>A skipped entry carries its skip reason by name, so the admin report can translate it.</summary>
+    [Fact]
+    public async Task LogsReturnTheSkipReasonOfASkippedEntry()
+    {
+        var client = await MigrationTestSeeds.AdminClientAsync(factory);
+        var id = await MigrationTestSeeds.CreateJobAsync(client, "http://logs.example.test");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
+            context.MigrationLogs.Add(MigrationLog.Create(
+                id, MigrationEntityType.Domains, "example.test", MigrationLogAction.Skipped, MigrationSkipReason.ClientNotFound));
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var response = await client.GetAsync($"/api/admin/migrations/{id}/logs");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var item = body.RootElement.GetProperty("items").EnumerateArray().Single();
+        item.GetProperty("skipReason").GetString().Should().Be(nameof(MigrationSkipReason.ClientNotFound));
+        item.GetProperty("reason").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     /// <summary>A filter value that names no member of its enum is refused before the query runs.</summary>

@@ -1,15 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>UpdateNameservers</c> use case —
+/// Integration tests for the admin <c>UpdateNameservers</c> use case:
 /// <c>PUT /api/domains/{id}/nameservers</c>. The client-facing equivalent is
 /// <c>UpdateMyDomainNameservers</c>.
 /// </summary>
@@ -17,8 +14,8 @@ namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 public sealed class UpdateNameserversTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     /// <summary>
-    /// PUT .../nameservers with <c>{ nameservers: [...] }</c> — the exact shape
-    /// <c>ClientDomainDetailView.vue</c> sends — succeeds with two entries.
+    /// <c>PUT /api/domains/{id}/nameservers</c> with <c>{ nameservers: ["ns1", "ns2"] }</c>, the exact
+    /// shape <c>ClientDomainDetailView.vue</c> sends, succeeds with two entries.
     /// </summary>
     [Fact]
     public async Task UpdateNameservers_WithTwoEntries_Returns204Async()

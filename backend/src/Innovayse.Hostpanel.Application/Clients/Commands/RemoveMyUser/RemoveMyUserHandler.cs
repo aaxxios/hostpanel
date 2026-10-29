@@ -1,5 +1,5 @@
 using Innovayse.Hostpanel.Application.Clients.Commands.RemoveUserFromClient;
-using Innovayse.Hostpanel.Application.Clients.Extensions;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Wolverine;
 
@@ -11,11 +11,16 @@ public sealed class RemoveMyUserHandler
     /// <summary>Wolverine bus the caller lookup and the removal are dispatched through.</summary>
     private readonly IMessageBus _bus;
 
+    /// <summary>Resolves the account the caller acts for (the owner only).</summary>
+    private readonly IClientAccess _access;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Wolverine bus the caller lookup and the removal are dispatched through.</param>
-    public RemoveMyUserHandler(IMessageBus bus)
+    /// <param name="access">Resolves the account the caller acts for (the owner only).</param>
+    public RemoveMyUserHandler(IMessageBus bus, IClientAccess access)
     {
         _bus = bus;
+        _access = access;
     }
 
     /// <summary>Removes someone from the caller's own account.</summary>
@@ -26,12 +31,12 @@ public sealed class RemoveMyUserHandler
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
-        var profile = await _bus.GetCallerClientAsync(ct);
-        if (profile.IsFailure)
+        var clientId = await _access.RequireOwnClientIdAsync(ct);
+        if (clientId.IsFailure)
         {
-            return Result.FailureCode(profile.ErrorCode!);
+            return Result.FailureCode(clientId.ErrorCode!);
         }
 
-        return await _bus.InvokeAsync<Result>(new RemoveUserFromClientCommand(profile.Value!.Id, cmd.MemberUserId), ct);
+        return await _bus.InvokeAsync<Result>(new RemoveUserFromClientCommand(clientId.Value, cmd.MemberUserId), ct);
     }
 }

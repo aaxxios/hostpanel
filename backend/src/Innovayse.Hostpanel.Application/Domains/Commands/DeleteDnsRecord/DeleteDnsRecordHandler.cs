@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteDnsRecord;
 
@@ -13,24 +15,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.DeleteDnsRecord;
 /// </summary>
 public sealed class DeleteDnsRecordHandler
 {
-    /// <summary>The registrar provider the deletion is synced to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<DeleteDnsRecordHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the deletion is synced to.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public DeleteDnsRecordHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public DeleteDnsRecordHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<DeleteDnsRecordHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -62,19 +67,20 @@ public sealed class DeleteDnsRecordHandler
 
         if (domain.RegistrarRef is not null)
         {
-            var result = await _registrar.DeleteDnsRecordAsync(
-                domain.Name, domain.RegistrarRef, cmd.RecordId!.Value, ct);
+            var registrar = await _registrars.ResolveAsync(domain, ct);
+            var result = await registrar.DeleteDnsRecordAsync(
+                new DnsRecordRemoval(new DomainRef(domain.Name, domain.RegistrarRef), cmd.RecordId!.Value), ct);
 
             if (!result.Success)
             {
-                return Result.Failure(
-                    $"Registrar failed to delete DNS record {cmd.RecordId} for '{domain.Name}': "
-                        + result.ErrorMessage,
-                    HostpanelErrorCodes.DNS_RECORD_UPSTREAM_FAILED);
+                _logger.LogWarning(
+                    "Registrar failed to delete DNS record {RecordId} for '{DomainName}': {Reason}",
+                    cmd.RecordId, domain.Name, result.ErrorCode);
+                return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DNS_RECORD_UPSTREAM_FAILED));
             }
         }
 
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

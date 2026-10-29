@@ -2,7 +2,9 @@ using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Orders;
+
 /// <summary>
 /// Represents a single line item within an <see cref="Order"/>.
 /// Snapshots the product name and price at order time so price changes
@@ -19,8 +21,8 @@ public sealed class OrderItem : BaseEntity
     /// <summary>Gets the product name snapshot at order time.</summary>
     public string ProductName { get; private set; } = string.Empty;
 
-    /// <summary>Gets the selected billing cycle ("monthly" or "annual").</summary>
-    public string BillingCycle { get; private set; } = string.Empty;
+    /// <summary>Gets the selected billing cycle.</summary>
+    public BillingCycle BillingCycle { get; private set; }
 
     /// <summary>Gets the optional domain name for hosting products.</summary>
     public string? Domain { get; private set; }
@@ -28,8 +30,8 @@ public sealed class OrderItem : BaseEntity
     /// <summary>Gets the optional hostname for VPS/server products.</summary>
     public string? Hostname { get; private set; }
 
-    /// <summary>Gets the domain action type: "register" or "transfer". Null for hosting items.</summary>
-    public string? DomainAction { get; private set; }
+    /// <summary>Gets the domain action this line performs. Null for hosting items.</summary>
+    public DomainAction? DomainAction { get; private set; }
 
     /// <summary>Gets the EPP/authorization code for domain transfers. Null for registrations.</summary>
     public string? EppCode { get; private set; }
@@ -46,7 +48,7 @@ public sealed class OrderItem : BaseEntity
     /// <summary>Gets the current lifecycle status of this item.</summary>
     public OrderItemStatus Status { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private OrderItem() { }
 
     /// <summary>
@@ -54,24 +56,24 @@ public sealed class OrderItem : BaseEntity
     /// </summary>
     /// <param name="productId">FK to the product.</param>
     /// <param name="productName">Product name at order time.</param>
-    /// <param name="billingCycle">Billing cycle: "monthly" or "annual".</param>
+    /// <param name="billingCycle">The billing cycle.</param>
     /// <param name="firstPaymentAmount">First payment amount.</param>
     /// <param name="recurringAmount">Recurring charge amount.</param>
     /// <param name="domain">Optional domain name.</param>
     /// <param name="hostname">Optional hostname.</param>
-    /// <param name="domainAction">Domain action: "register" or "transfer". Null for hosting.</param>
+    /// <param name="domainAction">The domain action. Null for hosting.</param>
     /// <param name="eppCode">EPP authorization code for transfers.</param>
     /// <param name="years">Registration period in years for domain items.</param>
     /// <returns>A new pending <see cref="OrderItem"/>.</returns>
     internal static OrderItem Create(
         int productId,
         string productName,
-        string billingCycle,
+        BillingCycle billingCycle,
         decimal firstPaymentAmount,
         decimal recurringAmount,
         string? domain,
         string? hostname,
-        string? domainAction = null,
+        DomainAction? domainAction = null,
         string? eppCode = null,
         int? years = null)
     {

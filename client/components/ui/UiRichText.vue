@@ -12,6 +12,7 @@ import { defineComponent, h } from 'vue'
 import type { PropType, VNode } from 'vue'
 import { TAG_CLASSES, parseRichText } from '~/utils/ui/richText'
 import type { RichNode } from '~/utils/ui/richText'
+import { UiRichNodeType } from '~/utils/ui/enums'
 
 /**
  * Converts one sanitised node into a VNode.
@@ -20,7 +21,7 @@ import type { RichNode } from '~/utils/ui/richText'
  * @returns The VNode (a text node for text).
  */
 const toVNode = (node: RichNode): VNode | string => {
-  if (node.type === 'text') {
+  if (node.type === UiRichNodeType.Text) {
     return node.text
   }
   const props: Record<string, string> = { ...node.attrs }

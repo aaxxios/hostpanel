@@ -107,9 +107,12 @@ describe('ProductsView', () => {
     await vi.waitFor(() => {
       expect(requestsOf(mock)).toContain('PUT /products/1')
     })
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="products-feedback"]').text()).toBe('Changes saved successfully.')
+    })
   })
 
-  it('shows the API sentence above the table when a save is refused', async () => {
+  it('shows the API sentence next to the save button when a save is refused', async () => {
     stubRouteTable({ ...routes, 'POST /products': () => problem('That slug is taken.', 400) })
     const { wrapper } = await mountScreen(ProductsView)
 
@@ -118,7 +121,7 @@ describe('ProductsView', () => {
     await wrapper.get('[data-testid="product-form"]').trigger('submit')
 
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-testid="products-action-error"]').text()).toBe('That slug is taken.')
+      expect(wrapper.get('[data-testid="product-form-error"]').text()).toBe('That slug is taken.')
     })
     expect(wrapper.find('[data-testid="product-form"]').exists()).toBe(true)
   })
@@ -139,5 +142,26 @@ describe('ProductsView', () => {
     const { wrapper } = await mountScreen(ProductsView)
 
     expect(wrapper.text()).toContain('No products found')
+  })
+
+  it('loads again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRouteTable({
+      ...routes,
+      'GET /products': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json([])
+      },
+    })
+    const { wrapper } = await mountScreen(ProductsView)
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="products-error"]').text()).toBe('Not allowed.')
+    })
+    await wrapper.get('[data-testid="products-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('No products found')
+    })
   })
 })

@@ -1,11 +1,12 @@
 /**
  * Unit tests for the migration presentation helpers: every job state and log outcome has a tone
- * and a caption key, and only Pending and InProgress jobs count as active.
+ * and a caption key, every skip reason and job failure has a translated caption, and only Pending and InProgress jobs count as active.
  */
 import { describe, expect, it } from 'vitest'
-import { isJobActive, migrationActionLabelKey, migrationStatusLabelKey } from '@/lib/migrationStatus'
+import { isJobActive, migrationActionLabelKey, migrationJobFailureLabelKey, migrationSkipReasonLabelKey, migrationStatusLabelKey } from '@/lib/migrationStatus'
 import { migrationActionTone, migrationStatusTone } from '@/lib/tones'
-import { MigrationLogAction, MigrationStatus } from '@/types/migration'
+import { MigrationJobFailure, MigrationLogAction, MigrationSkipReason, MigrationStatus } from '@/types/migration'
+import { createTestI18n } from '../helpers/i18n'
 
 describe('migrationStatus', () => {
   it('gives every job state a tone and a caption key', () => {
@@ -19,6 +20,22 @@ describe('migrationStatus', () => {
     for (const action of Object.values(MigrationLogAction)) {
       expect(migrationActionTone[action]).toBeTruthy()
       expect(migrationActionLabelKey[action]).toMatch(/^migration\./)
+    }
+  })
+
+  it('gives every skip reason a caption key that the catalogue defines', () => {
+    for (const reason of Object.values(MigrationSkipReason)) {
+      const key = migrationSkipReasonLabelKey[reason]
+      expect(key).toMatch(/^migration\.skipReason\./)
+      expect(createTestI18n().global.te(key)).toBe(true)
+    }
+  })
+
+  it('gives every job failure a caption key that the catalogue defines', () => {
+    for (const failure of Object.values(MigrationJobFailure)) {
+      const key = migrationJobFailureLabelKey[failure]
+      expect(key).toMatch(/^migration\.jobFailure\./)
+      expect(createTestI18n().global.te(key)).toBe(true)
     }
   })
 

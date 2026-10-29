@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-/** aurora process section — four numbered steps beside a sticky intro with two calls to action. */
+/** aurora process section: four numbered steps beside a sticky intro with two calls to action. */
 import { HOME_SECTION_SCROLL_MARGIN_CLASS } from '~/constants/homeSections'
 import { HomeSectionId } from '~/types/homesectionid'
 import { BRAND_BUTTON, LINE_BUTTON } from '~/templates/aurora/buttons'

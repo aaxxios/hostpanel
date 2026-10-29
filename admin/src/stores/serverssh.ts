@@ -1,17 +1,27 @@
 /**
- * Pinia store for one server's SSH key management settings: load, save and agent health check.
- * The only caller of the SSH settings endpoints in `useServersApi`; a refusal is kept as the API's
+ * Pinia store for one server's SSH key management: settings (load, save, agent health check), the
+ * installer setup (identity generation, the one-command installer, the network lines) and the host
+ * key scan. The only caller of the SSH endpoints in `useServersApi`; a refusal is kept as the API's
  * own sentence (and per-field sentences), never thrown.
  */
 
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useServersApi } from '@/composables/apis/useServersApi'
 import { runAction } from '@/lib/runAction'
-import type { ServerSshSettingsDto, ServerSshSettingsPayload, ServerSshSetupDto, SshAgentTestResultDto, SshHostKeyScanDto } from '@/types/serverssh'
+import { buildInstallCommand, buildNetworkLines } from '@/lib/sshAgent'
+import type {
+  ServerSshSettingsDto,
+  ServerSshSettingsPayload,
+  ServerSshSetupDto,
+  SshAgentNetworkLines,
+  SshAgentTestResultDto,
+  SshHostKeyScanDto,
+} from '@/types/serverssh'
 
-/** SSH settings state for the server whose dialog is open. */
+/** SSH key management state for the server whose dialog is open. */
 export const useServerSshStore = defineStore('serverSsh', () => {
+  /** The servers endpoints this store is the only caller of. */
   const api = useServersApi()
 
   /** The settings of the open server, once loaded. */
@@ -49,6 +59,20 @@ export const useServerSshStore = defineStore('serverSsh', () => {
 
   /** Per-field sentences of the last refused save. */
   const fieldErrors = ref<Record<string, string>>({})
+
+  /**
+   * The one-command installer, once an identity exists. It downloads from the HostPanel the
+   * administrator is signed in to, so it is built from this page's own origin.
+   */
+  const installCommand = computed<string | null>(() =>
+    (setup.value ? buildInstallCommand(window.location.origin, setup.value) : null))
+
+  /**
+   * Firewall and sshd lines that let only this HostPanel reach the saved agent port, null until
+   * both the setup and the settings are loaded or while HostPanel's address is not configured.
+   */
+  const networkLines = computed<SshAgentNetworkLines | null>(() =>
+    (setup.value && settings.value ? buildNetworkLines(setup.value.sourceAddresses, settings.value.agentPort) : null))
 
   /**
    * Loads a server's settings.
@@ -158,6 +182,7 @@ export const useServerSshStore = defineStore('serverSsh', () => {
 
   return {
     settings, setup, loading, saving, testing, generating, scanning, lastTest, lastScan, error, scanError, fieldErrors,
+    installCommand, networkLines,
     load, loadAll, save, test, generateIdentity, scanHostKey, reset,
   }
 })

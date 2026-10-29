@@ -61,7 +61,7 @@
           variant="danger"
           class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all"
           testid="cart-drawer-remove"
-          @click="cart.removeItem(item.pid, item.domain, item.domainAction)"
+          @click="cart.removeItem(item.pid, item.billingcycle, item.domain, item.domainAction)"
         />
       </UiCard>
     </UiStack>

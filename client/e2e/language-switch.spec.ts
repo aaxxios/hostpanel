@@ -2,7 +2,7 @@
  * Flow: the reader language reaches the backend (`X-Language` proof).
  *
  * The C# API answers every sentence in the language of the `X-Language` header, so a portal that
- * forgets to send it is answered in English whatever the reader picked -- and nothing fails. The
+ * forgets to send it is answered in English whatever the reader picked, and nothing fails. The
  * contact form is the browser-initiated call that goes through every hop (page -> transport ->
  * BFF -> backend), so the header the stub logs is the proof for the whole chain.
  */

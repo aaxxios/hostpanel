@@ -1,4 +1,10 @@
 /** Payload for creating a new client via the admin API. */
+
+import type { ClientPreferences, ClientSettings, ClientStatus } from '@/types/client'
+import type { ContactNotifications } from '@/types/contactnotifications'
+import type { PostalAddress } from '@/types/postaladdress'
+
+/** Everything the admin create endpoint takes. */
 export interface AdminCreateClientPayload {
   /** True to create a new Identity user alongside the client. */
   createNewUser: boolean
@@ -16,56 +22,14 @@ export interface AdminCreateClientPayload {
   companyName?: string
   /** Optional phone number. */
   phone?: string
-  /** Street address line 1. */
-  street?: string
-  /** Street address line 2. */
-  address2?: string
-  /** City. */
-  city?: string
-  /** State or province. */
-  state?: string
-  /** Postal code. */
-  postCode?: string
-  /** ISO 3166-1 alpha-2 country code. */
-  country?: string
-  /** ISO 4217 currency code. */
-  currency?: string
-  /** Preferred language code. */
-  language?: string
-  /** Payment method identifier. */
-  paymentMethod?: string
-  /** Billing contact name or reference. */
-  billingContact?: string
-  /** Internal admin notes. */
-  adminNotes?: string
-  /** Client status (Active, Inactive, Suspended, Closed). */
-  status?: string
-  /** Whether the client receives general notification emails. */
-  notifyGeneral: boolean
-  /** Whether the client receives invoice notification emails. */
-  notifyInvoice: boolean
-  /** Whether the client receives support notification emails. */
-  notifySupport: boolean
-  /** Whether the client receives product notification emails. */
-  notifyProduct: boolean
-  /** Whether the client receives domain notification emails. */
-  notifyDomain: boolean
-  /** Whether the client receives affiliate notification emails. */
-  notifyAffiliate: boolean
-  /** Whether late fees are applied to overdue invoices. */
-  lateFees: boolean
-  /** Whether overdue notices are sent. */
-  overdueNotices: boolean
-  /** Whether the client is exempt from taxes. */
-  taxExempt: boolean
-  /** Whether invoices are generated separately per product. */
-  separateInvoices: boolean
-  /** Whether credit card processing is disabled. */
-  disableCcProcessing: boolean
-  /** Whether the client has opted in to marketing emails. */
-  marketingOptIn: boolean
-  /** Whether the client status updates are tracked. */
-  statusUpdate: boolean
-  /** Whether the client may use single sign-on. */
-  allowSso: boolean
+  /** Billing address. */
+  address: PostalAddress
+  /** Language, ISO 4217 currency, payment method, billing contact and internal admin notes. */
+  preferences: ClientPreferences
+  /** The status the client starts in, or null to start it Active. */
+  status: ClientStatus | null
+  /** Which kinds of email the client receives. */
+  notifications: ContactNotifications
+  /** The account switches staff set on the client. */
+  settings: ClientSettings
 }

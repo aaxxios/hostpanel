@@ -2,7 +2,6 @@ using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Orders.Enums;
-using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -37,27 +36,27 @@ internal sealed class DemoSalesSeeder
     ];
 
     /// <summary>The services a quote proposes: description and dollar price of one unit.</summary>
-    private static readonly (string Description, decimal Price)[] QuoteLines =
+    private static readonly DemoQuoteLine[] QuoteLines =
     [
-        ("Website migration to managed hosting", 250m),
-        ("Managed VPS setup and hardening", 180m),
-        ("Monthly monitoring and patching", 75m),
-        ("Email migration for ten mailboxes", 120m),
-        ("Load balancer configuration", 300m),
-        ("Staff training session", 90m),
+        new("Website migration to managed hosting", 250m),
+        new("Managed VPS setup and hardening", 180m),
+        new("Monthly monitoring and patching", 75m),
+        new("Email migration for ten mailboxes", 120m),
+        new("Load balancer configuration", 300m),
+        new("Staff training session", 90m),
     ];
 
     /// <summary>The one-off and recurring charges billable items are made of: description and dollar amount.</summary>
-    private static readonly (string Description, decimal Amount)[] BillableLines =
+    private static readonly DemoBillableLine[] BillableLines =
     [
-        ("Emergency restore from backup", 45m),
-        ("Extra bandwidth block", 20m),
-        ("Managed security review", 120m),
-        ("Additional dedicated IP", 3m),
-        ("Premium monitoring", 25m),
-        ("Content delivery add-on", 15m),
-        ("Migration assistance", 80m),
-        ("Offsite archive storage", 12m),
+        new("Emergency restore from backup", 45m),
+        new("Extra bandwidth block", 20m),
+        new("Managed security review", 120m),
+        new("Additional dedicated IP", 3m),
+        new("Premium monitoring", 25m),
+        new("Content delivery add-on", 15m),
+        new("Migration assistance", 80m),
+        new("Offsite archive storage", 12m),
     ];
 
     /// <summary>The order states handed out in turn; mostly accepted, with the odd pending, cancelled and flagged one.</summary>
@@ -241,19 +240,18 @@ internal sealed class DemoSalesSeeder
             var currency = client.Currency ?? DemoCatalogueSeeder.BaseCurrency;
             var product = products[((n * 3) + 1) % products.Count];
             var cycle = n % 3 == 0 ? BillingCycle.Annual : BillingCycle.Monthly;
-            var cycleName = cycle == BillingCycle.Annual ? BillingCycleNames.Annual : BillingCycleNames.Monthly;
             var price = product.PriceFor(currency, cycle) ?? 0m;
             var status = OrderStatuses[n % OrderStatuses.Length];
 
             var order = Order.Create(
-                $"DEMO-{1000 + n}", client.Id, PaymentMethodNames.Card, $"203.0.113.{10 + n}", currency);
-            order.AddItem(product.Id, product.Name, cycleName, price, price, DemoSites.HostOf(client), null);
+                $"DEMO-{1000 + n}", client.Id, PaymentMethodNames.Card, $"203.0.113.{10 + n}", currency, _today);
+            order.AddItem(product.Id, product.Name, cycle, price, price, DemoSites.HostOf(client), null);
             if (n % 5 == 0 && domainProduct is not null)
             {
                 var domainPrice = currency == DemoCatalogueSeeder.BaseCurrency ? 11.99m : 4600m;
                 order.AddItem(
-                    domainProduct.Id, domainProduct.Name, BillingCycleNames.Annual, domainPrice, domainPrice,
-                    $"{DemoSites.LabelOf(client)}-order{n}.example", null, DomainActionNames.Register, null, 1);
+                    domainProduct.Id, domainProduct.Name, BillingCycle.Annual, domainPrice, domainPrice,
+                    $"{DemoSites.LabelOf(client)}-order{n}.example", null, DomainAction.Register, null, 1);
             }
 
             if (invoiceIds.TryGetValue(client.Id, out var ids) && ids.Count > 0)
@@ -264,7 +262,7 @@ internal sealed class DemoSalesSeeder
             switch (status)
             {
                 case OrderStatus.Active:
-                    order.Accept();
+                    order.Accept(_today);
                     break;
                 case OrderStatus.Cancelled:
                     order.Cancel();

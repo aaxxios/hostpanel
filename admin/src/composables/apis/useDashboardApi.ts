@@ -1,7 +1,7 @@
 /**
  * Endpoint functions for the admin dashboard: statistics and the recent-activity feed.
  *
- * No state lives here — the dashboard and activity stores own it. Every function rejects
+ * No state lives here: the dashboard and activity stores own it. Every function rejects
  * with an `ApiError`; turning that into words is `lib/errorHandler.ts`'s job.
  */
 

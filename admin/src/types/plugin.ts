@@ -1,6 +1,6 @@
 /** Summary of one installed plugin returned by GET /api/admin/plugins. */
 export interface PluginListItemDto {
-  /** Unique plugin identifier from plugin.json (e.g. "innovayse-cwp"). */
+  /** Unique plugin identifier, the `id` field of plugin.json. */
   id: string
   /** Human-readable display name. */
   name: string
@@ -18,10 +18,12 @@ export interface PluginListItemDto {
   color: string
   /** Whether the DLL was successfully loaded at the last startup. */
   isLoaded: boolean
+  /** Whether the plugin ships with the server build; a built-in plugin cannot be removed. */
+  isBuiltIn: boolean
 }
 
 /** Result returned by install and remove plugin operations. */
 export interface PluginActionResultDto {
-  /** Always true — a server restart is required for changes to take effect. */
+  /** Always true: a server restart is required for changes to take effect. */
   requiresRestart: boolean
 }

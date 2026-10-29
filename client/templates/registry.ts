@@ -28,8 +28,8 @@ export const templates: Record<TemplateName, Record<TemplateSlot, TemplateLoader
   },
   /*
    * nova reuses aurora's domain search and checkout deliberately. Both are
-   * working flows against live endpoints — the checkout in particular is the
-   * ordering path — and a second copy of them would be a second place for a
+   * working flows against live endpoints, the checkout in particular is the
+   * ordering path, and a second copy of them would be a second place for a
    * payment bug to live. nova supplies its own header, footer and page bodies,
    * which is where its design actually differs.
    */

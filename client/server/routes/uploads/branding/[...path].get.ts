@@ -1,19 +1,18 @@
 /**
  * GET /uploads/branding/**
  *
- * Serves operator-uploaded branding files — the logo, the favicon and the icon set
- * generated from them — from the storefront's own origin.
+ * Serves operator-uploaded branding files (the logo, the favicon and the icon set
+ * generated from them) from the storefront's own origin.
  *
- * **There is already a generic `/uploads/**` proxy** beside this one, added for slide images.
+ * **There is also a generic `/uploads/**` proxy** beside this one, for slide images.
  * This route is deliberately narrower and therefore wins for branding paths. The generic one
- * calls `proxyRequest`, which hands the upstream response back verbatim -- its status, and its
+ * calls `proxyRequest`, which hands the upstream response back verbatim: its status, and its
  * `Content-Type`. That is acceptable for slides and not for these: branding files are what a
  * page links as its icon, so they are the ones worth pinning to a known type, refusing by
- * extension, and serving with `nosniff` and a long immutable cache. Slides keep the old
- * behaviour; nothing about them changed.
+ * extension, and serving with `nosniff` and a long immutable cache.
  *
  * The files are written by the C# API into its web root, which is a different origin to
- * this one. The setting rows store root-relative URLs (`/uploads/branding/...`) so that a
+ * this one. The setting rows store root-relative URLs (`/uploads/branding/<file>`) so that a
  * domain change never strands them, which means the storefront has to answer for that
  * path itself. This route is that answer: it streams the bytes through rather than
  * redirecting, so the browser never learns the API's address and no CORS negotiation is
@@ -25,10 +24,13 @@
  *   one derived from the extension, and `X-Content-Type-Options: nosniff` accompanies it.
  *   The API only ever writes PNGs here, so anything else is a sign something is wrong and
  *   is refused rather than passed to a browser to interpret.
- * - **Refuses to walk.** The captured path is rejected outright if it contains a `..`
- *   segment, a backslash or a leading slash, before it is ever appended to the upstream
- *   URL.
+ * - **Refuses to walk.** The captured path goes through `requireUploadPath`, the same reader the
+ *   generic uploads proxy uses: it is decoded once, refused when it holds a `.`, `..` or empty
+ *   segment, a backslash or a second encoding, and re-encoded before it is appended to the
+ *   upstream URL.
  */
+
+import { requireUploadPath } from '~/server/utils/uploadPath'
 
 /** Extensions this route will serve, and the type each is served as. */
 const ALLOWED_TYPES: Record<string, string> = {
@@ -37,18 +39,9 @@ const ALLOWED_TYPES: Record<string, string> = {
 }
 
 export default defineEventHandler(async (event) => {
-  const path = getRouterParam(event, 'path') ?? ''
-
-  // Path traversal guard. The upstream is a file server, so a `..` that survived this far
-  // would be resolved by it, not by us.
-  const segments = path.split('/')
-  if (
-    path === ''
-    || path.includes('\\')
-    || segments.some(s => s === '' || s === '.' || s === '..')
-  ) {
-    throw createError({ statusCode: 400 })
-  }
+  // The upstream is a file server, so a `..` that survived this far would be resolved by it, not
+  // by us; the shared reader refuses it, and every other way out of the folder, first.
+  const path = requireUploadPath(event)
 
   const extension = path.slice(path.lastIndexOf('.')).toLowerCase()
   const contentType = ALLOWED_TYPES[extension]

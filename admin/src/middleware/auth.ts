@@ -7,13 +7,11 @@ import { AppRoute } from '@/lib/routes'
 import { REDIRECT_QUERY_PARAM, loginLocationFor, safeRedirectTarget } from '@/lib/redirectTarget'
 
 /**
- * Auth middleware — decides, per navigation, whether a route may be entered.
+ * Auth middleware: decides, per navigation, whether a route may be entered.
  *
- * Everything it decides on comes from the server. There is no longer a
- * `localStorage` "setup complete" flag: it was written by whichever browser finished
- * setup and read by nothing, so a second machine, a cleared profile or a private window
- * all disagreed with it, and the API answers the same question authoritatively at
- * `/auth/setup-required`.
+ * Everything it decides on comes from the server. Whether setup is complete is asked of
+ * `/auth/setup-required` rather than kept in browser storage, which a second machine, a
+ * cleared profile or a private window would not share.
  *
  * @param to - Target route being navigated to.
  * @returns The redirect path, or true to allow the navigation.
@@ -27,16 +25,18 @@ export const authMiddleware = async (
   // The three are independent questions only the server can answer (the session credential is an
   // httpOnly cookie the page cannot read), so they go out together: asking them one after the other
   // cost a full round trip each before the first screen could open. All are asked once per page
-  // load rather than per navigation; afterwards the guard reads the store and makes no request.
+  // load rather than per navigation; afterwards the guard reads the store and makes no request. The
+  // session is asked through `checkSession`, which remembers a signed-out answer as well, so an
+  // anonymous visitor is not probed again on every navigation.
   await Promise.all([
     auth.mode === null ? auth.loadMode() : Promise.resolve(),
-    auth.user === null ? auth.fetchMe() : Promise.resolve(),
+    auth.checkSession(),
   ])
 
   // The first-run screen. It creates the very first local account, so it is meaningful
   // only while nobody holds Admin and only where this deployment owns its own accounts.
-  // On an SSO deployment there is nothing for it to create — the accounts live in the
-  // sign-on service — and reaching it would call endpoints that answer 404 there.
+  // On an SSO deployment there is nothing for it to create, the accounts live in the
+  // sign-on service, and reaching it would call endpoints that answer 404 there.
   if (to.meta.setup === true) {
     if (!auth.setupRequired || auth.mode !== AuthMode.Local) {
       return AppRoute.Login

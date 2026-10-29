@@ -233,6 +233,8 @@ create_env() {
   # The API decodes this as base64 and requires exactly 32 bytes (AesEncryptionService).
   set_env "$env" ENCRYPTION_KEY "$(openssl rand -base64 32)"
   set_env "$env" HOSTPANEL_BACKCHANNEL_LOGOUT_KEY "$(rand_hex 24)"
+  # The client portal encrypts its stored sessions with this key: 32 random bytes, base64.
+  set_env "$env" SESSION_ENCRYPTION_KEY "$(openssl rand -base64 32)"
 
   # Mail: the bundled example points at a dev catcher that does not exist in this stack.
   # The operator fills in a real relay afterwards; until then the API starts but cannot send.
@@ -260,8 +262,14 @@ update_env() {
 
   while IFS= read -r key; do
     if ! grep -Eq "^${key}=" "$env"; then
-      set_env "$env" "$key" "$(get_env "${INSTALL_DIR}/.env.example" "$key")"
-      warn "New setting ${key} added to .env with its example value; review it."
+      # A secret is generated, never copied from the template: a template value is public.
+      if [ "$key" = "SESSION_ENCRYPTION_KEY" ]; then
+        set_env "$env" "$key" "$(openssl rand -base64 32)"
+        warn "New secret ${key} generated and added to .env."
+      else
+        set_env "$env" "$key" "$(get_env "${INSTALL_DIR}/.env.example" "$key")"
+        warn "New setting ${key} added to .env with its example value; review it."
+      fi
     fi
   done < <(grep -Eo '^[A-Z][A-Z0-9_]*=' "${INSTALL_DIR}/.env.example" | tr -d '=')
 
@@ -278,6 +286,15 @@ update_env() {
 # Runs compose in the install dir. Every call gets /dev/null as stdin (see the header).
 compose() {
   ( cd "$INSTALL_DIR" && docker compose -f "$COMPOSE_FILE" "$@" < /dev/null )
+}
+
+# The API runs as an unprivileged user. A data volume created by an earlier release belongs to root,
+# so it is handed over once before the stack starts (a no-op on a volume that already belongs to it).
+fix_volume_ownership() {
+  info "Making sure the API can write to its data volumes"
+  compose run -T --rm --no-deps --user 0 --cap-add CHOWN --entrypoint sh "$API_SERVICE" \
+    -c 'chown -R "$APP_UID" /app/wwwroot/uploads /app/plugins-installed' \
+    || warn "Could not set the owner of the API data volumes; uploads may fail until you do."
 }
 
 # Waits until the API answers /health from inside its own container (its port is not published).
@@ -315,7 +332,6 @@ print_summary() {
   printf '\n%sHostpanel is running.%s\n\n' "$BOLD" "$NC"
   printf '  Client portal : https://%s\n' "$domain"
   printf '  Admin panel   : https://%s\n' "$admin_domain"
-  printf '  API docs      : https://%s/scalar/\n' "$domain"
   printf '  Install dir   : %s  (secrets are in .env, mode 600)\n\n' "$INSTALL_DIR"
   if [ "$(get_env "${INSTALL_DIR}/.env" EDGE_SCHEME)" = "http://" ]; then
     printf '  TLS is off: the bundled caddy serves plain HTTP on port %s. Forward both hosts to it from\n' "$http_port"
@@ -402,6 +418,7 @@ main() {
 
   info "Pulling the images"
   compose pull
+  fix_volume_ownership
   info "Starting the stack"
   compose up -d
 

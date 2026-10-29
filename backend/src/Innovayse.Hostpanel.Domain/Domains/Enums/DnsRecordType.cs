@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Domains.Enums;
+
 /// <summary>Supported DNS record types.</summary>
 public enum DnsRecordType
 {
@@ -14,7 +15,7 @@ public enum DnsRecordType
     /// <summary>Mail exchange record.</summary>
     MX = 3,
 
-    /// <summary>Text record — used for SPF, DKIM, verification, etc.</summary>
+    /// <summary>Text record: used for SPF, DKIM, verification, etc.</summary>
     TXT = 4,
 
     /// <summary>Name server record.</summary>

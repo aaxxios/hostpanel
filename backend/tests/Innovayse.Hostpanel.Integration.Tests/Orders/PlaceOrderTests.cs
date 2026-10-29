@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -13,11 +15,10 @@ using Innovayse.Hostpanel.Domain.Orders.Enums;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Integration.Tests.Orders;
 
 /// <summary>
@@ -61,7 +62,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
     /// <summary>Switches the bank-transfer integration on through the real admin endpoint.</summary>
     /// <remarks>
     /// Checkout offers nothing a fresh migration has not switched on, and <c>PlaceOrderHandler</c>
-    /// refuses any module the checkout is not offering — so a test placing an order has to turn
+    /// refuses any module the checkout is not offering, so a test placing an order has to turn
     /// the method on first, exactly as an operator would.
     /// </remarks>
     /// <returns>A task that completes once the switch is on.</returns>
@@ -76,9 +77,10 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
     /// <summary>Seeds an active hosting product priced in USD (and, optionally, AMD).</summary>
     /// <param name="amdMonthly">The AMD price to set, or <see langword="null"/> for USD only.</param>
-    /// <param name="usdMonthly">The USD monthly price; <see cref="UsdMonthly"/> unless a test needs another.</param>
+    /// <param name="name">The product's name, which the invoice line carries.</param>
+    /// <param name="usdMonthly">The USD monthly price; <see cref="UsdMonthly"/> when omitted.</param>
     /// <returns>The new product's primary key.</returns>
-    private async Task<int> SeedProductAsync(decimal? amdMonthly = null, decimal usdMonthly = UsdMonthly)
+    private async Task<int> SeedProductAsync(decimal? amdMonthly = null, string name = "Starter Hosting", decimal usdMonthly = UsdMonthly)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -88,7 +90,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Starter Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, name, null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
         product.SetPrice("USD", BillingCycle.Monthly, usdMonthly);
         if (amdMonthly.HasValue)
         {
@@ -113,7 +115,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Priceless Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m);
+            group.Id, "Priceless Hosting", null, null, null, null, ProductType.SharedHosting, 0m, 0m, DateTimeOffset.UtcNow);
 
         db.Products.Add(product);
         await db.SaveChangesAsync();
@@ -121,22 +123,25 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         return product.Id;
     }
 
-    /// <summary>A guest checkout with valid registration fields places an order and gets a payment token.</summary>
+    /// <summary>
+    /// A guest checkout with valid registration fields places an order, gets a payment token, and
+    /// keeps the phone number the guest gave on the client record it creates.
+    /// </summary>
     [Fact]
     public async Task GuestCheckoutPlacesAnOrderAndReturnsAPaymentToken()
     {
         await EnableBankTransferAsync();
         var productId = await SeedProductAsync();
         var client = factory.CreateClient();
-
         var response = await client.PostAsJsonAsync("/api/orders", new
         {
             firstName = "Ada",
             lastName = "Lovelace",
             email = $"guest-{Guid.NewGuid():N}@example.test",
             password = TestPassword,
+            phoneNumber = "+37400000000",
             paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -144,75 +149,45 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         body.RootElement.GetProperty("orderId").GetInt32().Should().BeGreaterThan(0);
         body.RootElement.GetProperty("invoiceId").GetInt32().Should().BeGreaterThan(0);
         body.RootElement.GetProperty("paymentToken").GetString().Should().NotBeNullOrWhiteSpace();
-    }
-
-    /// <summary>
-    /// A free order needs no payment: its $0 invoice is settled at checkout, the order is accepted
-    /// and its service created. It used to wait on a payment that could never come, so every free
-    /// order stayed Pending with an Unpaid $0 invoice.
-    /// </summary>
-    [Fact]
-    public async Task FreeOrderIsSettledAndFulfilledAtCheckout()
-    {
-        await EnableBankTransferAsync();
-        var productId = await SeedProductAsync(usdMonthly: 0m);
-        var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/api/orders", new
-        {
-            firstName = "Ada",
-            lastName = "Lovelace",
-            email = $"free-{Guid.NewGuid():N}@example.test",
-            password = TestPassword,
-            paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
-        });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("paid").GetBoolean().Should().BeTrue();
-        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
-        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+        // The backend states what it billed, so the checkout can compare it with the total it showed.
+        body.RootElement.GetProperty("total").GetDecimal().Should().Be(UsdMonthly);
+        body.RootElement.GetProperty("currency").GetString().Should().Be("USD");
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Paid);
-        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).Status.Should().NotBe(OrderStatus.Pending);
-        (await db.Transactions.AsNoTracking().AnyAsync(t => t.InvoiceId == invoiceId)).Should().BeFalse();
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        var clientId = await db.Orders.AsNoTracking().Where(o => o.Id == orderId).Select(o => o.ClientId).SingleAsync();
+        var stored = await db.Clients.AsNoTracking().SingleAsync(c => c.Id == clientId);
+        stored.Phone.Should().Be("+37400000000");
     }
 
-    /// <summary>A priced order is left for the payer to pay: not marked paid, invoice unpaid.</summary>
+    /// <summary>
+    /// A priced order is left for the payer to pay: it bills its full total, its invoice stays
+    /// Unpaid and the order stays Pending. Only an order that owes nothing is settled at checkout.
+    /// </summary>
     [Fact]
     public async Task PricedOrderIsNotSettledAtCheckout()
     {
         await EnableBankTransferAsync();
         var productId = await SeedProductAsync();
-        var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/orders", new
-        {
-            firstName = "Ada",
-            lastName = "Lovelace",
-            email = $"priced-{Guid.NewGuid():N}@example.test",
-            password = TestPassword,
-            paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
-        });
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        body.RootElement.GetProperty("paid").GetBoolean().Should().BeFalse();
+        body.RootElement.GetProperty("total").GetDecimal().Should().Be(UsdMonthly);
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
         var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
-
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Unpaid);
+        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).Status.Should().Be(OrderStatus.Pending);
     }
 
     /// <summary>
-    /// Orders placed at the same moment each get their own number and none fails. The number used to
-    /// be the stored maximum plus one, so concurrent orders computed the same value and the unique
-    /// index refused all but one with a server error.
+    /// Orders placed at the same moment each get their own number and none fails. A number taken as
+    /// the stored maximum plus one would collide under concurrency, and the unique index would
+    /// refuse all but one with a server error.
     /// </summary>
     [Fact]
     public async Task ConcurrentOrdersAreNumberedDistinctlyAndNoneFails()
@@ -234,7 +209,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
                 email = $"guest-{Guid.NewGuid():N}@example.test",
                 password = TestPassword,
                 paymentMethod = "bank_transfer",
-                items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+                items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
             });
         }).ToList();
         gate.SetResult();
@@ -273,7 +248,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             password = TestPassword,
             paymentMethod = "bank_transfer",
             currency = "ZZZ",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -296,7 +271,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             // A method no test ever switches on: sibling tests enable bank_transfer in the shared
             // host, so naming it here made this refusal depend on test order.
             paymentMethod = "never_enabled_method",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -304,8 +279,8 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
     }
 
     /// <summary>
-    /// A signed-in caller placing their first order gets a client record rather than a refusal —
-    /// there is no "no client account" refusal left in this flow at all.
+    /// A signed-in caller placing their first order gets a client record rather than a refusal:
+    /// this flow has no "no client account" refusal.
     /// </summary>
     [Fact]
     public async Task SignedInCallersFirstOrderCreatesTheirClientRecordAndSucceeds()
@@ -330,7 +305,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         var response = await client.PostAsJsonAsync("/api/orders", new
         {
             paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         // The body rides along as the reason: a bare 500 says nothing about which side failed.
@@ -345,8 +320,83 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         var orderId = placed.RootElement.GetProperty("orderId").GetInt32();
         var clientId = (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).ClientId;
         var subject = (await db.Clients.AsNoTracking().SingleAsync(c => c.Id == clientId)).UserId;
-        (await db.SubjectRoles.AsNoTracking().AnyAsync(r => r.Subject == subject && r.Role == "Client"))
+        (await db.SubjectRoles.AsNoTracking().AnyAsync(r => r.Subject == subject && r.Role == Role.Client))
             .Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A signed-in caller whose client row already exists but who holds no Client role (a sign-up
+    /// through the external sign-on, whose row the registration handler wrote first) is granted
+    /// the role by their order. Without it every portal call answered 403 after they had ordered.
+    /// </summary>
+    [Fact]
+    public async Task SignedInCallerWithAClientRowButNoRoleIsGrantedTheClientRoleByTheirOrder()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var subject = await ClientsTestSeeds.CreateUnlinkedSubjectAsync(factory, "orderer-no-role");
+        using (var seed = factory.Services.CreateScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Clients.Add(Domain.Clients.Client.Create(subject.UserId, "Fresh", "Subject", subject.Email, DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync();
+            (await seed.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+                .GetRolesAsync(subject.UserId, CancellationToken.None)).Should().NotContain(Role.Client);
+        }
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await factory.GetClientTokenAsync(subject.Email, TestPassword));
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+            .GetRolesAsync(subject.UserId, CancellationToken.None)).Should().Contain(Role.Client);
+    }
+
+    /// <summary>
+    /// A credential whose display name is only an email address (a sign-on provider that knows no
+    /// name sends the address instead) is not stored as the first and last name. The new client row
+    /// is named after the email's local part, and the caller is granted the Client role.
+    /// </summary>
+    [Fact]
+    public async Task SignedInCallerWhoseDisplayNameIsAnEmailIsNotNamedAfterTheWholeAddress()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var email = $"mail-as-name-{Guid.NewGuid():N}@example.test";
+        string userId;
+        using (var seed = factory.Services.CreateScope())
+        {
+            userId = await seed.ServiceProvider.GetRequiredService<IUserService>().CreateAsync(
+                new CreateUserInput(email, TestPassword, email, null), CancellationToken.None);
+        }
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await factory.GetClientTokenAsync(email, TestPassword));
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Clients
+            .AsNoTracking()
+            .SingleAsync(c => c.UserId == userId);
+        stored.FirstName.Should().Be(email.Split('@')[0]);
+        stored.LastName.Should().BeEmpty();
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+            .GetRolesAsync(userId, CancellationToken.None)).Should().Contain(Role.Client);
     }
 
     /// <summary>A checkout naming a product id nothing in the catalogue carries is refused.</summary>
@@ -364,7 +414,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             email = $"guest-{Guid.NewGuid():N}@example.test",
             password = TestPassword,
             paymentMethod = "bank_transfer",
-            items = new[] { new { productId = MissingProductId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId = MissingProductId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -386,7 +436,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             email = $"guest-{Guid.NewGuid():N}@example.test",
             password = TestPassword,
             paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = BillingCycleNames.Monthly } },
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -394,11 +444,14 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
     }
 
     /// <summary>
-    /// A billing cycle the parser would not understand is refused by the validator before the
-    /// handler runs, as a 400 with a message — never the parser's exception turned into a 500.
+    /// A billing cycle that is not one of the enum's names is refused as a 400 before the handler
+    /// runs, including the legacy "annually" spelling the wire no longer accepts.
     /// </summary>
-    [Fact]
-    public async Task CheckoutRefusesABillingCycleTheParserDoesNotUnderstand()
+    /// <param name="cycle">The cycle text sent in the order line.</param>
+    [Theory]
+    [InlineData("weekly")]
+    [InlineData("annually")]
+    public async Task CheckoutRefusesABillingCycleThatIsNotAnEnumName(string cycle)
     {
         await EnableBankTransferAsync();
         var productId = await SeedProductAsync();
@@ -411,7 +464,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
             email = $"guest-{Guid.NewGuid():N}@example.test",
             password = TestPassword,
             paymentMethod = "bank_transfer",
-            items = new[] { new { productId, billingCycle = "weekly" } },
+            items = new[] { new { productId, billingCycle = cycle } },
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -444,9 +497,9 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
                 new
                 {
                     productId,
-                    billingCycle = BillingCycleNames.Annually,
+                    billingCycle = nameof(BillingCycle.Annual),
                     domain = $"example.{tld}",
-                    domainAction = DomainActionNames.Register,
+                    domainAction = nameof(DomainAction.Register),
                     years = 1,
                 },
             },
@@ -468,6 +521,278 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         invoice.SubTotal.Should().Be(expectedAmd);
         expectedAmd.Should().NotBe(usdSellPrice);
     }
+
+    /// <summary>
+    /// A fractional domain price is read the same under every request language: a checkout sent
+    /// in Russian, whose culture writes a decimal comma, still orders the domain at 9.99.
+    /// </summary>
+    [Fact]
+    public async Task DomainPriceIsReadTheSameUnderEveryRequestLanguage()
+    {
+        await EnableBankTransferAsync();
+        var tld = $"x{Guid.NewGuid():N}"[..9];
+        const decimal usdSellPrice = 9.99m;
+        await SeedUsdTldAndRatesAsync(tld, usdSellPrice);
+        var productId = await SeedDomainProductAsync();
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Language", "ru");
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            email = $"guest-{Guid.NewGuid():N}@example.test",
+            password = TestPassword,
+            paymentMethod = "bank_transfer",
+            currency = "USD",
+            items = new[]
+            {
+                new
+                {
+                    productId,
+                    billingCycle = nameof(BillingCycle.Annual),
+                    domain = $"example.{tld}",
+                    domainAction = nameof(DomainAction.Register),
+                    years = 1,
+                },
+            },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).SubTotal.Should().Be(usdSellPrice);
+    }
+
+    /// <summary>
+    /// The response carries the order's real number, the one stored on the order, so a client
+    /// never has to build it from the id.
+    /// </summary>
+    [Fact]
+    public async Task PlacedOrderAnswersWithItsStoredOrderNumber()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await db.Orders.AsNoTracking().Where(o => o.Id == orderId).Select(o => o.OrderNumber).SingleAsync();
+        body.RootElement.GetProperty("orderNumber").GetString().Should().Be(stored);
+    }
+
+    /// <summary>
+    /// When Billing cannot raise the invoice, no order is left behind: the order is saved only
+    /// once its invoice exists, so a client retrying never meets a Pending order nobody can pay.
+    /// </summary>
+    /// <remarks>
+    /// The failure is a real database refusal: a trigger on the invoice lines table refuses the one
+    /// line carrying this test's product name, and is dropped again afterwards.
+    /// </remarks>
+    [Fact]
+    public async Task InvoiceCreationFailureLeavesNoOrder()
+    {
+        await EnableBankTransferAsync();
+        var marker = $"Fail-{Guid.NewGuid():N}";
+        var productId = await SeedProductAsync(name: marker);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE OR REPLACE FUNCTION \"RefuseMarkedInvoiceItem\"() RETURNS trigger AS $$ BEGIN " +
+                "IF NEW.\"Description\" LIKE 'Fail-%' THEN RAISE EXCEPTION 'refused by test'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql;");
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE TRIGGER \"RefuseMarkedInvoiceItem\" BEFORE INSERT ON \"InvoiceItems\" " +
+                "FOR EACH ROW EXECUTE FUNCTION \"RefuseMarkedInvoiceItem\"();");
+        }
+
+        try
+        {
+            var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId));
+
+            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        }
+        finally
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync("DROP TRIGGER IF EXISTS \"RefuseMarkedInvoiceItem\" ON \"InvoiceItems\";");
+            await db.Database.ExecuteSqlRawAsync("DROP FUNCTION IF EXISTS \"RefuseMarkedInvoiceItem\"();");
+        }
+
+        using var check = factory.Services.CreateScope();
+        var context = check.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await context.Orders.AsNoTracking().AnyAsync(o => o.Items.Any(i => i.ProductId == productId))).Should().BeFalse();
+        (await context.Invoices.AsNoTracking().AnyAsync(i => i.Items.Any(l => l.Description == marker))).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A free plan's order owes nothing, so it is settled and fulfilled at placement instead of
+    /// waiting for a payment no gateway would take.
+    /// </summary>
+    [Fact]
+    public async Task ZeroTotalOrderIsSettledAndFulfilledAtPlacement()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync(usdMonthly: 0m);
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        // A zero total is what tells the checkout there is nothing to pay and no payment step to open.
+        body.RootElement.GetProperty("total").GetDecimal().Should().Be(0m);
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Paid);
+        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).Status.Should().NotBe(OrderStatus.Pending);
+        (await db.Transactions.AsNoTracking().AnyAsync(t => t.InvoiceId == invoiceId)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A renewal of a domain the caller does not hold is refused at checkout, before any account,
+    /// number or invoice is created, rather than after the money was taken.
+    /// </summary>
+    [Fact]
+    public async Task RenewalOfADomainNotHeldIsRefusedAtCheckout()
+    {
+        await EnableBankTransferAsync();
+        var tld = $"x{Guid.NewGuid():N}"[..9];
+        await SeedUsdTldAndRatesAsync(tld, 10m);
+        var productId = await SeedDomainProductAsync();
+        var email = $"guest-{Guid.NewGuid():N}@example.test";
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            email,
+            password = TestPassword,
+            paymentMethod = "bank_transfer",
+            currency = "USD",
+            items = new[]
+            {
+                new
+                {
+                    productId,
+                    billingCycle = nameof(BillingCycle.Annual),
+                    domain = $"someone-else.{tld}",
+                    domainAction = nameof(DomainAction.Renew),
+                    years = 1,
+                },
+            },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AssertCodeAsync(response, HostpanelErrorCodes.DOMAIN_NOT_FOUND);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Users.AsNoTracking().AnyAsync(u => u.Email == email)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Domain lines are checked by the validator: an unknown action, a missing name, a period
+    /// outside 1 to 10 years and a transfer without its code are each a 400.
+    /// </summary>
+    /// <param name="action">The line's domain action.</param>
+    /// <param name="domain">The line's domain name.</param>
+    /// <param name="years">The line's period.</param>
+    /// <param name="eppCode">The line's authorization code.</param>
+    [Theory]
+    [InlineData("steal", "example.com", 1, null)]
+    [InlineData(nameof(DomainAction.Register), null, 1, null)]
+    [InlineData(nameof(DomainAction.Register), "example.com", 11, null)]
+    [InlineData(nameof(DomainAction.Transfer), "example.com", 1, null)]
+    public async Task InvalidDomainLineIsRefusedByTheValidator(string action, string? domain, int years, string? eppCode)
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedDomainProductAsync();
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", new
+        {
+            firstName = "Ada",
+            lastName = "Lovelace",
+            email = $"guest-{Guid.NewGuid():N}@example.test",
+            password = TestPassword,
+            paymentMethod = "bank_transfer",
+            items = new[]
+            {
+                new { productId, billingCycle = nameof(BillingCycle.Annual), domain, domainAction = action, years, eppCode },
+            },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertCodeAsync(response, "VALIDATION_ERROR");
+    }
+
+    /// <summary>A guest checking out with an address that already has an account is answered 409.</summary>
+    [Fact]
+    public async Task GuestCheckoutWithATakenEmailIsAConflict()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var email = $"taken-{Guid.NewGuid():N}@example.test";
+        var first = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId, email));
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var second = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId, email));
+
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await AssertCodeAsync(second, HostpanelErrorCodes.ACCOUNT_EMAIL_EXISTS);
+    }
+
+    /// <summary>A signed-in caller's first order keeps the phone number they gave, as a guest's does.</summary>
+    [Fact]
+    public async Task SignedInCallersFirstOrderStoresTheirPhoneNumber()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+
+        // Created straight in the identity store, so no registration event links a client row
+        // behind the test's back: the order below is always the one that creates it.
+        var caller = await ClientsTestSeeds.CreateUnlinkedUserAsync(factory, "first-order");
+
+        var response = await caller.Client.PostAsJsonAsync("/api/orders", new
+        {
+            phoneNumber = "+37411111111",
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var clientId = await db.Orders.AsNoTracking().Where(o => o.Id == orderId).Select(o => o.ClientId).SingleAsync();
+        var stored = await db.Clients.AsNoTracking().SingleAsync(c => c.Id == clientId);
+
+        stored.UserId.Should().Be(caller.UserId);
+        stored.Phone.Should().Be("+37411111111");
+    }
+
+    /// <summary>A complete guest checkout body for one monthly line of a product.</summary>
+    /// <param name="productId">The product to order.</param>
+    /// <param name="email">The guest's address; a fresh one when omitted.</param>
+    /// <returns>The request body.</returns>
+    private static object GuestOrder(int productId, string? email = null) => new
+    {
+        firstName = "Ada",
+        lastName = "Lovelace",
+        email = email ?? $"guest-{Guid.NewGuid():N}@example.test",
+        password = TestPassword,
+        paymentMethod = "bank_transfer",
+        items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+    };
 
     /// <summary>Seeds a USD-sold TLD and the AMD and USD rates, so the conversion is deterministic.</summary>
     /// <param name="tld">The extension, without the dot.</param>
@@ -517,7 +842,7 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
         await db.SaveChangesAsync();
 
         var product = Product.Create(
-            group.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m);
+            group.Id, "Domain Registration", null, null, null, null, ProductType.Domain, 0m, 0m, DateTimeOffset.UtcNow);
         db.Products.Add(product);
         await db.SaveChangesAsync();
 

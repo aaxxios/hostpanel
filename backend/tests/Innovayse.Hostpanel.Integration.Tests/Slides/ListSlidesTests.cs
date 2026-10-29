@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Slides;
 
 /// <summary>
-/// Integration tests for the <c>ListSlides</c> use case — <c>GET /api/admin/slides</c>.
+/// Integration tests for the <c>ListSlides</c> use case: <c>GET /api/admin/slides</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListSlidesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>

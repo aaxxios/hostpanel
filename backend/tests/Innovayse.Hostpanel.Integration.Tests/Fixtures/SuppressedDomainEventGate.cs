@@ -17,13 +17,4 @@ public sealed class SuppressedDomainEventGate : IDomainEventGate
     {
         return new NoRelease();
     }
-
-    /// <summary>A handle with nothing to release, since the gate never stops being suppressed.</summary>
-    private sealed class NoRelease : IDisposable
-    {
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-        }
-    }
 }

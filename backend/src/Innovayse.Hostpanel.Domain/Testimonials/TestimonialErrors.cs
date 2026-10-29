@@ -11,12 +11,12 @@ namespace Innovayse.Hostpanel.Domain.Testimonials;
 /// </remarks>
 public static class TestimonialErrors
 {
-    /// <summary>The sort order is negative (400) — <see cref="Testimonial.Create"/>, <see cref="Testimonial.Update"/> and <see cref="Testimonial.SetSortOrder"/>.</summary>
+    /// <summary>The sort order is negative (400): <see cref="Testimonial.Create"/>, <see cref="Testimonial.Update"/> and <see cref="Testimonial.SetSortOrder"/>.</summary>
     public const string SortOrderNegative = "TESTIMONIAL_SORT_ORDER_NEGATIVE";
 
-    /// <summary>The display name is empty or whitespace (400) — <see cref="Testimonial.Create"/> and <see cref="Testimonial.Update"/>.</summary>
+    /// <summary>The display name is empty or whitespace (400): <see cref="Testimonial.Create"/> and <see cref="Testimonial.Update"/>.</summary>
     public const string NameRequired = "TESTIMONIAL_NAME_REQUIRED";
 
-    /// <summary>The rating is outside 1 to 5 (400) — <see cref="Testimonial.Create"/> and <see cref="Testimonial.Update"/>.</summary>
+    /// <summary>The rating is outside 1 to 5 (400): <see cref="Testimonial.Create"/> and <see cref="Testimonial.Update"/>.</summary>
     public const string RatingOutOfRange = "TESTIMONIAL_RATING_OUT_OF_RANGE";
 }

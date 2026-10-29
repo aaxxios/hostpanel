@@ -1,19 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the client-facing <c>TransferMyDomain</c> use case —
+/// Integration tests for the client-facing <c>TransferMyDomain</c> use case:
 /// <c>POST /api/me/domains/transfer-order</c>, which places an order to transfer a domain in to
 /// the caller's own account. The admin equivalent is <c>TransferDomain</c>.
 /// </summary>
@@ -63,5 +61,19 @@ public sealed class TransferMyDomainTests(IntegrationTestFactory factory) : ICla
             new { domainName = "incoming-transfer.com", eppCode = "EPP-SECRET-CODE", years = 1, paymentMethod = "bank-gateway" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>An authorisation code shorter than six characters is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task TransferMyDomain_ShortEppCode_Returns400ValidationErrorAsync()
+    {
+        var owner = await DomainsTestSeeds.RegisterOwnerAsync(factory, "transfer-my-domain-invalid");
+
+        var response = await owner.Client.PostAsJsonAsync(
+            "/api/me/domains/transfer-order",
+            new { domainName = "incoming-transfer.com", eppCode = "abc", years = 1, paymentMethod = "bank-gateway" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

@@ -4,7 +4,7 @@ export interface ProductFeature {
   id: number
   /** FK to the product the line describes. */
   productId: number
-  /** What the line is called, e.g. "Disk space" — also what aligns comparison-table rows. */
+  /** What the line is called, e.g. "Disk space": also what aligns comparison-table rows. */
   label: string
   /** What the line says for this product, e.g. "50 GB". */
   value: string

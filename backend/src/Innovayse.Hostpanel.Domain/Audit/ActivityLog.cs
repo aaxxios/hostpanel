@@ -2,11 +2,15 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Audit;
-/// <summary>Records a single admin action performed on a client account for audit purposes.</summary>
+
+/// <summary>
+/// Records a single staff action for audit purposes: one performed on a client account, or a
+/// system-wide one (such as installing a plugin) that concerns no client.
+/// </summary>
 public sealed class ActivityLog : BaseEntity
 {
-    /// <summary>Gets the FK to the client this log entry belongs to.</summary>
-    public int ClientId { get; private set; }
+    /// <summary>Gets the FK to the client this log entry belongs to; <see langword="null"/> for a system-wide action.</summary>
+    public int? ClientId { get; private set; }
 
     /// <summary>Gets the human-readable description of the action performed.</summary>
     public string Description { get; private set; } = string.Empty;
@@ -41,7 +45,7 @@ public sealed class ActivityLog : BaseEntity
     public void Backdate(DateTimeOffset performedAt) => CreatedAt = performedAt;
 
     /// <summary>Creates a new activity log entry.</summary>
-    /// <param name="clientId">FK to the client account.</param>
+    /// <param name="clientId">FK to the client account; <see langword="null"/> for a system-wide action.</param>
     /// <param name="description">Human-readable description of the action.</param>
     /// <param name="adminId">Identity user ID of the performing admin.</param>
     /// <param name="adminName">Display name of the performing admin.</param>
@@ -49,7 +53,7 @@ public sealed class ActivityLog : BaseEntity
     /// <param name="ipAddress">IP address from which the action originated.</param>
     /// <returns>A new unsaved <see cref="ActivityLog"/> entry.</returns>
     public static ActivityLog Create(
-        int clientId, string description,
+        int? clientId, string description,
         string? adminId, string? adminName, string? adminEmail, string? ipAddress)
     {
         return new ActivityLog(0)
@@ -60,7 +64,6 @@ public sealed class ActivityLog : BaseEntity
             AdminName = adminName,
             AdminEmail = adminEmail,
             IpAddress = ipAddress,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 }

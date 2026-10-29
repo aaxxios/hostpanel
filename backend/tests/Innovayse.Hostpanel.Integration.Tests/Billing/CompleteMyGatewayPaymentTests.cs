@@ -1,17 +1,15 @@
+using Innovayse.Hostpanel.Application.Billing.Common.Enums;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -21,7 +19,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// shared <c>CompleteGatewayPaymentCommand</c> (its own gateway-state rules are covered in
 /// <see cref="CompleteGatewayPaymentTests"/>, which this handler dispatches to unchanged).
 /// </summary>
-/// <remarks>Split from the deleted <c>MyInvoicesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CompleteMyGatewayPaymentTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -31,13 +28,13 @@ public sealed class CompleteMyGatewayPaymentTests(IntegrationTestFactory factory
     private WebApplicationFactory<Program> BuildHost(FakePaymentPluginResolver resolver) =>
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver)));
+                services.AddSingleton<IPaymentPluginResolver>(resolver)));
 
     /// <summary>The owner completes a gateway payment on their own invoice.</summary>
     [Fact]
     public async Task Complete_TheOwnersInvoice_Returns200()
     {
-        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-1", "orderStatus:2") };
+        var plugin = new FakePaymentPlugin { StatusResult = new(GatewayPaymentState.Paid, "ref-1", "orderStatus:2", AmountMinor: 1000) };
         var resolver = new FakePaymentPluginResolver();
         resolver.Register("bank-gateway", plugin);
         var host = BuildHost(resolver);
@@ -54,7 +51,7 @@ public sealed class CompleteMyGatewayPaymentTests(IntegrationTestFactory factory
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("state").GetString().Should().Be("paid");
+        body.GetProperty("state").GetString().Should().Be(nameof(GatewayCompletionState.Paid));
     }
 
     /// <summary>

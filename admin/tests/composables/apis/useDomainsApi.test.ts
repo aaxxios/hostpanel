@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useDomainsApi } from '@/composables/apis/useDomainsApi'
+import { DomainStatus } from '@/types/domain'
 import { json, stubFetch, callOf } from '../../helpers/fetch'
 
 afterEach(() => {
@@ -33,7 +34,7 @@ describe('useDomainsApi', () => {
     const fields = {
       firstPaymentAmount: 10, recurringAmount: 12, paymentMethod: null, promotionCode: null,
       subscriptionId: null, adminNotes: null, expiresAt: null, nextDueDate: null,
-      registrationPeriod: 1, status: 'Active', nameservers: ['ns1.example.com'],
+      registrationPeriod: 1, status: DomainStatus.Active, nameservers: ['ns1.example.com'],
     }
 
     expect(await api.getDomain(3)).toEqual({ id: 3 })

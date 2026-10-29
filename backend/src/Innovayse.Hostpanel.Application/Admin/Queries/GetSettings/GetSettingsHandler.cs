@@ -34,7 +34,6 @@ public sealed class GetSettingsHandler
     /// <returns>Success with every configured setting, secret values withheld. This use case refuses nothing.</returns>
     public async Task<Result<IReadOnlyList<SettingDto>>> HandleAsync(GetSettingsQuery query, CancellationToken ct)
     {
-        // Was ISettingRepository.ListAsync -- read-only, so no tracking is needed.
         var settings = await _context.Settings.AsNoTracking().OrderBy(s => s.Key).ToListAsync(ct);
         // A secret row is listed with isSecret and hasValue only; its value never leaves the server.
         var secrecy = SettingSecrecy.From(_plugins);

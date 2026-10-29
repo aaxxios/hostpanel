@@ -84,7 +84,7 @@
                   <UiStack gap="sm" class="w-full">
                     <UiButton variant="primary" size="lg" full-width data-testid="classic-hosting-free-add" @click="addToCart(freePlan)">
                       <ShoppingCart :size="18" class="mr-2" />
-                      {{ cart.hasItem(freePlan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.getStarted') }}
+                      {{ cart.hasItem(freePlan.id, selectedCycle) ? $t('hosting.inCart') : $t('hosting.getStarted') }}
                     </UiButton>
                     <UiLink data-testid="classic-hosting-free-plan" :to="localePath(`/hosting/${planSlug(freePlan)}`)" tone="inherit" :underline="false" class="flex items-center justify-center gap-2 text-sm font-medium text-classic-brand hover:text-classic-brand-hover group">
                       {{ $t('hosting.viewAllFeatures') }}
@@ -105,7 +105,7 @@
           <UiBalancedGrid :count="otherPlans.length" class="mb-8" data-testid="classic-hosting-plans">
             <UiStack
               v-for="(plan, index) in otherPlans"
-              :key="plan.pid"
+              :key="plan.id"
               gap="none"
               class="relative animate-reveal-up motion-reduce:animate-none"
               data-testid="classic-hosting-plan"
@@ -182,12 +182,12 @@
 
                 <UiStack gap="sm" class="mt-auto">
                   <UiButton
-                    :variant="cart.hasItem(plan.pid, selectedCycle) ? 'secondary' : 'primary'"
+                    :variant="cart.hasItem(plan.id, selectedCycle) ? 'secondary' : 'primary'"
                     full-width
                     data-testid="classic-hosting-add"
                     @click="addToCart(plan)"
                   >
-                    {{ cart.hasItem(plan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.addToCart') }}
+                    {{ cart.hasItem(plan.id, selectedCycle) ? $t('hosting.inCart') : $t('hosting.addToCart') }}
                   </UiButton>
                   <UiButton
                     data-testid="classic-hosting-plan-select"
@@ -249,7 +249,7 @@
                   </UiStack>
                   <UiStack gap="md" class="w-full">
                     <UiButton variant="primary" size="lg" full-width data-testid="classic-hosting-agency-add" @click="addToCart(agencyPlan)">
-                      {{ cart.hasItem(agencyPlan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.addToCart') }}
+                      {{ cart.hasItem(agencyPlan.id, selectedCycle) ? $t('hosting.inCart') : $t('hosting.addToCart') }}
                     </UiButton>
                     <UiLink data-testid="classic-hosting-agency-plan" :to="localePath(`/hosting/${planSlug(agencyPlan)}`)" tone="inherit" :underline="false" class="flex items-center justify-center gap-2 text-sm font-medium text-classic-brand hover:text-classic-brand-hover group">
                       {{ $t('hosting.viewAllFeatures') }}
@@ -279,7 +279,7 @@
                           {{ $t('hosting.comparison.feature') }}
                         </UiStack>
                       </UiTableTh>
-                      <UiTableTh v-for="plan in comparedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-6 min-w-[120px]">
+                      <UiTableTh v-for="plan in comparedPlans" :key="plan.id" align="center" class="!p-4 md:!p-6 min-w-[120px]">
                         <UiText size="xs" tone="inherit" weight="semibold" class="md:text-sm mb-1 text-classic-ink leading-tight">
                           {{ formatPlanName(plan.name) }}
                         </UiText>
@@ -297,7 +297,7 @@
                       </UiTableTd>
                       <UiTableTd
                         v-for="(value, index) in row.values"
-                        :key="`${row.label}-${comparedPlans[index]?.pid ?? index}`"
+                        :key="`${row.label}-${comparedPlans[index]?.id ?? index}`"
                         align="center"
                         class="!p-4 md:!p-5 !text-xs md:!text-sm"
                         :class="value ? 'text-classic-ink' : 'text-classic-muted'"
@@ -309,15 +309,15 @@
                     <!-- Bottom action row -->
                     <UiTableRow :hoverable="false">
                       <UiTableTd class="!p-4 md:!p-6 sticky left-0 bg-classic-surface z-20 border-r border-classic-border" />
-                      <UiTableTd v-for="plan in comparedPlans" :key="plan.pid" align="center" class="!p-4 md:!p-6">
+                      <UiTableTd v-for="plan in comparedPlans" :key="plan.id" align="center" class="!p-4 md:!p-6">
                         <UiButton
-                          :variant="cart.hasItem(plan.pid, selectedCycle) ? 'secondary' : 'primary'"
+                          :variant="cart.hasItem(plan.id, selectedCycle) ? 'secondary' : 'primary'"
                           size="sm"
                           class="px-4 md:px-6 whitespace-nowrap"
                           data-testid="classic-hosting-compare-add"
                           @click="addToCart(plan)"
                         >
-                          {{ cart.hasItem(plan.pid, selectedCycle) ? $t('hosting.inCart') : $t('hosting.select') }}
+                          {{ cart.hasItem(plan.id, selectedCycle) ? $t('hosting.inCart') : $t('hosting.select') }}
                         </UiButton>
                       </UiTableTd>
                     </UiTableRow>
@@ -384,7 +384,7 @@ const AGENCY_NAME_MARKER = 'agency'
  * @param plan - The plan.
  * @returns True for the featured plan.
  */
-const isFeatured = (plan: HostingPlan): boolean => plan.pid === catalogPlans.value.find(p => p.isFeatured === true)?.pid
+const isFeatured = (plan: HostingPlan): boolean => plan.id === catalogPlans.value.find(p => p.isFeatured === true)?.id
 
 /** Translate function and the active locale. */
 const { t, locale } = useI18n()
@@ -441,7 +441,7 @@ const comparable = computed(() => isComparable(props.comparisonRows))
 /** The catalogue plans in the page's column order, so each column matches its row values. */
 const comparedPlans = computed<HostingPlan[]>(() =>
   props.plans
-    .map(card => catalogPlans.value.find(plan => (plan.pid || plan.id) === card.id))
+    .map(card => catalogPlans.value.find(plan => plan.id === card.id))
     .filter((plan): plan is HostingPlan => plan !== undefined))
 
 /**
@@ -567,7 +567,7 @@ const addToCart = (plan: HostingPlan): void => {
     return
   }
   cart.addItem({
-    pid: plan.pid || plan.id || 0,
+    pid: plan.id,
     name: plan.name,
     billingcycle: selectedCycle.value,
     cycleLabel: cycleLabel(selectedCycle.value),

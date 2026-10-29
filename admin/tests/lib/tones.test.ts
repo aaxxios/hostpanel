@@ -37,9 +37,18 @@ import { MigrationLogAction, MigrationStatus } from '@/types/migration'
 import { NetworkIssuePriority, NetworkIssueStatus } from '@/types/networkissue'
 import { OrderItemStatus, OrderStatus } from '@/types/order'
 import { QuoteStage } from '@/types/quote'
-import { ServiceStatus } from '@/types/service'
+import { CancellationStatus, CancellationType, ServiceStatus } from '@/types/service'
 import { TicketPriority, TicketStatus } from '@/types/ticket'
 import { UiTone } from '@/utils/ui/tone'
+
+/**
+ * A wire value a newer API could send that this build's enum does not know yet. The cast is the
+ * point: the functions are typed to the enum, and the test proves what they do at runtime anyway.
+ *
+ * @param value - The unknown wire value.
+ * @returns The value typed as the enum.
+ */
+const fromNewerApi = <T extends string>(value: string): T => value as T
 
 describe('lifecycle status tones', () => {
   it('colours each order status', () => {
@@ -178,7 +187,7 @@ describe('migration tones', () => {
 
 describe('unknown values', () => {
   it('fall back to neutral for a value the API added later', () => {
-    expect(orderStatusTone('Archived')).toBe(UiTone.Neutral)
+    expect(orderStatusTone(fromNewerApi<OrderStatus>('Archived'))).toBe(UiTone.Neutral)
     expect(domainStatusTone('')).toBe(UiTone.Neutral)
     expect(clientStatusTone('Archived')).toBe(UiTone.Neutral)
     expect(contactTypeTone('Legal')).toBe(UiTone.Neutral)
@@ -203,19 +212,19 @@ describe('statusLabel', () => {
 
 describe('cancellation requests', () => {
   it('tones an immediate cancellation red and an open request green', () => {
-    expect(cancellationTypeTone('Immediate')).toBe(UiTone.Danger)
-    expect(cancellationTypeTone('EndOfBillingPeriod')).toBe(UiTone.Primary)
-    expect(cancellationStatusTone('Open')).toBe(UiTone.Success)
-    expect(cancellationStatusTone('Closed')).toBe(UiTone.Neutral)
-    expect(cancellationTypeTone('Mystery')).toBe(UiTone.Neutral)
+    expect(cancellationTypeTone(CancellationType.Immediate)).toBe(UiTone.Danger)
+    expect(cancellationTypeTone(CancellationType.EndOfBillingPeriod)).toBe(UiTone.Primary)
+    expect(cancellationStatusTone(CancellationStatus.Open)).toBe(UiTone.Success)
+    expect(cancellationStatusTone(CancellationStatus.Closed)).toBe(UiTone.Neutral)
+    expect(cancellationTypeTone(fromNewerApi<CancellationType>('Mystery'))).toBe(UiTone.Neutral)
   })
 
   it('words the known types and statuses and shows an unknown one as received', () => {
-    expect(cancellationTypeLabel('Immediate')).toBe('Immediate')
-    expect(cancellationTypeLabel('EndOfBillingPeriod')).toBe('End of Billing Period')
-    expect(cancellationTypeLabel('Mystery')).toBe('Mystery')
-    expect(cancellationStatusLabel('Open')).toBe('Open')
-    expect(cancellationStatusLabel('Closed')).toBe('Closed')
-    expect(cancellationStatusLabel('Mystery')).toBe('Mystery')
+    expect(cancellationTypeLabel(CancellationType.Immediate)).toBe('Immediate')
+    expect(cancellationTypeLabel(CancellationType.EndOfBillingPeriod)).toBe('End of Billing Period')
+    expect(cancellationTypeLabel(fromNewerApi<CancellationType>('Mystery'))).toBe('Mystery')
+    expect(cancellationStatusLabel(CancellationStatus.Open)).toBe('Open')
+    expect(cancellationStatusLabel(CancellationStatus.Closed)).toBe('Closed')
+    expect(cancellationStatusLabel(fromNewerApi<CancellationStatus>('Mystery'))).toBe('Mystery')
   })
 })

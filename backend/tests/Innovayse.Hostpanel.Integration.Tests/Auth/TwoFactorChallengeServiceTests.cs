@@ -1,10 +1,8 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Infrastructure.Auth;
 using Innovayse.Hostpanel.Infrastructure.Auth.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
@@ -180,5 +178,21 @@ public sealed class TwoFactorChallengeServiceTests
         service.Complete(spent);
 
         service.TryRead(other).Should().NotBeNull();
+    }
+
+    /// <summary>A spent challenge stays spent when the cache is compacted under memory pressure.</summary>
+    [Fact]
+    public void SpentChallenge_SurvivesCacheCompaction()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var options = Options.Create(new TwoFactorChallengeOptions { LifetimeSeconds = 300, MaxAttempts = 5 });
+        var service = new TwoFactorChallengeService(new EphemeralDataProtectionProvider(), cache, options);
+        var challenge = service.TryRead(service.Issue(UserId))!;
+        service.TryBeginAttempt(challenge).Should().BeTrue();
+        service.Complete(challenge);
+
+        cache.Compact(1.0);
+
+        service.TryBeginAttempt(challenge).Should().BeFalse();
     }
 }

@@ -1,3 +1,4 @@
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Auth;
 using Innovayse.Hostpanel.Shared.Constants;
@@ -12,7 +13,7 @@ public sealed class GetMyAccountHandler
     /// <summary>Where this deployment's people are read from.</summary>
     private readonly IIdentityProvider _identity;
 
-    /// <summary>Local role store; roles are granted here, not by the SSO.</summary>
+    /// <summary>Local role store; roles are granted here, not by the sign-on provider.</summary>
     private readonly ISubjectRoleStore _roles;
 
     /// <summary>
@@ -26,7 +27,7 @@ public sealed class GetMyAccountHandler
 
     /// <summary>Initializes the handler.</summary>
     /// <param name="identity">Where this deployment's people are read from.</param>
-    /// <param name="roles">Local role store; roles are granted here, not by the SSO.</param>
+    /// <param name="roles">Local role store; roles are granted here, not by the sign-on provider.</param>
     /// <param name="caller">Who is calling.</param>
     /// <param name="access">Reads what the caller may do on a client account.</param>
     public GetMyAccountHandler(
@@ -52,8 +53,8 @@ public sealed class GetMyAccountHandler
             return Result<MyAccountDto>.FailureCode(SharedErrorCodes.Unauthorized);
         }
 
-        // EmailVerified: the provider's own answer wins (local mode reads the user store); null falls back to the token claim (SSO).
-        // One lookup: both modes name a person the same way -- whatever the configured provider calls them.
+        // EmailVerified: the provider's own answer wins (local mode reads the user store); null falls back to the token claim.
+        // One lookup: both modes name a person the same way; whatever the configured provider calls them.
         var account = await _identity.FindBySubjectAsync(subject, ct);
         if (account is null)
         {
@@ -64,6 +65,6 @@ public sealed class GetMyAccountHandler
         var permissions = await _access.GetCallerPermissionsAsync(ct);
 
         return Result<MyAccountDto>.Success(new MyAccountDto(
-            account.Email, held, account.EmailVerified ?? _caller.IsEmailVerified, (int)permissions));
+            account.Email, held.Select(r => r.ToString()).ToList(), account.EmailVerified ?? _caller.IsEmailVerified, (int)permissions));
     }
 }

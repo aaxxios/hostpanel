@@ -121,7 +121,7 @@
  *
  * The newsletter block posts to an external provider's form endpoint and is
  * omitted entirely when none is configured, so an unconfigured install never
- * shows a subscribe button that goes nowhere. Live chat is not duplicated here —
+ * shows a subscribe button that goes nowhere. Live chat is not duplicated here:
  * the layout already mounts UiFloatingActions.
  */
 import LogoLockup from '~/components/LogoLockup.vue'
@@ -167,7 +167,7 @@ const emailTouched = ref(false)
 
 /**
  * Whether to warn about the address. The form posts to an external provider, so
- * success cannot be confirmed here — only an obviously wrong address can be
+ * success cannot be confirmed here: only an obviously wrong address can be
  * caught before the visitor is sent away.
  */
 const emailInvalid = computed(() =>

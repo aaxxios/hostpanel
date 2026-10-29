@@ -7,8 +7,8 @@ import { flushPromises } from '@vue/test-utils'
 import SupportTicketsView from '@/views/SupportTicketsView.vue'
 import { TicketPriority, TicketStatus } from '@/types/ticket'
 import { mountView } from '../helpers/mount'
-import { problem, stubFetch, callOf } from '../helpers/fetch'
-import { stubPathRoutes } from '../helpers/routes'
+import { json, problem, stubFetch, callOf } from '../helpers/fetch'
+import { stubPathRoutes, stubRoutes } from '../helpers/routes'
 
 /** One ticket row as the list endpoint returns it. */
 const ticket = {
@@ -22,6 +22,7 @@ const ticket = {
   lastReplyAt: null,
   isFlagged: false,
   clientId: 3,
+  clientName: 'Ada Lovelace',
 }
 
 afterEach(() => {
@@ -64,6 +65,43 @@ describe('SupportTicketsView', () => {
     await flushPromises()
 
     expect(callOf(mock, 1)).toMatchObject({ url: '/api/tickets/bulk', method: 'POST', body: { ticketIds: [5], action: 'close' } })
+    expect(wrapper.get('[data-testid="support-tickets-feedback"]').text()).toBe('Changes saved successfully.')
+  })
+
+  it('deletes the selection only after the danger confirmation', async () => {
+    const mock = stubPathRoutes([
+      { path: '/tickets?', body: { items: [ticket], totalCount: 1 } },
+      { path: '/tickets/bulk', body: null },
+    ])
+    const wrapper = await mountView(SupportTicketsView)
+
+    await wrapper.get('[data-testid="support-tickets-select-5"]').trigger('click')
+    await wrapper.get('[data-testid="support-tickets-bulk-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+    expect(mock.mock.calls.some(([url]) => String(url).includes('/tickets/bulk'))).toBe(false)
+
+    await wrapper.get('[data-testid="support-tickets-bulk-delete"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(callOf(mock, 1)).toMatchObject({ url: '/api/tickets/bulk', method: 'POST', body: { ticketIds: [5], action: 'delete' } })
+    expect(wrapper.get('[data-testid="support-tickets-feedback"]').text()).toBe('Record deleted.')
+  })
+
+  it('shows the API sentence when a bulk action is refused', async () => {
+    stubRoutes({
+      'POST /api/tickets/bulk': () => problem('Tickets are locked.', 409),
+      'GET /api/tickets': () => json({ items: [ticket], totalCount: 1 }),
+    })
+    const wrapper = await mountView(SupportTicketsView)
+
+    await wrapper.get('[data-testid="support-tickets-select-5"]').trigger('click')
+    await wrapper.get('[data-testid="support-tickets-bulk-close"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="support-tickets-feedback"]').text()).toBe('Tickets are locked.')
+    expect(wrapper.find('[data-testid="support-tickets-error"]').exists()).toBe(false)
   })
 
   it('shows the empty state when nothing matches', async () => {
@@ -82,12 +120,27 @@ describe('SupportTicketsView', () => {
     expect(wrapper.get('[data-testid="support-tickets-error"]').text()).toBe('Not allowed.')
   })
 
-  it('names the client who opened the ticket and falls back to the client number', async () => {
-    stubPathRoutes([{ path: '/tickets?', body: { items: [{ ...ticket, clientName: 'Ada Lovelace' }, { ...ticket, id: 6, clientId: 9 }], totalCount: 2 } }])
+  it('loads the list again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/tickets': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json({ items: [ticket], totalCount: 1 })
+      },
+    })
+    const wrapper = await mountView(SupportTicketsView)
+
+    await wrapper.get('[data-testid="support-tickets-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="support-tickets-error"]').exists()).toBe(false)
+  })
+
+  it('names the client who opened the ticket', async () => {
+    stubPathRoutes([{ path: '/tickets?', body: { items: [ticket], totalCount: 1 } }])
 
     const wrapper = await mountView(SupportTicketsView)
 
     expect(wrapper.get('[data-testid="support-tickets-row-5"]').text()).toContain('Ada Lovelace')
-    expect(wrapper.get('[data-testid="support-tickets-row-6"]').text()).toContain('Client #9')
   })
 })

@@ -2,8 +2,6 @@ using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Support.Common;
 using Innovayse.Hostpanel.Application.Support.Extensions;
-using Innovayse.Hostpanel.Domain.Support;
-using Innovayse.Hostpanel.Domain.Support.Enums;
 using Innovayse.Hostpanel.Shared.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -27,24 +25,20 @@ public sealed class ListNetworkIssuesHandler
     /// <param name="query">The paging window and optional status filter.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Success with the page. This use case answers no refusal code.</returns>
-    public async Task<Result<PagedResult<NetworkIssueDto>>> HandleAsync(ListNetworkIssuesQuery query, CancellationToken ct)
+    public async Task<Result<PaginatedList<NetworkIssueDto>>> HandleAsync(ListNetworkIssuesQuery query, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(query);
 
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, PagingLimits.MinPageSize, PagingLimits.MaxPageSize);
 
-        NetworkIssueStatus? statusFilter = null;
-        if (!string.IsNullOrWhiteSpace(query.Status) &&
-            Enum.TryParse<NetworkIssueStatus>(query.Status, ignoreCase: true, out var parsed))
+        var filtered = _context.NetworkIssues.AsNoTracking();
+        if (query.Statuses is { Length: > 0 } statuses)
         {
-            statusFilter = parsed;
+            filtered = filtered.Where(n => statuses.Contains(n.Status));
         }
 
-        var baseQuery = _context.NetworkIssues
-            .AsNoTracking()
-            .Where(n => statusFilter == null || n.Status == statusFilter)
-            .OrderByDescending(n => n.CreatedAt);
+        var baseQuery = filtered.OrderByDescending(n => n.CreatedAt);
 
         var totalCount = await baseQuery.CountAsync(ct);
         var items = await baseQuery
@@ -52,6 +46,6 @@ public sealed class ListNetworkIssuesHandler
             .SelectDto()
             .ToListAsync(ct);
 
-        return Result.Success(new PagedResult<NetworkIssueDto>(items, totalCount, page, pageSize));
+        return Result.Success(new PaginatedList<NetworkIssueDto>(items, totalCount, page, pageSize));
     }
 }

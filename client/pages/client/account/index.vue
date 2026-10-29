@@ -55,7 +55,11 @@ const allTabs = computed(() => [
 /** The tab strip: only the tabs the person may open. */
 const tabs = computed(() => allTabs.value.filter(tab => client.mayDo(tab.permission)))
 
-/** The tab named by the query, or the details tab when it is missing, unknown or not permitted. */
+/**
+ * The tab named by the query, or the details tab when it is missing, unknown or not permitted.
+ *
+ * @returns The tab to open first.
+ */
 const initialTab = (): AccountTab => {
   const requested = tabs.value.find(tab => tab.value === route.query.tab)
   return requested?.value ?? AccountTab.Details

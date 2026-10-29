@@ -6,10 +6,10 @@
  * no `catch`. A load puts its sentence in `error`; a command puts its sentence in `actionError`.
  */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useOrdersApi } from '@/composables/apis/useOrdersApi'
 import { runAction } from '@/lib/runAction'
-import type { OrderDetail, OrderListItem } from '@/types/order'
+import type { OrderDetail, OrderLineFailure, OrderListItem, OrderStatus } from '@/types/order'
 import { DEFAULT_PAGE_SIZE } from '@/lib/limits'
 
 /** Loads and changes orders. */
@@ -32,7 +32,7 @@ export const useOrdersStore = defineStore('orders', () => {
   const totalCount = ref(0)
 
   /** Optional status filter. */
-  const statusFilter = ref<string | null>(null)
+  const statusFilter = ref<OrderStatus | null>(null)
 
   /** True while a load is in flight. */
   const loading = ref(false)
@@ -42,6 +42,14 @@ export const useOrdersStore = defineStore('orders', () => {
 
   /** Sentence for the last refused accept, cancel or delete, null when none. */
   const actionError = ref<string | null>(null)
+
+  /** Lines the last accept could not fulfil; empty when every line was. */
+  const acceptFailures = ref<OrderLineFailure[]>([])
+
+  /** The failed lines of the last accept, named by domain or product, comma-separated. */
+  const acceptFailureNames = computed(() =>
+    acceptFailures.value.map((line) => line.domain ?? line.productName).join(', '),
+  )
 
   /**
    * Loads one page of orders for the active status filter.
@@ -78,14 +86,17 @@ export const useOrdersStore = defineStore('orders', () => {
   }
 
   /**
-   * Accepts a pending order, then refreshes the current order detail.
+   * Accepts a pending order, keeps the lines it could not fulfil in `acceptFailures`, then
+   * refreshes the current order detail.
    *
    * @param id - The order primary key.
    * @returns True when accepted; false when refused (see `actionError`).
    */
   const acceptOrder = async (id: number): Promise<boolean> => {
+    acceptFailures.value = []
     const result = await runAction(actionError, () => api.acceptOrder(id))
     if (result.ok) {
+      acceptFailures.value = result.value.failedLines
       await fetchOne(id)
     }
     return result.ok
@@ -129,6 +140,8 @@ export const useOrdersStore = defineStore('orders', () => {
     loading,
     error,
     actionError,
+    acceptFailures,
+    acceptFailureNames,
     fetchAll,
     fetchOne,
     acceptOrder,

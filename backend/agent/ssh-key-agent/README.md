@@ -11,7 +11,7 @@ generates. Nothing in it is specific to one hosting company, network or server.
 |---|---|---|
 | `cwp` (CentOS Web Panel) | Supported; adapter, unit tests and isolated lab tests | Account must exist in CWP (`root_cwp.user`, via `providers/cwp/account-check`); suspended (`usermod -L`) accounts cannot receive keys. |
 | `generic-linux` | Agent profile; lab-tested. **Not selectable in HostPanel yet** — HostPanel has no server module for a plain Linux host. | passwd identity checks and the suspension lock only. |
-| cPanel/WHM, DirectAdmin | **Not supported.** Extension point only. | A provider is a profile in `profiles/<name>.conf` plus, if it needs one, a root-owned helper in `providers/<name>/` that answers `account_check_command`; HostPanel maps the server module to the profile in `SshKeyProviderFactory.AgentProfileFor`. Neither exists for these panels. |
+| Other hosting panels | **Not supported.** Extension point only. | A provider is a profile in `profiles/<name>.conf` plus, if it needs one, a root-owned helper in `providers/<name>/` that answers `account_check_command`; HostPanel maps the server module to the profile in `SshKeyProviderFactory.AgentProfileFor`. None exists for them yet. |
 
 HostPanel only offers SSH key management on servers whose module maps to a profile (today: the
 v7 hosting panel module → `cwp`). Every other server answers "not available for this type of
@@ -26,7 +26,7 @@ hosting" to customers.
    server. It downloads the agent bundle from your HostPanel, **stops unless the SHA256 matches the
    value shown in the authenticated admin panel**, unpacks to a fresh temporary directory and runs
    `install.sh --provider <profile> --binding <id> "<public key>"`. The installer prints the
-   server's host key fingerprints. Paste it into an SSH session: CWP's browser Terminal drops `$`
+   server's host key fingerprints. Paste it into an SSH session: a hosting panel's browser terminal drops `$`
    variables and repeats input, which breaks the command.
 3. **Host key.** *Read host key*: HostPanel shows the key the agent endpoint presents (without
    authenticating). Compare it with what the installer printed; if identical, *Use this

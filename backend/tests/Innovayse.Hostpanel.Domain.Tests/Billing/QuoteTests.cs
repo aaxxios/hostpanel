@@ -1,13 +1,15 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Billing;
 
 /// <summary>Unit tests for the <see cref="Quote"/> aggregate's stage invariants.</summary>
 public sealed class QuoteTests
 {
+    /// <summary>The fixed moment every quote in these tests is raised at.</summary>
+    private static readonly DateTimeOffset Now = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+
     /// <summary>
     /// AddItem on a quote whose stage was moved outside the editable set throws
     /// <see cref="DomainRuleException"/> with <c>QUOTE_NOT_EDITABLE</c>.
@@ -15,7 +17,7 @@ public sealed class QuoteTests
     [Fact]
     public void AddItem_WhenStageIsDead_ThrowsWithQuoteNotEditable()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "USD");
         quote.UpdateDetails(quote.Subject, QuoteStage.Dead, quote.ExpiryDate, quote.Notes);
 
         var act = () => quote.AddItem("SSL", 5m, 1);
@@ -27,7 +29,7 @@ public sealed class QuoteTests
     [Fact]
     public void Accept_WhenStageIsDead_ThrowsWithQuoteNotAcceptable()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "USD");
         quote.UpdateDetails(quote.Subject, QuoteStage.Dead, quote.ExpiryDate, quote.Notes);
 
         var act = quote.Accept;
@@ -42,7 +44,7 @@ public sealed class QuoteTests
     [Fact]
     public void RemoveItem_WhenIdUnknown_ThrowsWithQuoteItemNotFound()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "USD");
 
         var act = () => quote.RemoveItem(999);
 
@@ -53,7 +55,7 @@ public sealed class QuoteTests
     [Fact]
     public void Create_StampsTheCurrency()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "eur");
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "eur");
 
         quote.Currency.Should().Be("EUR");
     }
@@ -65,7 +67,7 @@ public sealed class QuoteTests
     [InlineData("US")]
     public void Create_RefusesAMalformedCurrency(string currency)
     {
-        var act = () => Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: currency);
+        var act = () => Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: currency);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -74,7 +76,7 @@ public sealed class QuoteTests
     [Fact]
     public void Duplicate_KeepsTheCurrency()
     {
-        var original = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "GBP");
+        var original = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "GBP");
 
         original.Duplicate().Currency.Should().Be("GBP");
     }
@@ -83,7 +85,7 @@ public sealed class QuoteTests
     [Fact]
     public void Backdate_MovesTheCreationDateOnly()
     {
-        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: DateTimeOffset.UtcNow.AddDays(7), currency: "USD");
+        var quote = Quote.Create(clientId: 1, subject: "Test", expiryDate: Now.AddDays(7), currency: "USD");
         var written = new DateTimeOffset(2026, 2, 3, 10, 0, 0, TimeSpan.Zero);
 
         quote.Backdate(written);

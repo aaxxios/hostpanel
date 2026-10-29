@@ -4,7 +4,7 @@
  *
  * The model is an ISO `YYYY-MM-DD` string (or null). Typing a complete date commits it; a partial
  * date moves the calendar so the reader sees where it will land. `direction` picks the quick
- * choices: `past` (yesterday, 7 days ago, ...) or `future` (tomorrow, in 7 days, ...), which
+ * choices: `past` (yesterday, 7 days ago and so on) or `future` (tomorrow, in 7 days and so on), which
  * replaces the former separate future picker. Colours are theme tokens, so the popup follows the
  * light/dark switch. `data-testid` and classes land on the root element.
  */

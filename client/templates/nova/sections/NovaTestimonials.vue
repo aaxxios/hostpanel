@@ -25,7 +25,7 @@
 <script setup lang="ts">
 /**
  * nova testimonials. The quotes come from the storefront store
- * (`GET /api/public/testimonials`); with none the section renders nothing -- not a placeholder,
+ * (`GET /api/public/testimonials`); with none the section renders nothing, not a placeholder,
  * and certainly not an invented name.
  */
 import NovaSectionHeader from '~/templates/nova/sections/NovaSectionHeader.vue'

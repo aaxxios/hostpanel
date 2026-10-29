@@ -1,7 +1,7 @@
 /**
  * Mount tests for ManageUsersView: rows render with their actions, the search is sent to the API,
- * the password-reset action confirms with a success message, and a refused load shows the API's
- * sentence instead of the table.
+ * the password-reset action confirms with a success message, deleting a user is confirmed first and
+ * reports its outcome, and a refused load shows the API's sentence with a Retry instead of the table.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -88,5 +88,79 @@ describe('ManageUsersView', () => {
     const wrapper = await mountUsers()
 
     expect(wrapper.text()).toContain('No users found')
+  })
+
+  it('reloads the list from the Retry of a refused load', async () => {
+    let refused = true
+    stubRoutes({
+      'GET /api/admin/users': () => (refused ? problem('Users are unavailable.', 503) : json({ items: [user], totalCount: 1 })),
+    })
+    const wrapper = await mountUsers()
+
+    refused = false
+    await wrapper.get('[data-testid="users-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="users-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="users-row-u1"]').exists()).toBe(true)
+  })
+
+  /**
+   * Opens the manage modal of the user and asks to delete them.
+   *
+   * @param wrapper - The mounted screen.
+   * @returns Resolves when the confirmation prompt is open.
+   */
+  const askDelete = async (wrapper: Awaited<ReturnType<typeof mountUsers>>): Promise<void> => {
+    await wrapper.get('[data-testid="users-manage-u1"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="clients-userform-delete"]').trigger('click')
+  }
+
+  it('deletes a user only after the confirmation and reports it', async () => {
+    const mock = stubRoutes({
+      'GET /api/admin/users/u1': () => json({ ...user, accounts: [] }),
+      'DELETE /api/admin/users/u1': () => new Response(null, { status: 204 }),
+      'GET /api/admin/users': () => json({ items: [user], totalCount: 1 }),
+    })
+    const wrapper = await mountUsers()
+    await askDelete(wrapper)
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(true)
+    expect(wrapper.get('[data-testid="users-action-success"]').text()).toContain('User deleted.')
+  })
+
+  it('keeps the user when the confirmation is cancelled', async () => {
+    const mock = stubRoutes({
+      'GET /api/admin/users/u1': () => json({ ...user, accounts: [] }),
+      'GET /api/admin/users': () => json({ items: [user], totalCount: 1 }),
+    })
+    const wrapper = await mountUsers()
+    await askDelete(wrapper)
+
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'DELETE')).toBe(false)
+    expect(wrapper.find('[data-testid="users-action-success"]').exists()).toBe(false)
+  })
+
+  it('shows the API sentence when the delete is refused', async () => {
+    stubRoutes({
+      'GET /api/admin/users/u1': () => json({ ...user, accounts: [] }),
+      'DELETE /api/admin/users/u1': () => problem('The user owns an account.', 409),
+      'GET /api/admin/users': () => json({ items: [user], totalCount: 1 }),
+    })
+    const wrapper = await mountUsers()
+    await askDelete(wrapper)
+
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="users-action-error"]').text()).toContain('The user owns an account.')
   })
 })

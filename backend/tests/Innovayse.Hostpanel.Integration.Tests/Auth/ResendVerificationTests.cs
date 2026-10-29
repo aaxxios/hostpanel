@@ -1,8 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 

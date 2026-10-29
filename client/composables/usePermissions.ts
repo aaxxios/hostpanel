@@ -39,7 +39,7 @@ export enum Permission {
   ViewEmails = 2048,
   /** Can place new orders. */
   PlaceNewOrders = 4096,
-  /** All permissions — owner default. */
+  /** All permissions: owner default. */
   All = 8191,
 }
 

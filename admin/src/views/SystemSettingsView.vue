@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * System settings view — the storefront's identity, content, appearance and branding cards, then the
+ * System settings view: the storefront's identity, content, appearance and branding cards, then the
  * key-value list of every other global setting.
  *
  * A secret row (an integration credential, the setup token) is write only: the API sends whether it
@@ -9,7 +9,10 @@
  *
  * Only the first load replaces the page with a loading state: every save re-fetches the list, and
  * swapping the cards for a spinner and back would unmount them and drop every unsaved draft in the
- * other cards.
+ * other cards. A refused first load shows the API's sentence with a retry instead of the cards.
+ *
+ * The outcome of a save or clear (success, or the API's sentence) shows next to the control that
+ * was saved: inside its card, or in the value cell of its table row.
  */
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,13 +21,14 @@ import BrandingCard from '@/components/settings/BrandingCard.vue'
 import HomeSectionsCard from '@/components/settings/HomeSectionsCard.vue'
 import HostingDetailsCard from '@/components/settings/HostingDetailsCard.vue'
 import PortalAppearanceCard from '@/components/settings/PortalAppearanceCard.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SecretSettingField from '@/components/settings/SecretSettingField.vue'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
 import SiteIdentityCard from '@/components/settings/SiteIdentityCard.vue'
 import StorefrontContentCard from '@/components/settings/StorefrontContentCard.vue'
 import TrackingChatCard from '@/components/settings/TrackingChatCard.vue'
 import TypographyCard from '@/components/settings/TypographyCard.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -37,22 +41,25 @@ import UiTableHead from '@/components/ui/UiTableHead.vue'
 import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import { useSettingsStore } from '@/stores/settings'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSaveResult } from '@/types/setting'
 
 const { t } = useI18n()
 
 /** Settings store: the list, the loading flag and the refusal sentence. */
 const store = useSettingsStore()
 
-/** True while a save is in flight, so every card disables its Save button. */
+/** True while a table row's save or clear is in flight, so the table disables its controls. */
 const saving = ref(false)
+
+/** How the last save or clear of each table row went, keyed by setting id; cleared by the next edit. */
+const rowOutcomes = ref<Record<number, SettingSaveResult | null>>({})
 
 /**
  * Unsaved edits of the table rows, keyed by setting id.
  *
- * The table used to be read-only, which left every seeded key — the storefront's contact details,
- * footer widgets and app launcher among them — changeable only through the API. Editing here is per
- * row rather than a bulk form so a mistake in one value cannot be saved along with the others.
+ * Every seeded key (the storefront's contact details, footer widgets and app launcher among them)
+ * is editable here. Editing is per row rather than a bulk form so a mistake in one value cannot
+ * be saved along with the others.
  */
 const drafts = ref<Record<number, string>>({})
 
@@ -62,24 +69,27 @@ const drafts = ref<Record<number, string>>({})
  */
 const savedVersion = ref(0)
 
+/**
+ * Reads the outcome of the store's last action: saved, or the API's refusal sentence.
+ *
+ * @param ok - Whether the API accepted the change.
+ * @returns The outcome a control shows next to itself.
+ */
+const resultOf = (ok: boolean): SettingSaveResult => ({ saved: ok, error: ok ? null : store.actionError })
+
 onMounted(store.fetchSettings)
 
 /**
- * Persists one setting.
+ * Persists one setting for a card, which shows the outcome next to the saved control.
  *
- * The store keeps the refusal sentence in `error` for the banner below. The outcome is returned
- * rather than swallowed, because the caller has to know whether it may drop the operator's text.
+ * It is returned rather than swallowed, because the caller has to know whether it may drop the
+ * operator's text.
  *
  * @param id - Setting ID.
  * @param value - New value.
- * @returns True when the value was stored.
+ * @returns Whether the value was stored, and the API's sentence when it was refused.
  */
-const onSave = async (id: number, value: string): Promise<boolean> => {
-  saving.value = true
-  const saved = await store.updateSetting(id, value)
-  saving.value = false
-  return saved
-}
+const onSave = async (id: number, value: string): Promise<SettingSaveResult> => resultOf(await store.updateSetting(id, value))
 
 /**
  * Current text for a row: the operator's unsaved edit, or the stored value. A secret row starts
@@ -108,14 +118,27 @@ const isDirty = (setting: Setting): boolean => {
 }
 
 /**
+ * Records an edit of a table row and forgets the outcome of its previous save.
+ *
+ * @param setting - The settings row.
+ * @param value - The text now typed for it.
+ */
+const edit = (setting: Setting, value: string): void => {
+  drafts.value[setting.id] = value
+  rowOutcomes.value[setting.id] = null
+}
+
+/**
  * Removes a secret row's stored value and drops any typed replacement.
  *
  * @param setting - The secret settings row.
  */
 const clearRow = async (setting: Setting): Promise<void> => {
+  rowOutcomes.value[setting.id] = null
   saving.value = true
   const cleared = await store.clearSetting(setting.id)
   saving.value = false
+  rowOutcomes.value[setting.id] = resultOf(cleared)
   if (cleared) {
     delete drafts.value[setting.id]
   }
@@ -125,7 +148,7 @@ const clearRow = async (setting: Setting): Promise<void> => {
  * Saves one row and drops its draft, so the input falls back to the stored value.
  *
  * The draft is dropped only on success: dropping it either way would replace whatever the operator
- * typed with the value already stored, leaving an error banner and no way back to the text that
+ * typed with the value already stored, leaving an error and no way back to the text that
  * caused it.
  *
  * @param setting - The settings row.
@@ -135,7 +158,12 @@ const saveRow = async (setting: Setting): Promise<void> => {
   if (!isDirty(setting) || draft === undefined) {
     return
   }
-  if (await onSave(setting.id, draft)) {
+  rowOutcomes.value[setting.id] = null
+  saving.value = true
+  const result = await onSave(setting.id, draft)
+  saving.value = false
+  rowOutcomes.value[setting.id] = result
+  if (result.saved) {
     delete drafts.value[setting.id]
     savedVersion.value += 1
   }
@@ -147,21 +175,23 @@ const saveRow = async (setting: Setting): Promise<void> => {
     <UiPageHeader :title="t('settings.systemSettings')" />
 
     <SettingsLoading v-if="store.loading && store.settings.length === 0" :message="t('common.loading')" />
+    <UiErrorState
+      v-else-if="store.error && store.settings.length === 0"
+      :message="store.error"
+      testid="system-settings-error"
+      @retry="store.fetchSettings()"
+    />
     <template v-else>
-      <UiAlert v-if="store.error" variant="danger" class="mb-6" data-testid="system-settings-error">
-        {{ store.error }}
-      </UiAlert>
-
       <!-- Identity first: the name is the first thing an operator sets, and everything below renders it. -->
-      <SiteIdentityCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <StorefrontContentCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <PortalAppearanceCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <HomeSectionsCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <HostingDetailsCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <BrandColorsCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <TypographyCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <BrandingCard :settings="store.settings" :saving="saving" @save="onSave" />
-      <TrackingChatCard :settings="store.settings" :saving="saving" @save="onSave" />
+      <SiteIdentityCard :settings="store.settings" :save="onSave" />
+      <StorefrontContentCard :settings="store.settings" :save="onSave" />
+      <PortalAppearanceCard :settings="store.settings" :save="onSave" />
+      <HomeSectionsCard :settings="store.settings" :save="onSave" />
+      <HostingDetailsCard :settings="store.settings" :save="onSave" />
+      <BrandColorsCard :settings="store.settings" :save="onSave" />
+      <TypographyCard :settings="store.settings" :save="onSave" />
+      <BrandingCard :settings="store.settings" :save="onSave" />
+      <TrackingChatCard :settings="store.settings" :save="onSave" />
 
       <UiCard class="overflow-hidden overflow-x-auto">
         <UiTable density="comfortable" :empty="store.settings.length === 0" :colspan="3">
@@ -189,7 +219,7 @@ const saveRow = async (setting: Setting): Promise<void> => {
                     :disabled="saving"
                     :testid="`setting-secret-${setting.id}`"
                     class="min-w-48 flex-1"
-                    @update:model-value="drafts[setting.id] = $event"
+                    @update:model-value="edit(setting, $event)"
                     @clear="clearRow(setting)"
                   />
                   <UiInput
@@ -200,7 +230,7 @@ const saveRow = async (setting: Setting): Promise<void> => {
                     :placeholder="t('shared.value')"
                     :data-testid="`setting-value-${setting.id}`"
                     class="min-w-48 flex-1"
-                    @update:model-value="drafts[setting.id] = $event"
+                    @update:model-value="edit(setting, $event)"
                     @keyup.enter="saveRow(setting)"
                   />
                   <UiButton
@@ -215,6 +245,7 @@ const saveRow = async (setting: Setting): Promise<void> => {
                     {{ saving ? t('common.saving') : t('common.save') }}
                   </UiButton>
                 </UiStack>
+                <SettingOutcome :outcome="rowOutcomes[setting.id] ?? null" :data-testid="`setting-outcome-${setting.id}`" />
               </UiTableCell>
               <UiTableCell muted>{{ setting.description ?? '—' }}</UiTableCell>
             </UiTableRow>

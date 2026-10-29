@@ -11,7 +11,7 @@ import { json, stubApi } from './support/stubApi'
 test('the subject filter narrows the quotes list', async ({ page }) => {
   await stubApi(page, {
     signedIn: true,
-    routes: [json(HttpMethod.Get, '/api/billing/quotes', quotesPage), json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 })],
+    routes: [json(HttpMethod.Get, '/api/billing/quotes', quotesPage), json(HttpMethod.Get, '/api/clients', { items: [], pageNumber: 1, pageSize: 100, totalCount: 0, totalPages: 0 })],
   })
 
   await page.goto('/billing/quotes')
@@ -30,7 +30,7 @@ test('a quote id opens the quote detail', async ({ page }) => {
     signedIn: true,
     routes: [
       json(HttpMethod.Get, '/api/billing/quotes', quotesPage),
-      json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
+      json(HttpMethod.Get, '/api/clients', { items: [], pageNumber: 1, pageSize: 100, totalCount: 0, totalPages: 0 }),
       json(HttpMethod.Get, `/api/billing/quotes/${draftQuote.id}`, { ...draftQuote, items: [], notes: '' }),
     ],
   })
@@ -47,7 +47,7 @@ test('a refused load shows the API sentence', async ({ page }) => {
     signedIn: true,
     routes: [
       json(HttpMethod.Get, '/api/billing/quotes', { type: 'FORBIDDEN', title: 'Forbidden', status: 403, detail: sentence }, 403),
-      json(HttpMethod.Get, '/api/clients', { items: [], totalCount: 0, page: 1, pageSize: 100 }),
+      json(HttpMethod.Get, '/api/clients', { items: [], pageNumber: 1, pageSize: 100, totalCount: 0, totalPages: 0 }),
     ],
   })
 

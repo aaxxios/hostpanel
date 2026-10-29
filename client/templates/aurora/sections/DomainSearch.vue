@@ -44,7 +44,7 @@
 
     <!--
       The reserved height only applies once a search is under way, so the results
-      area stops jumping between rows — before the first search it would just be
+      area stops jumping between rows: before the first search it would just be
       a block of empty card.
     -->
     <UiStack

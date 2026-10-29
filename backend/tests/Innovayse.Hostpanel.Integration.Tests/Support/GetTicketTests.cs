@@ -1,9 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,7 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// ticket is refused <c>TICKET_NOT_FOUND</c>, and the action is closed to a caller with no
 /// credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>TicketsAdminEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetTicketTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -21,13 +17,15 @@ public sealed class GetTicketTests(IntegrationTestFactory factory) : IClassFixtu
     public async Task AdminCanReadATicketAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
-        var id = await SupportTestSeeds.CreateAdminTicketAsync(client);
+        var id = await SupportTestSeeds.CreateAdminTicketAsync(factory, client);
 
         var response = await client.GetAsync($"/api/tickets/{id}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         body.RootElement.GetProperty("subject").GetString().Should().Be("Admin-created ticket");
+        body.RootElement.GetProperty("feedback").GetProperty("rating").ValueKind.Should().Be(JsonValueKind.Null);
+        body.RootElement.GetProperty("assignee").GetProperty("id").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     /// <summary>Reading a ticket that does not exist answers 404 with <c>TICKET_NOT_FOUND</c>.</summary>

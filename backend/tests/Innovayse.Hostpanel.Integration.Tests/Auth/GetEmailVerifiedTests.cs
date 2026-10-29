@@ -2,13 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
-/// <summary><c>GET /api/auth/email-verified</c>: whether the caller's credential says their email is confirmed. Local mode only: the SSO branch needs the optional SSO package (INNOVAYSE_SSO), which the standard test build excludes.</summary>
+/// <summary><c>GET /api/auth/email-verified</c>: whether the caller's credential says their email is confirmed. Local mode only: the sign-on provider branch needs the optional sign-on provider package (INNOVAYSE_SSO), which the standard test build excludes.</summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetEmailVerifiedTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

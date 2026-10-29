@@ -34,4 +34,21 @@ export interface PortalSessionStore {
    * @returns Resolves once the entry is gone.
    */
   delete: (id: string) => Promise<void>
+  /**
+   * Takes the refresh lock of a session: at most one holder at a time across every replica, so the
+   * rotating refresh token is presented to the identity provider once. The lock expires by itself.
+   *
+   * @param id - The opaque session id.
+   * @param ttlSeconds - How long the lock lives if never released, in seconds.
+   * @returns The holder's token to release it with, or null when another holder has it.
+   */
+  acquireRefreshLock: (id: string, ttlSeconds: number) => Promise<string | null>
+  /**
+   * Releases a refresh lock, only when the caller still holds it.
+   *
+   * @param id - The opaque session id.
+   * @param holder - The token `acquireRefreshLock` returned.
+   * @returns Resolves once the lock is released or was already gone.
+   */
+  releaseRefreshLock: (id: string, holder: string) => Promise<void>
 }

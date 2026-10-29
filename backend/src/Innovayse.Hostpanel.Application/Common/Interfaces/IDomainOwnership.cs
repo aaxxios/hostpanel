@@ -7,22 +7,15 @@ namespace Innovayse.Hostpanel.Application.Common.Interfaces;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The client-facing domain routes may only ever touch the caller's own domains, and the rule
-/// that decides that used to run in <c>MyDomainsController</c> -- eighteen times, each one an
-/// <c>if (!await ownership.IsOwnedByCallerAsync(id, ct)) return Forbid();</c> ahead of the
-/// dispatch. That was better than reading claims in the controller, but the check still
-/// travelled separately from the message: every one of the commands behind those actions is
-/// also dispatched by the admin <c>DomainsController</c>, so the guarantee held only for
-/// callers who happened to come through that one endpoint.
+/// The client-facing domain routes may only ever touch the caller's own domains. The check runs
+/// in the client-facing <c>My*</c> handlers rather than at the endpoint, because the commands
+/// behind those actions are also dispatched by the admin <c>DomainsController</c>.
 /// </para>
 /// <para>
-/// It now sits beside <c>ITicketOwnership</c> and <c>IInvoiceOwnership</c> and is shaped like
-/// them: it resolves the caller through <c>ICurrentUserService</c> rather than being told
-/// whom to check. Unlike those two, which still throw a typed exception, this one answers a
-/// <see cref="Result"/> carrying <c>DOMAIN_NOT_FOUND</c> on refusal, so every client-facing
-/// domain handler can propagate it the same way it propagates any other refusal — no thrown
-/// exception the API boundary has to know about specially. The client-facing <c>My*</c> handlers
-/// call it; the endpoint no longer does.
+/// It sits beside <c>ITicketOwnership</c> and <c>IInvoiceOwnership</c> and is shaped like them:
+/// it resolves the caller through <c>ICurrentUserService</c> rather than being told whom to check,
+/// and answers a <see cref="Result"/> carrying <c>DOMAIN_NOT_FOUND</c> on refusal, so every
+/// client-facing domain handler propagates it the same way it propagates any other refusal.
 /// </para>
 /// </remarks>
 public interface IDomainOwnership

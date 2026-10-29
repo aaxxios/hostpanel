@@ -121,7 +121,12 @@ const mode = ref<InvitePermissionMode>(InvitePermissionMode.All)
 /** Success sentence after an invitation went out; empty otherwise. */
 const success = ref('')
 
-/** Builds a record with every permission set to the same state. */
+/**
+ * Builds a record with every permission set to the same state.
+ *
+ * @param state - Whether every permission is granted.
+ * @returns One entry per {@link TeamPermission}.
+ */
 const allPermissions = (state: boolean): Record<TeamPermission, boolean> => {
   const record = {} as Record<TeamPermission, boolean>
   for (const key of Object.values(TeamPermission)) {
@@ -154,12 +159,13 @@ const permissionOptions = computed(() => [
 const onSubmit = async (): Promise<void> => {
   success.value = ''
   const permissions = mode.value === InvitePermissionMode.All
-    ? InvitePermissionMode.All
-    : Object.values(TeamPermission).filter(key => chosen[key]).join(',')
+    ? []
+    : Object.values(TeamPermission).filter(key => chosen[key])
   const outcome = await account.inviteUser({
     email: email.value,
     firstName: firstName.value,
     lastName: lastName.value,
+    permissionMode: mode.value,
     permissions
   })
   if (outcome === ActionOutcome.Succeeded) {

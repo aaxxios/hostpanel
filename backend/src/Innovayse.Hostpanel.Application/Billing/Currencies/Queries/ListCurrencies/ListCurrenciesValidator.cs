@@ -7,7 +7,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Currencies.Queries.ListCurrenc
 
 /// <summary>
 ///     Validator for ListCurrenciesQuery.
-///     Its one input is a flag, which every value of is valid, so no rule is declared — decided, not
+///     Its one input is a flag, which every value of is valid, so no rule is declared: decided, not
 ///     forgotten.
 /// </summary>
 public sealed class ListCurrenciesValidator : LocalizedValidator<ListCurrenciesQuery>

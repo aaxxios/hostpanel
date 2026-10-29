@@ -1,11 +1,6 @@
 {
   "addBillableItem": {
-    "selectAService": "Ընտրեք ծառայությունը",
-    "describeTheCharge": "Նկարագրեք գանձումը...",
-    "recurEvery": "Կրկնել յուրաքանչյուր",
-    "for": "համար",
-    "times": "անգամ",
-    "invoiceCount": "Հաշիվների քանակ"
+    "describeTheCharge": "Նկարագրեք գանձումը..."
   },
   "addTimeBilling": {
     "addTimeBillingEntries": "Ավելացնել ժամանակի հաշվառման գրառումներ",
@@ -36,6 +31,9 @@
     "generating": "Ստեղծվում է…",
     "profileData": "Պրոֆիլի տվյալներ",
     "payMethods": "Վճարման եղանակներ",
+    "users": "Կապված օգտատերեր",
+    "invitations": "Հրավերներ",
+    "storageNote": "Համաձայնությունների պատմությունը պարունակում է միայն շուկայավարման ընթացիկ ընտրությունը, իսկ վճարման եղանակների բաժինը ցույց է տալիս նախընտրած եղանակը և քարտի պահպանված լինելը քարտային դարպասում։ Տվյալներ չունեցող բաժինն արտահանվում է դատարկ ցուցակով։ Նամակների և գործողությունների ցուցակները սահմանափակված են վերջին 500 գրառումով, և ֆայլը նշում է կրճատման մասին։",
     "consentHistory": "Համաձայնությունների պատմություն"
   },
   "clientForm": {
@@ -66,7 +64,9 @@
     "ttl": "TTL",
     "noDnsRecordsFound": "DNS գրառումներ չեն գտնվել",
     "deleteDnsRecord": "Ջնջել DNS գրառումը",
-    "deleteThisDnsRecord": "Ջնջե՞լ այս DNS գրառումը"
+    "deleteThisDnsRecord": "Ջնջե՞լ այս DNS գրառումը",
+    "saved": "DNS գրառումը պահպանվեց։",
+    "deleted": "DNS գրառումը ջնջվեց։"
   },
   "domainContact": {
     "modifyContactDetails": "Փոփոխել կոնտակտային տվյալները",
@@ -77,7 +77,16 @@
   "domainRemindersTable": {
     "domainReminderHistory": "Դոմեյնի հիշեցումների պատմություն",
     "reminder": "Հիշեցում",
-    "sent": "Ուղարկվել է"
+    "sent": "Ուղարկվել է",
+    "types": {
+      "thirtyDaysBeforeExpiry": "Ժամկետի ավարտից 30 օր առաջ",
+      "fourteenDaysBeforeExpiry": "Ժամկետի ավարտից 14 օր առաջ",
+      "sevenDaysBeforeExpiry": "Ժամկետի ավարտից 7 օր առաջ",
+      "oneDayBeforeExpiry": "Ժամկետի ավարտից 1 օր առաջ",
+      "expiredNotice": "Ժամկետի ավարտի ծանուցում",
+      "redemptionNotice": "Վերականգնման ժամկետի ծանուցում",
+      "unknown": "Անհայտ հիշեցում"
+    }
   },
   "emailForwardingTable": {
     "emailForwardingRules": "Նամակների վերահասցեավորման կանոններ",
@@ -85,7 +94,9 @@
     "destination": "Հասցեատեր",
     "noEmailForwardingRulesFound": "Վերահասցեավորման կանոններ չեն գտնվել",
     "deleteForwardingRule": "Ջնջել վերահասցեավորման կանոնը",
-    "deleteThisEmailForwardingRule": "Ջնջե՞լ նամակների վերահասցեավորման այս կանոնը"
+    "deleteThisEmailForwardingRule": "Ջնջե՞լ նամակների վերահասցեավորման այս կանոնը",
+    "saved": "Վերահասցեավորման կանոնը պահպանվեց։",
+    "deleted": "Վերահասցեավորման կանոնը ջնջվեց։"
   },
   "userForm": {
     "manageUserEmail": "Օգտատիրոջ կառավարում՝ {email}",
@@ -122,7 +133,8 @@
     "totalcountRequestValue": "Հայտեր՝ {totalCount}",
     "noCancellationRequestsFound": "Չեղարկման հայտեր չեն գտնվել",
     "deleteCancellationRequest": "Ջնջել չեղարկման հայտը",
-    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս չեղարկման հայտը։"
+    "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս չեղարկման հայտը։",
+    "requestDeleted": "Չեղարկման հայտը ջնջվեց։"
   },
   "clientBillableItems": {
     "billableItems": "Վճարվող դիրքեր",
@@ -139,7 +151,11 @@
     "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք անմիջապես հաշիվ դուրս գրել ընտրված դիրքերի համար։",
     "confirmDelete": "Հաստատեք ջնջումը",
     "areYouSureYouWant2": "Վստա՞հ եք, որ ցանկանում եք ջնջել այս վճարվող դիրքը։",
-    "confirmDeleteSelected": "Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրը։ | Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրերը։"
+    "confirmDeleteSelected": "Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրը։ | Վստա՞հ եք, որ ուզում եք ջնջել ընտրված {count} տարրերը։",
+    "itemsInvoiced": "Կետերը հաշվագրվեցին։",
+    "itemsDeleted": "Վճարովի կետերը ջնջվեցին։",
+    "itemAdded": "Վճարովի կետը ավելացվեց։",
+    "timeBillingAdded": "Ժամանակի հաշվառման գրառումները ավելացվեցին։"
   },
   "clientContacts": {
     "contactsLength": "Կոնտակտներ ({length})",
@@ -191,7 +207,9 @@
     "registerThisDomainWithThe": "Գրանցե՞լ այս դոմեյնը գրանցողի մոտ",
     "eppAuthorizationCode": "EPP թույլտվության կոդ",
     "useThisCodeToTransfer": "Օգտագործեք այս կոդը դոմեյնը մեկ այլ գրանցողի տեղափոխելու համար։ Պահեք այն գաղտնի։",
-    "copy": "Պատճենել"
+    "copy": "Պատճենել",
+    "registrarCommandDone": "Պատրաստ է։ Ռեգիստրատորն ընդունեց փոփոխությունը։",
+    "contactSaved": "Կոնտակտային տվյալները պահպանվեցին։"
   },
   "clientDomainsList": {
     "loadingDomains": "Դոմեյնները բեռնվում են...",
@@ -200,7 +218,19 @@
   "clientEmails": {
     "emails": "Նամակներ",
     "loadingEmails": "Նամակները բեռնվում են...",
-    "totalcountEmailValue": "Նամակներ՝ {totalCount}"
+    "totalcountEmailValue": "Նամակներ՝ {totalCount}",
+    "status": "Կարգավիճակ",
+    "delivered": "Առաքված է",
+    "failure": {
+      "unknown": "Չի առաքվել",
+      "relayUnreachable": "Փոստային սերվերը հասանելի չէ",
+      "timeout": "Փոստային սերվերը ժամանակին չպատասխանեց",
+      "secureConnectionFailed": "Պաշտպանված կապ հաստատել չհաջողվեց",
+      "authenticationRejected": "Փոստային սերվերը մերժեց մուտքի տվյալները",
+      "recipientRejected": "Ստացողի հասցեն մերժվեց",
+      "senderRejected": "Ուղարկողի հասցեն մերժվեց",
+      "messageRejected": "Նամակը մերժվեց"
+    }
   },
   "clientInvoices": {
     "createInvoice": "+ Ստեղծել հաշիվ",
@@ -219,7 +249,9 @@
     "deleteInvoice": "Ջնջել հաշիվը",
     "confirmBulkAction": "Հաստատեք զանգվածային գործողությունը",
     "confirmBulkApply": "Կիրառե՞լ «{action}» ընտրված {count} հաշիվ-ապրանքագրին։ | Կիրառե՞լ «{action}» ընտրված {count} հաշիվ-ապրանքագրերին։",
-    "confirmDeleteInvoice": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} հաշիվ-ապրանքագիրը։"
+    "confirmDeleteInvoice": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} հաշիվ-ապրանքագիրը։",
+    "bulkActionDone": "Կատարվեց ընտրված հաշիվների համար։",
+    "invoiceDeleted": "Հաշիվը ջնջվեց։"
   },
   "clientLayout": {
     "loadingClient": "Հաճախորդը բեռնվում է…",
@@ -240,6 +272,20 @@
     "openTicket": "Բացել տոմս"
   },
   "clientProfile": {
+    "statusEffects": {
+      "Suspended": "Հաճախորդը դեռ կարող է մուտք գործել և դիտել իր հաշիվը, բայց չի կարող պատվերներ տալ կամ սկսել նոր քարտային վճարումներ, և հաշվի կասեցման ընթացքում երկարաձգման հաշիվներ չեն դուրս գրվում։ Նրա ծառայությունները շարունակում են աշխատել։",
+      "Closed": "Փակումը անշրջելի է։ Հաճախորդի սեսիաները ավարտվում են, ակտիվ ծառայությունները կասեցվում են, չվճարված երկարաձգման հաշիվները չեղարկվում են, և նա այլևս չի կարող պատվերներ տալ կամ վճարել։ Փակված հաշիվը հնարավոր չէ նորից բացել։"
+    },
+    "statusConfirm": {
+      "Suspended": {
+        "title": "Կասեցնե՞լ հաճախորդին",
+        "action": "Կասեցնել հաճախորդին"
+      },
+      "Closed": {
+        "title": "Փակե՞լ հաճախորդին",
+        "action": "Փակել հաճախորդին"
+      }
+    },
     "profile": "Պրոֆիլ",
     "clientId": "Հաճախորդի ID՝",
     "joined": "Գրանցման ամսաթիվ՝",
@@ -258,7 +304,8 @@
     "noQuotesFound": "Առաջարկներ չեն գտնվել։",
     "clientquotestotalQuoteValue": "Առաջարկներ՝ {clientQuotesTotal}",
     "deleteQuote": "Ջնջել առաջարկը",
-    "confirmDeleteQuote": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} առաջարկը։"
+    "confirmDeleteQuote": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} առաջարկը։",
+    "quoteDeleted": "Առաջարկը ջնջվեց։"
   },
   "clientServiceDetail": {
     "loadingService": "Ծառայությունը բեռնվում է...",
@@ -276,6 +323,7 @@
     "suspend": "Կասեցնել",
     "changePackage": "Փոխել փաթեթը",
     "unsuspend": "Վերսկսել",
+    "changeStatus": "Փոխել կարգավիճակը",
     "addons": "Հավելումներ",
     "noAddonsFound": "Հավելումներ չեն գտնվել։",
     "billing": "Վճարում",
@@ -287,6 +335,7 @@
     "promotionCode": "Պրոմոկոդ",
     "subscriptionId": "Բաժանորդագրության ID",
     "autoManagement": "Ավտոմատ կառավարում",
+    "autoRenew": "Ավտոմատ բիլինգ (երկարաձգման հաշիվներ, չվճարման համար կասեցում և դադարեցում)",
     "overrideAutoSuspend": "Չեղարկել ավտոմատ կասեցումը",
     "suspendUntil": "Կասեցնել մինչև",
     "autoTerminateEndOfCycle": "Ավտոմատ դադարեցում ժամանակահատվածի վերջում",
@@ -302,7 +351,19 @@
     "suspendService": "Կասեցնել ծառայությունը",
     "areYouSureYouWant": "Վստա՞հ եք, որ ցանկանում եք կասեցնել այս ծառայությունը։ Հաճախորդը կկորցնի հասանելիությունը, մինչև ծառայությունը վերսկսվի։",
     "terminateService": "Դադարեցնել ծառայությունը",
-    "thisActionCannotBeUndone": "Այս գործողությունը հնարավոր չէ չեղարկել։ Ծառայությունը կդադարեցվի ընդմիշտ։"
+    "thisActionCannotBeUndone": "Այս գործողությունը հնարավոր չէ չեղարկել։ Ծառայությունը կդադարեցվի ընդմիշտ։",
+    "saveServiceInfo": "Պահպանել ծառայության տվյալները",
+    "saveBilling": "Պահպանել վճարումները",
+    "saveAutomation": "Պահպանել ավտոմատացումը",
+    "saveNotes": "Պահպանել նշումները",
+    "saveTerminationDate": "Պահպանել դադարեցման ամսաթիվը",
+    "changeStatusTo": "Փոխել կարգավիճակը՝ {status}",
+    "provisioned": "Ծառայությունը ստեղծված է սերվերում։",
+    "passwordChanged": "Գաղտնաբառը փոխված է։",
+    "packageChanged": "Փաթեթը փոխված է։",
+    "suspended": "Ծառայությունը կասեցված է։",
+    "unsuspended": "Ծառայությունը վերսկսված է։",
+    "terminated": "Ծառայությունը դադարեցված է։"
   },
   "clientServicesList": {
     "loadingServices": "Ծառայությունները բեռնվում են...",
@@ -376,7 +437,8 @@
     "noDomainsFound": "Դոմեյններ չեն գտնվել",
     "currentQuotes": "Ընթացիկ առաջարկներ",
     "createDate": "Ստեղծման ամսաթիվ",
-    "noQuotesFound": "Առաջարկներ չեն գտնվել"
+    "noQuotesFound": "Առաջարկներ չեն գտնվել",
+    "notesSaved": "Նշումները պահպանվեցին։"
   },
   "clientTicketDetail": {
     "loadingTicket": "Տոմսը բեռնվում է...",
@@ -388,7 +450,11 @@
     "conversation": "Նամակագրություն",
     "staff": "Աշխատակից",
     "deleteTicket": "Ջնջել տոմսը",
-    "confirmDeleteTicket": "Վստա՞հ եք, որ ուզում եք ջնջել #TKT-{id} տիկետը։ Այս գործողությունը հնարավոր չէ չեղարկել։"
+    "confirmDeleteTicket": "Վստա՞հ եք, որ ուզում եք ջնջել #TKT-{id} տիկետը։ Այս գործողությունը հնարավոր չէ չեղարկել։",
+    "ticketSaved": "Տոմսը պահպանվեց։",
+    "ticketClosed": "Տոմսը փակվեց։",
+    "ticketReopened": "Տոմսը կրկին բացվեց։",
+    "replySent": "Պատասխանն ուղարկվեց։"
   },
   "clientTickets": {
     "tickets": "Տոմսեր",
@@ -411,7 +477,9 @@
     "totalOut": "Ընդհանուր ելք",
     "totalcountTransactionValue": "Գործարքներ՝ {totalCount}",
     "deleteTransaction": "Ջնջել գործարքը",
-    "confirmDeleteTransaction": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} գործարքը։"
+    "confirmDeleteTransaction": "Վստա՞հ եք, որ ուզում եք ջնջել #{id} գործարքը։",
+    "transactionAdded": "Գործարքը ավելացվեց։",
+    "transactionDeleted": "Գործարքը ջնջվեց։"
   },
   "clientUsers": {
     "loadingUsers": "Օգտատերերը բեռնվում են...",
@@ -468,7 +536,10 @@
     "totalcountUserValue": "Օգտատերեր՝ {totalCount}",
     "noUsersFound": "Օգտատերեր չեն գտնվել",
     "passwordResetEmailSent": "Գաղտնաբառի վերականգնման նամակը ուղարկվեց։",
-    "never": "Երբեք"
+    "never": "Երբեք",
+    "userSaved": "Օգտատերը պահպանվեց։",
+    "userDeleted": "Օգտատերը ջնջվեց։",
+    "passwordChanged": "Գաղտնաբառը փոխվեց։"
   },
   "serviceAddons": {
     "serviceAddons": "Ծառայությունների հավելումներ",

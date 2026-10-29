@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import type { PropType } from 'vue'
 import StorefrontListTable from '@/components/storefront/StorefrontListTable.vue'
+import { StorefrontListOutcome } from '@/types/storefront'
 import { mountScreen } from '../../helpers/mount'
 
 vi.mock('vuedraggable', async () => {
@@ -116,7 +117,34 @@ describe('StorefrontListTable', () => {
     const { wrapper } = await mountScreen(hostWith({ actionError: 'Refused.', savingOrder: true }))
 
     expect(wrapper.get('[data-testid="widgets-action-error"]').text()).toBe('Refused.')
+    expect(wrapper.get('[data-testid="widgets-action-error"]').attributes('data-tone')).toBe('danger')
     expect(wrapper.get('[data-testid="widgets-saving-order"]').text()).toBe('Saving order...')
+  })
+
+  it('confirms a finished delete or reorder in the outcome line', async () => {
+    const deleted = await mountScreen(hostWith({ outcome: StorefrontListOutcome.Deleted }))
+    expect(deleted.wrapper.get('[data-testid="widgets-action-error"]').text()).toBe('Record deleted.')
+    expect(deleted.wrapper.get('[data-testid="widgets-action-error"]').attributes('data-tone')).toBe('success')
+
+    const ordered = await mountScreen(hostWith({ outcome: StorefrontListOutcome.OrderSaved }))
+    expect(ordered.wrapper.get('[data-testid="widgets-action-error"]').text()).toBe('Order saved.')
+  })
+
+  it('asks the page to load again from the retry of a refused load', async () => {
+    const { wrapper } = await mountScreen(hostWith({ error: 'Could not load.' }))
+
+    await wrapper.get('[data-testid="widgets-error-retry"]').trigger('click')
+
+    expect(wrapper.findComponent(StorefrontListTable).emitted('retry')).toHaveLength(1)
+  })
+
+  it('reports a dismissed delete question', async () => {
+    const { wrapper } = await mountScreen(hostWith({ deleteTarget: widgets[1] }))
+
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+
+    expect(wrapper.findComponent(StorefrontListTable).emitted('cancelDelete')).toHaveLength(1)
+    expect(wrapper.findComponent(StorefrontListTable).emitted('confirmDelete')).toBeUndefined()
   })
 
   it('emits add, edit and stage-delete from the buttons', async () => {

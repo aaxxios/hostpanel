@@ -4,8 +4,9 @@ namespace Innovayse.Hostpanel.Application.Common.Extensions;
 public static class TranslationExtensions
 {
     /// <summary>
-    /// Resolves a translation by locale: the requested one, else the fallback (default) locale, else
-    /// whichever is stored first.
+    /// Resolves a translation by locale: the requested one, else the fallback (default) locale, else the
+    /// first of the rest in locale order. The last step is ordered rather than "whichever is stored first",
+    /// because storage order is not guaranteed and the same request must always answer the same text.
     /// </summary>
     /// <typeparam name="T">The translation entity.</typeparam>
     /// <param name="translations">Every translation stored for one piece of content.</param>
@@ -24,6 +25,6 @@ public static class TranslationExtensions
 
         return all.FirstOrDefault(t => string.Equals(localeOf(t), requested, StringComparison.OrdinalIgnoreCase))
             ?? all.FirstOrDefault(t => string.Equals(localeOf(t), fallback, StringComparison.OrdinalIgnoreCase))
-            ?? all.FirstOrDefault();
+            ?? all.OrderBy(localeOf, StringComparer.Ordinal).FirstOrDefault();
     }
 }

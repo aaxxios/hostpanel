@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Servers.Enums;
+
 /// <summary>
 /// Identifies the control panel module used to manage a server.
 /// </summary>
@@ -21,9 +22,6 @@ public enum ServerModule
 
     /// <summary>Lukittu license server module.</summary>
     Lukittu = 5,
-
-    /// <summary>Innovayse WordPress Hosting module.</summary>
-    InnovayseWordPressHosting = 6,
 
     /// <summary>Virtualmin provisioning module.</summary>
     Virtualmin = 7,

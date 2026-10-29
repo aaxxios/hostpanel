@@ -14,7 +14,6 @@ import type { ProductPlan } from '~/types/productplan'
 /** A plan with a monthly and a yearly price and two feature lines. */
 const basePlan: ProductPlan = {
   id: 11,
-  pid: 11,
   tier: 'Starter',
   pricing: { monthly: 10, annual: 100 },
   description: 'For a first site',

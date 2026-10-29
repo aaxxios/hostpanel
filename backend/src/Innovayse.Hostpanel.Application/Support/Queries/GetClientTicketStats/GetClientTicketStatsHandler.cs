@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Support.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,11 +11,16 @@ public sealed class GetClientTicketStatsHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetClientTicketStatsHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetClientTicketStatsHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
@@ -29,7 +35,7 @@ public sealed class GetClientTicketStatsHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _clock.UtcNow;
         var thisMonthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
         var lastMonthStart = thisMonthStart.AddMonths(-1);
         var thisYearStart = new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);

@@ -5,21 +5,23 @@
  *
  * The page supplies the column captions and, per row, the cells between the drag handle and the
  * actions (`row` slot). Dragging reports the new order as id + sortOrder pairs; saving it, loading
- * the list and deleting stay with the page's store.
+ * the list and deleting stay with the page's store. A refused load offers a retry; the outcome of a
+ * delete or reorder (the success sentence, or the API's refusal) shows above the header.
  */
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
 import SettingsLoading from '@/components/settings/SettingsLoading.vue'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTable from '@/components/ui/UiTable.vue'
 import UiTableCell from '@/components/ui/UiTableCell.vue'
 import UiTableHead from '@/components/ui/UiTableHead.vue'
@@ -27,12 +29,15 @@ import UiTableHeader from '@/components/ui/UiTableHeader.vue'
 import UiTableRow from '@/components/ui/UiTableRow.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { Icon } from '@/lib/icons'
+import { StorefrontListOutcome } from '@/types/storefront'
 import type { StorefrontEntity, StorefrontListTestIds, StorefrontOrderItem } from '@/types/storefront'
+import { UiDialogVariant } from '@/utils/ui/dialog'
+import { UiTone } from '@/utils/ui/tone'
 
 const { t } = useI18n()
 
 /** Props for StorefrontListTable. */
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /** Page title (already translated). */
   title: string
   /** Line under the title (already translated). */
@@ -73,7 +78,11 @@ const props = defineProps<{
   deleting: boolean
   /** The question text for the staged entry (already translated). */
   deleteMessage: string
-}>()
+  /** What the last successful delete or reorder did, null when there is nothing to report. */
+  outcome?: StorefrontListOutcome | null
+}>(), {
+  outcome: null,
+})
 
 const emit = defineEmits<{
   /** Emitted when the operator presses Add. */
@@ -88,7 +97,26 @@ const emit = defineEmits<{
   cancelDelete: []
   /** Emitted with the new order after a drag ends. */
   reorder: [order: StorefrontOrderItem[]]
+  /** Emitted when the operator asks to load the refused list again. */
+  retry: []
 }>()
+
+/** Success sentence of each list outcome. */
+const OUTCOME_KEYS: Record<StorefrontListOutcome, string> = {
+  [StorefrontListOutcome.Deleted]: 'shared.recordDeleted',
+  [StorefrontListOutcome.OrderSaved]: 'storefront.list.orderSaved',
+}
+
+/** The outcome line: the API's refusal first, else the success sentence, else nothing. */
+const outcomeMessage = computed<string | null>(() => {
+  if (props.actionError) {
+    return props.actionError
+  }
+  return props.outcome === null ? null : t(OUTCOME_KEYS[props.outcome])
+})
+
+/** Tone of the outcome line: danger for a refusal, success otherwise. */
+const outcomeTone = computed<UiTone>(() => (props.actionError ? UiTone.Danger : UiTone.Success))
 
 defineSlots<{
   /**
@@ -136,9 +164,7 @@ const onDragEnd = (): void => {
 
 <template>
   <UiStack gap="none" :data-testid="testids.view">
-    <UiAlert v-if="actionError" variant="danger" class="mb-4" :data-testid="testids.actionError">
-      {{ actionError }}
-    </UiAlert>
+    <UiStatusMessage :message="outcomeMessage" :tone="outcomeTone" class="mb-4" :data-testid="testids.actionError" />
 
     <UiPageHeader :title="title" :subtitle="subtitle">
       <template #actions>
@@ -153,9 +179,7 @@ const onDragEnd = (): void => {
 
     <SettingsLoading v-if="loading" :message="loadingLabel" />
 
-    <UiAlert v-else-if="error" variant="danger" :data-testid="testids.error">
-      {{ error }}
-    </UiAlert>
+    <UiErrorState v-else-if="error" :message="error" :testid="testids.error" @retry="emit('retry')" />
 
     <UiCard v-else class="overflow-hidden">
       <UiTable density="comfortable" :empty="local.length === 0" :colspan="columns.length + 2">
@@ -234,13 +258,13 @@ const onDragEnd = (): void => {
     <!-- Delete confirmation -->
     <UiDialog
       v-if="deleteTarget"
-      variant="confirm"
+      :variant="UiDialogVariant.Confirm"
       :title="deleteTitle"
       :message="deleteMessage"
       :confirm-label="t('shared.delete')"
       :loading-label="t('shared.deleting')"
       :loading="deleting"
-      tone="danger"
+      :tone="UiTone.Danger"
       @confirm="emit('confirmDelete')"
       @close="emit('cancelDelete')"
     />

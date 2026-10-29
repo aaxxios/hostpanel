@@ -8,6 +8,7 @@
  * @module constants/pricingCycle
  */
 
+import { BillingCycle } from '~/types/billingcycle'
 import { PricingCycle } from '~/types/pricingcycle'
 
 /** The cycles a plan can be sold in, in the order they are offered. */
@@ -17,6 +18,12 @@ export const PRICING_CYCLES: readonly PricingCycle[] = [PricingCycle.Monthly, Pr
 export const PRICING_CYCLE_I18N_KEY: Record<PricingCycle, string> = {
   [PricingCycle.Monthly]: 'monthly',
   [PricingCycle.Annual]: 'annually',
+}
+
+/** Maps the cycle of a service the client owns to the last segment of its `products.pricing.cycles.*` locale key. */
+export const BILLING_CYCLE_I18N_KEY: Record<BillingCycle, string> = {
+  [BillingCycle.Monthly]: PRICING_CYCLE_I18N_KEY[PricingCycle.Monthly],
+  [BillingCycle.Annual]: PRICING_CYCLE_I18N_KEY[PricingCycle.Annual],
 }
 
 /** Months in a year, which turns an annual price into a per-month one. */
@@ -29,4 +36,4 @@ export const PRICING_CYCLE_ISO_DURATION: Record<PricingCycle, string> = {
 }
 
 /** The billing cycle a domain registration is added to the cart with: domains are sold by the year. */
-export const DOMAIN_BILLING_CYCLE = 'annually'
+export const DOMAIN_BILLING_CYCLE = PricingCycle.Annual

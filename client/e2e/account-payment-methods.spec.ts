@@ -30,7 +30,7 @@ test('making the card the default reaches the backend and confirms', async ({ pa
 
   await expect(page.getByTestId('account-payment-success')).toBeVisible()
   const sent = (await stubRequests(request)).find(r => r.method === 'PUT' && r.path === `/api/me/payment-methods/${SAVED_CARD.id}`)
-  expect(sent?.body).toMatchObject({ set_as_default: true })
+  expect(sent?.body).toMatchObject({ setAsDefault: true })
 })
 
 test('removing the card asks first, then removes it and the list empties', async ({ page, request }) => {

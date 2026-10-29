@@ -7,12 +7,14 @@
  * @module tests/server/utils/session-store.test
  */
 
+import { randomBytes } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import {
   SESSION_KEY_PREFIX,
   SUBJECT_KEY_PREFIX,
   createMemorySessionStore,
   createRedisSessionStore,
+  refreshLockKey,
   sessionKey,
   subjectKey,
   useSessionStore
@@ -30,8 +32,8 @@ interface FakeRedisState {
 }
 
 /**
- * Builds an in-memory stand-in for the Redis commands the store uses (GET, and a MULTI of SET EX,
- * SADD, EXPIRE, DEL and SREM).
+ * Builds an in-memory stand-in for the Redis commands the store uses (GET, SET EX NX, the
+ * compare-and-delete script, and a MULTI of SET EX, SADD, EXPIRE, DEL and SREM).
  *
  * @returns The client and the state it writes.
  */
@@ -89,6 +91,21 @@ const fakeRedis = (): { client: SessionRedisClient, state: FakeRedisState } => {
 
   const client = {
     get: async (key: string) => state.strings.get(key) ?? null,
+    set: async (key: string, value: string, _ex: string, ttl: number, _nx: string) => {
+      if (state.strings.has(key)) {
+        return null
+      }
+      state.strings.set(key, value)
+      state.ttls.set(key, ttl)
+      return 'OK'
+    },
+    eval: async (_script: string, _count: number, key: string, holder: string) => {
+      if (state.strings.get(key) === holder) {
+        state.strings.delete(key)
+        return 1
+      }
+      return 0
+    },
     multi,
   } as unknown as SessionRedisClient
   return { client, state }
@@ -98,6 +115,7 @@ describe('session keys', () => {
   it('uses the layout the API reads on a back-channel logout', () => {
     expect(SESSION_KEY_PREFIX).toBe('hostpanel:portal-session:')
     expect(SUBJECT_KEY_PREFIX).toBe('hostpanel:portal-session-subject:')
+    expect(refreshLockKey('abc')).toBe('hostpanel:portal-session-refresh-lock:abc')
     expect(sessionKey('abc')).toBe('hostpanel:portal-session:abc')
     expect(subjectKey('person-1')).toBe('hostpanel:portal-session-subject:person-1')
   })
@@ -122,6 +140,27 @@ describe('createMemorySessionStore', () => {
     await store.delete('never-there')
 
     expect(await store.get('s1')).toBeNull()
+  })
+})
+
+describe('createMemorySessionStore refresh lock', () => {
+  it('hands the lock to one holder at a time, frees it on release, and lets an expired lock be taken', async () => {
+    let now = 1_000_000
+    const store = createMemorySessionStore(() => now)
+
+    const first = await store.acquireRefreshLock('s1', 15)
+    expect(first).toBeTruthy()
+    expect(await store.acquireRefreshLock('s1', 15)).toBeNull()
+
+    await store.releaseRefreshLock('s1', 'someone-else')
+    expect(await store.acquireRefreshLock('s1', 15)).toBeNull()
+
+    await store.releaseRefreshLock('s1', first ?? '')
+    const second = await store.acquireRefreshLock('s1', 15)
+    expect(second).toBeTruthy()
+
+    now += 15_000
+    expect(await store.acquireRefreshLock('s1', 15)).toBeTruthy()
   })
 })
 
@@ -168,6 +207,50 @@ describe('createRedisSessionStore', () => {
     expect(await store.get('bad')).toBeNull()
     expect(await store.get('empty')).toBeNull()
     expect(await store.get('missing')).toBeNull()
+  })
+})
+
+describe('createRedisSessionStore with an encryption key', () => {
+  it('stores no readable token and reads the session back', async () => {
+    const { client, state } = fakeRedis()
+    const store = createRedisSessionStore(client, randomBytes(32))
+
+    await store.set('s1', { accessToken: 'at-secret', refreshToken: 'rt-secret', subject: 'person-1' }, 60)
+
+    const stored = state.strings.get('hostpanel:portal-session:s1') ?? ''
+    expect(stored).not.toContain('at-secret')
+    expect(stored).not.toContain('rt-secret')
+    expect(await store.get('s1')).toEqual({ accessToken: 'at-secret', refreshToken: 'rt-secret', subject: 'person-1' })
+    expect([...(state.sets.get('hostpanel:portal-session-subject:person-1') ?? [])]).toEqual(['s1'])
+  })
+
+  it('reads a plain or foreign-key entry as no session, and still deletes it', async () => {
+    const { client, state } = fakeRedis()
+    state.strings.set('hostpanel:portal-session:plain', JSON.stringify({ accessToken: 'at' }))
+    const store = createRedisSessionStore(client, randomBytes(32))
+
+    expect(await store.get('plain')).toBeNull()
+    await store.delete('plain')
+    expect(state.strings.has('hostpanel:portal-session:plain')).toBe(false)
+  })
+})
+
+describe('createRedisSessionStore refresh lock', () => {
+  it('takes the lock with an expiry, refuses a second holder, and releases only for its holder', async () => {
+    const { client, state } = fakeRedis()
+    const store = createRedisSessionStore(client)
+
+    const holder = await store.acquireRefreshLock('s1', 15)
+
+    expect(holder).toBeTruthy()
+    expect(state.ttls.get('hostpanel:portal-session-refresh-lock:s1')).toBe(15)
+    expect(await store.acquireRefreshLock('s1', 15)).toBeNull()
+
+    await store.releaseRefreshLock('s1', 'not-the-holder')
+    expect(state.strings.has('hostpanel:portal-session-refresh-lock:s1')).toBe(true)
+
+    await store.releaseRefreshLock('s1', holder ?? '')
+    expect(state.strings.has('hostpanel:portal-session-refresh-lock:s1')).toBe(false)
   })
 })
 

@@ -5,6 +5,8 @@
  * @module server/api/portal/order/[id]/confirm-payment.post
  */
 
+import { HttpMethod } from '~/types/httpmethod'
+
 /** What the backend answers a payment confirmation with. */
 interface ConfirmPaymentResult {
   /** Whether the order was confirmed and accepted. */
@@ -16,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
   return await internalApiCall<ConfirmPaymentResult>(event, `/orders/${id}/confirm-payment`, {
-    method: 'POST',
+    method: HttpMethod.Post,
     body,
   })
 })

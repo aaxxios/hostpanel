@@ -63,6 +63,6 @@ test('a refused save shows the API sentence and keeps the draft', async ({ page 
   await fieldOf(page, `setting-value-${timezone.id}`).fill('Asia/Nowhere')
   await page.getByTestId(`setting-save-${timezone.id}`).click()
 
-  await expect(page.getByTestId('system-settings-error')).toContainText(sentence)
+  await expect(page.getByTestId(`setting-outcome-${timezone.id}`)).toContainText(sentence)
   await expect(fieldOf(page, `setting-value-${timezone.id}`)).toHaveValue('Asia/Nowhere')
 })

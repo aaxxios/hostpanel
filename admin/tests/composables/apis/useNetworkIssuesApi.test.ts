@@ -25,14 +25,18 @@ const payload = {
 }
 
 describe('useNetworkIssuesApi', () => {
-  it('listNetworkIssues sends paging and status, dropping an empty status', async () => {
+  it('listNetworkIssues sends paging and the tab statuses, dropping an empty tab', async () => {
     const mock = stubFetch(json({ items: [], totalCount: 0 }))
     const api = useNetworkIssuesApi()
 
     await api.listNetworkIssues({ page: 1, pageSize: 20, status: NetworkIssueTab.Open })
+    await api.listNetworkIssues({ page: 1, pageSize: 20, status: NetworkIssueTab.Resolved })
     await api.listNetworkIssues({ page: 1, pageSize: 20, status: null })
-    expect(callOf(mock, 0).url).toBe('/api/network-issues?page=1&pageSize=20&status=Open')
-    expect(callOf(mock, 1).url).toBe('/api/network-issues?page=1&pageSize=20')
+    expect(callOf(mock, 0).url).toBe(
+      `/api/network-issues?page=1&pageSize=20&statuses=${NetworkIssueStatus.Reported}&statuses=${NetworkIssueStatus.Investigating}`,
+    )
+    expect(callOf(mock, 1).url).toBe(`/api/network-issues?page=1&pageSize=20&statuses=${NetworkIssueStatus.Resolved}`)
+    expect(callOf(mock, 2).url).toBe('/api/network-issues?page=1&pageSize=20')
   })
 
   it('getNetworkIssue reads one issue', async () => {

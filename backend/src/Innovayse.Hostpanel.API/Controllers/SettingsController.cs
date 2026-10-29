@@ -17,6 +17,7 @@ namespace Innovayse.Hostpanel.API.Controllers;
 /// <summary>Admin endpoints for managing system configuration settings and storefront branding.</summary>
 [Route("api/admin/settings")]
 [Authorize(Policy = Policies.Admin)]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class SettingsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -31,9 +32,15 @@ public sealed class SettingsController : BaseApiController
 
     /// <summary>Returns all configuration settings; a secret one carries no value.</summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with every setting; 401; 403.</returns>
+    /// <returns>
+    /// 200 with every setting; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<SettingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAllAsync(CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<IReadOnlyList<SettingDto>>>(new GetSettingsQuery(), ct);
@@ -43,10 +50,17 @@ public sealed class SettingsController : BaseApiController
     /// <summary>Returns a single setting by ID; a secret one carries no value.</summary>
     /// <param name="id">Setting primary key.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the setting; 404 with <c>SETTING_NOT_FOUND</c>; 401; 403.</returns>
+    /// <returns>
+    /// 200 with the setting; 400 when a value is refused; 404 when the id names no setting;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(SettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<SettingDto>>(new GetSettingQuery(id), ct);
@@ -61,13 +75,17 @@ public sealed class SettingsController : BaseApiController
     /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 on success; 404 with <c>SETTING_NOT_FOUND</c>; 400 with <c>INVALID_SETTING_VALUE</c>
-    /// when the key has a fixed vocabulary or shape and the value does not match it; 401; 403.
+    /// 204 on success; 400 when the value does not match the key's vocabulary or shape;
+    /// 404 when the id names no setting; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateAsync(
         int id, [FromBody] UpdateSettingCommand command, CancellationToken ct)
     {
@@ -92,20 +110,23 @@ public sealed class SettingsController : BaseApiController
     /// </remarks>
     /// <param name="kind">
     /// Which branding image this is: <c>logo</c>, <c>logodark</c>, <c>logomark</c> or
-    /// <c>favicon</c> — the <see cref="BrandingKind"/> member name, case-insensitive.
+    /// <c>favicon</c>; the <see cref="BrandingKind"/> member name, case-insensitive.
     /// </param>
     /// <param name="file">The image file to upload.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the primary URL and every file generated from the upload; 400 with
-    /// <c>BRANDING_KIND_INVALID</c>-shaped validation, <c>BRANDING_IMAGE_INVALID</c>; 413 with
-    /// <c>BRANDING_IMAGE_TOO_LARGE</c>; 401; 403.
+    /// 200 with the primary URL and every file generated from the upload;
+    /// 400 when the kind or the image is not acceptable; 413 when the file is over the size limit;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost("branding/{kind}")]
     [RequestSizeLimit(BrandingUploadLimits.RequestSizeLimitBytes)]
     [ProducesResponseType(typeof(BrandingUploadResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UploadBrandingImageAsync(BrandingKind kind, IFormFile file, CancellationToken ct)
     {
         await using var content = file?.OpenReadStream() ?? Stream.Null;

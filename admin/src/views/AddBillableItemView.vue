@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
- * Add billable item: a one-time or recurring charge for a client. Recurring charges also take
- * how often they recur. The screen returns to the list once the API accepts the item.
+ * Add billable item: a one-time or recurring charge for a client, with the day it is invoiced
+ * automatically (the invoice day of a one-time charge, the next due date of a recurring one).
+ * Recurring charges also take how often they recur (weekly, monthly, quarterly or annually). The
+ * screen returns to the list once the API accepts the item.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -22,25 +24,23 @@ import UiPageHeader from '@/components/ui/UiPageHeader.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
 import { useClientOptions } from '@/composables/useClientOptions'
-import { CURRENCY_OPTIONS } from '@/lib/constants'
+import { BILLABLE_ITEM_TYPE_OPTIONS, CURRENCY_OPTIONS, RECURRING_PERIOD_OPTIONS } from '@/lib/constants'
 import { toIsoDay } from '@/lib/format'
 import { useBillableItemsStore } from '@/stores/billableItems'
-import { BillableItemType } from '@/types/billableitem'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
 import { CurrencyCode } from '@/types/currency'
 import { AppRoute } from '@/lib/routes'
 
+/** Translator for the screen's labels. */
 const { t } = useI18n()
 
-/** Units a recurring charge can recur in, as the API expects them in the period text. */
-const RecurrenceUnit = {
-  Day: 'day',
-  Week: 'week',
-  Month: 'month',
-  Year: 'year',
-} as const
-
+/** Router, to return to the list after a save. */
 const router = useRouter()
+
+/** Billable items store, the only caller of the billable item endpoints. */
 const store = useBillableItemsStore()
+
+/** The clients the picker offers and the loader that fetches them. */
 const { clients, load: loadClients } = useClientOptions()
 
 /** Id of the client to bill, as the picker holds it. */
@@ -56,33 +56,21 @@ const amount = ref(0)
 const currency = ref<string>(CurrencyCode.Usd)
 
 /** One-time or recurring. */
-const type = ref<string>(BillableItemType.OneTime)
+const type = ref<BillableItemType>(BillableItemType.OneTime)
 
-/** Next (or only) due date (ISO day). */
+/** Day (ISO `YYYY-MM-DD`) the charge is invoiced automatically, null for none (invoiced by hand). */
 const nextDueDate = ref<string | null>(toIsoDay(new Date()))
 
-/** How many units a recurring charge waits between invoices. */
-const recurEvery = ref(1)
-
-/** The unit of the recurrence. */
-const recurUnit = ref<string>(RecurrenceUnit.Month)
+/** How often a recurring charge repeats. */
+const recurringPeriod = ref<RecurringPeriod>(RecurringPeriod.Monthly)
 
 /** True when the charge recurs, so the recurrence fields show. */
 const isRecurring = computed<boolean>(() => type.value === BillableItemType.Recurring)
 
-/** Options of the type select. */
-const typeOptions = computed(() => [
-  { value: BillableItemType.OneTime, label: t('billing.addBillableItem.oneTime') },
-  { value: BillableItemType.Recurring, label: t('billing.addBillableItem.recurringEvery') },
-])
-
-/** Options of the recurrence-unit select. */
-const unitOptions = computed(() => [
-  { value: RecurrenceUnit.Day, label: t('billing.addBillableItem.dayS') },
-  { value: RecurrenceUnit.Week, label: t('billing.addBillableItem.weekS') },
-  { value: RecurrenceUnit.Month, label: t('billing.addBillableItem.monthS') },
-  { value: RecurrenceUnit.Year, label: t('billing.addBillableItem.yearS') },
-])
+/** Label of the due date field: the invoice day of a one-time charge, the next due date of a recurring one. */
+const dueDateLabel = computed<string>(() =>
+  isRecurring.value ? t('billing.addBillableItem.nextDueDate') : t('billing.addBillableItem.invoiceOn'),
+)
 
 /** Creates the item and returns to the list when it was accepted. */
 const submit = async (): Promise<void> => {
@@ -92,7 +80,7 @@ const submit = async (): Promise<void> => {
     amount: amount.value,
     currency: currency.value,
     type: type.value,
-    recurringPeriod: isRecurring.value ? `${recurEvery.value} ${recurUnit.value}` : undefined,
+    recurringPeriod: isRecurring.value ? recurringPeriod.value : undefined,
     nextDueDate: nextDueDate.value || undefined,
   })
   if (ok) {
@@ -100,6 +88,7 @@ const submit = async (): Promise<void> => {
   }
 }
 
+/** Loads the clients the picker offers. */
 onMounted(loadClients)
 </script>
 
@@ -142,19 +131,26 @@ onMounted(loadClients)
             <UiSelect v-model="currency" :options="CURRENCY_OPTIONS" :placeholder="t('shared.currency')" />
           </UiField>
           <UiField :label="t('shared.type')" :error="store.fieldErrors.type">
-            <UiSelect v-model="type" :options="typeOptions" :placeholder="t('shared.type')" data-testid="billing-add-billable-item-type" />
+            <UiSelect v-model="type" :options="BILLABLE_ITEM_TYPE_OPTIONS" :placeholder="t('shared.type')" data-testid="billing-add-billable-item-type" />
           </UiField>
-          <UiField :label="t('billing.addBillableItem.nextDueDate')" :error="store.fieldErrors.nextDueDate">
-            <UiDatePicker v-model="nextDueDate" :direction="UiDatePickerDirection.Future" :placeholder="t('shared.selectDate')" />
+          <UiField :label="dueDateLabel" :error="store.fieldErrors.nextDueDate" data-testid="billing-add-billable-item-next-due-date-field">
+            <UiDatePicker
+              v-model="nextDueDate"
+              :direction="UiDatePickerDirection.Future"
+              :placeholder="t('shared.selectDate')"
+              data-testid="billing-add-billable-item-next-due-date"
+            />
           </UiField>
         </UiGrid>
 
         <UiGrid v-if="isRecurring" :columns="2">
-          <UiField :label="t('billing.addBillableItem.recurEvery')" :error="store.fieldErrors.recurringPeriod">
-            <UiNumberInput v-model="recurEvery" :step="1" :min="1" placeholder="1" data-testid="billing-add-billable-item-every" />
-          </UiField>
-          <UiField :label="t('billing.addBillableItem.recurUnit')">
-            <UiSelect v-model="recurUnit" :options="unitOptions" :placeholder="t('billing.addBillableItem.monthS')" />
+          <UiField :label="t('billing.addBillableItem.recurringPeriod')" :error="store.fieldErrors.recurringPeriod">
+            <UiSelect
+              v-model="recurringPeriod"
+              :options="RECURRING_PERIOD_OPTIONS"
+              :placeholder="t('billing.addBillableItem.recurringPeriod')"
+              data-testid="billing-add-billable-item-recurring-period"
+            />
           </UiField>
         </UiGrid>
 

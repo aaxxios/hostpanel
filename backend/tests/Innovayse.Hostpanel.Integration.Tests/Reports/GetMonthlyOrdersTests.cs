@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Orders;
 using Innovayse.Hostpanel.Domain.Products;
 using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
@@ -16,7 +13,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 /// <c>GET /api/reports/monthly-orders</c> against Postgres: orders grouped by product group,
 /// with group and overall totals.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetMonthlyOrdersTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -35,14 +31,14 @@ public sealed class GetMonthlyOrdersTests(IntegrationTestFactory factory) : ICla
             await db.SaveChangesAsync();
 
             var product = Product.Create(
-                group.Id, $"Product-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m);
+                group.Id, $"Product-{marker}", null, null, null, null, ProductType.SharedHosting, 10m, 100m, DateTimeOffset.UtcNow);
             db.Products.Add(product);
             await db.SaveChangesAsync();
             productId = product.Id;
 
-            var order = Order.Create($"ORD{Guid.NewGuid():N}"[..20], clientId, "manual", null, "USD");
-            order.AddItem(productId, product.Name, BillingCycleNames.Monthly, 10m, 10m, null, null);
-            order.Accept();
+            var order = Order.Create($"ORD{Guid.NewGuid():N}"[..20], clientId, "manual", null, "USD", DateTimeOffset.UtcNow);
+            order.AddItem(productId, product.Name, BillingCycle.Monthly, 10m, 10m, null, null);
+            order.Accept(DateTimeOffset.UtcNow);
             db.Orders.Add(order);
             await db.SaveChangesAsync();
         }
@@ -56,6 +52,26 @@ public sealed class GetMonthlyOrdersTests(IntegrationTestFactory factory) : ICla
             g => g.GetProperty("groupName").GetString() == $"Group-{marker}"
                 && g.GetProperty("products").EnumerateArray().Any(
                     p => p.GetProperty("productId").GetInt32() == productId && p.GetProperty("unitsSold").GetInt32() == 1));
+    }
+
+    /// <summary>
+    /// A unit is an order line on a pending or accepted order, never a cancelled one, and the
+    /// foreign order's value is converted: 30 plus 8,000 (20 in the base) is 50.
+    /// </summary>
+    [Fact]
+    public async Task CountsPendingAndAcceptedLinesInTheBaseCurrency()
+    {
+        var scenario = await IncomeTestSeeds.SeedAsync(factory, 2038);
+        var client = await ReportsTestSeeds.AdminClientAsync(factory);
+
+        var body = await client.GetFromJsonAsync<JsonElement>("/api/reports/monthly-orders?year=2038&month=5");
+
+        var row = body.GetProperty("groups").EnumerateArray()
+            .SelectMany(g => g.GetProperty("products").EnumerateArray())
+            .Single(p => p.GetProperty("productId").GetInt32() == scenario.ProductId);
+        row.GetProperty("unitsSold").GetInt32().Should().Be(2);
+        row.GetProperty("value").GetDecimal().Should().Be(50m);
+        body.GetProperty("currency").GetString().Should().Be(scenario.BaseCurrency);
     }
 
     /// <summary>An out-of-range month is refused before the handler runs.</summary>
@@ -78,7 +94,7 @@ public sealed class GetMonthlyOrdersTests(IntegrationTestFactory factory) : ICla
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

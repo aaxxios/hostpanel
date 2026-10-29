@@ -1,19 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/domains</c> against Postgres: the paginated domains report.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetDomainsReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -27,7 +24,7 @@ public sealed class GetDomainsReportTests(IntegrationTestFactory factory) : ICla
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var domain = RegisteredDomain.Register(
-                clientId, $"{marker}.com", DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false);
+                clientId, $"{marker}.com", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1), autoRenew: false, whoisPrivacy: false, priceCurrency: TestCurrencies.Base);
             db.Domains.Add(domain);
             await db.SaveChangesAsync();
         }
@@ -38,11 +35,11 @@ public sealed class GetDomainsReportTests(IntegrationTestFactory factory) : ICla
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        // The stored Name already carries the TLD ("marker.com"), so the report shows it as stored and
-        // does not append the TLD a second time. The client name must come from the Client row itself,
-        // not from a join against Identity's Users table.
+        // The stored Name already carries the TLD ("marker.com", in lower case like every stored domain
+        // name), so the report shows it as stored and does not append the TLD a second time. The client
+        // name must come from the Client row itself, not from a join against Identity's Users table.
         body.GetProperty("items").EnumerateArray().Should().Contain(
-            i => i.GetProperty("domainName").GetString() == $"{marker}.com"
+            i => i.GetProperty("domainName").GetString() == $"{marker}.com".ToLowerInvariant()
                 && i.GetProperty("clientName").GetString()!.Contains(marker));
     }
 
@@ -55,7 +52,7 @@ public sealed class GetDomainsReportTests(IntegrationTestFactory factory) : ICla
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {
@@ -64,5 +61,17 @@ public sealed class GetDomainsReportTests(IntegrationTestFactory factory) : ICla
         var response = await client.GetAsync("/api/reports/domains?page=1&pageSize=20");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>A page number below one is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task GetDomainsReport_PageBelowOne_Returns400ValidationError()
+    {
+        var admin = await ReportsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/reports/domains?page=0&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReportsTestSeeds.CodeOfAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

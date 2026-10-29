@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
  * Network issue form shared by create and edit. The mode comes from the route: an `:id` param
- * means edit and loads the issue first.
+ * means edit and loads the issue first. A refused load offers a retry instead of an empty form; a
+ * refused save shows the API's sentence next to the save button, a saved issue returns to the list.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
+import { UiTone } from '@/utils/ui/tone'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiDatePicker from '@/components/ui/UiDatePicker.vue'
@@ -103,6 +106,12 @@ const saving = ref(false)
 /** Whether the existing issue is being loaded. */
 const loading = ref(false)
 
+/** Whether the last load of the issue was refused. */
+const loadFailed = ref(false)
+
+/** The API's sentence for the last refused save, null when none. */
+const saveError = ref<string | null>(null)
+
 /**
  * Loads the issue being edited into the form.
  */
@@ -111,7 +120,7 @@ const fetchIssue = async (): Promise<void> => {
     return
   }
   loading.value = true
-  await store.fetchById(issueId.value)
+  loadFailed.value = !(await store.fetchById(issueId.value))
   loading.value = false
   const data = store.current
   if (data) {
@@ -132,6 +141,7 @@ const fetchIssue = async (): Promise<void> => {
  * Creates or updates the issue according to the mode, then returns to the list.
  */
 const handleSave = async (): Promise<void> => {
+  saveError.value = null
   saving.value = true
   const payload = {
     title: form.value.title,
@@ -154,6 +164,8 @@ const handleSave = async (): Promise<void> => {
 
   if (saved) {
     router.push(AppRoute.SupportNetworkIssues)
+  } else {
+    saveError.value = store.error ?? t('errors.noAnswer')
   }
 }
 
@@ -181,9 +193,14 @@ onMounted(() => {
 
     <UiSkeleton v-if="loading" :lines="4" data-testid="network-issue-form-loading" />
 
-    <UiAlert v-if="store.error" variant="error" data-testid="network-issue-form-error">{{ store.error }}</UiAlert>
+    <UiErrorState
+      v-else-if="loadFailed"
+      :message="store.error ?? t('errors.noAnswer')"
+      testid="network-issue-form-error"
+      @retry="fetchIssue"
+    />
 
-    <UiCard v-if="!loading" padding="md">
+    <UiCard v-else padding="md">
       <UiStack>
         <UiField :label="t('shared.title')" :error="store.fieldErrors.title">
           <UiInput
@@ -274,6 +291,7 @@ onMounted(() => {
             {{ t('shared.cancel') }}
           </UiLink>
         </UiStack>
+        <UiStatusMessage :message="saveError" :tone="UiTone.Danger" data-testid="network-issue-form-save-error" />
       </UiStack>
     </UiCard>
   </UiStack>

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountClient } from '~/tests/helpers/mountClient'
 import DomainRenewPanel from '~/components/client/domains/DomainRenewPanel.vue'
 import type { DomainDetail } from '~/types/domaindetail'
+import { DomainStatus } from '~/types/domainstatus'
 
 /** The mocked endpoints the store reaches. */
 const domainsApi = vi.hoisted(() => ({ createRenewOrder: vi.fn() }))
@@ -26,7 +27,7 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({ useCurrencyApi: () => ({})
  * @returns A domain.
  */
 const domain = (overrides: Partial<DomainDetail> = {}): DomainDetail => ({
-  id: 7, name: 'example.com', status: 'Active', expiresAt: '2099-01-01T00:00:00Z', recurringAmount: 12, priceCurrency: 'USD',
+  id: 7, name: 'example.com', status: DomainStatus.Active, expiresAt: '2099-01-01T00:00:00Z', recurringAmount: 12, priceCurrency: 'USD',
   ...overrides
 } as DomainDetail)
 
@@ -54,7 +55,7 @@ describe('DomainRenewPanel', () => {
 
   it.each([
     [{}, 'client.domains.renewActive'],
-    [{ status: 'Expired' }, 'client.domains.renewPastPeriod'],
+    [{ status: DomainStatus.Expired }, 'client.domains.renewPastPeriod'],
     [{ expiresAt: new Date(Date.now() + 5 * 86_400_000).toISOString() }, 'client.domains.renewExpiringSoon'],
   ])('reads the standing of %j as %s', async (overrides, label) => {
     const wrapper = await mountPanel(overrides)

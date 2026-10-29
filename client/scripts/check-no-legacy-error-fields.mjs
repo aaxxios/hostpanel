@@ -1,16 +1,16 @@
 /**
  * Legacy error-field gate, run by `yarn lint`.
  *
- * The C# API's refusal body is problem+json `{ type, title, status, detail, errors }`. The old
- * `{ error, code }` pair is gone from the wire, and a client that still read it would silently
- * render nothing. This gate fails when source under `client/` reads `.error` or `.code` off a
- * response body (`data.error`, `err.data.error`, `body.code`, `err.data.code`, ...).
+ * The C# API's refusal body is problem+json `{ type, title, status, detail, errors }`. An
+ * `{ error, code }` pair is not on the wire, and a client that read it would silently render
+ * nothing. This gate fails when source under `client/` reads `.error` or `.code` off a
+ * response body (`data.error`, `err.data.error`, `body.code`, `err.data.code` and the like).
  *
  * A read is allowed only on a line carrying the marker `legacy-gate: allow <reason>` (comment on
  * the same line or the line above). Two exist by design:
- *  - the BFF envelope's `data.code` in `lib/errorHandler.ts` -- that `code` is our own field, set by
- *    `server/utils/api.ts`, not the backend's legacy pair;
- *  - the SSO's OAuth `error` reply in `server/api/portal/auth/sso/callback.get.ts` -- an RFC 6749
+ *  - the BFF envelope's `data.code` in `lib/errorHandler.ts`: that `code` is our own field, set by
+ *    `server/utils/api.ts`, not a backend field;
+ *  - the SSO's OAuth `error` reply in `server/api/portal/auth/sso/callback.get.ts`: an RFC 6749
  *    identifier from another service.
  *
  * Tests, scripts and generated folders are not scanned. Exits 1 with one line per hit.

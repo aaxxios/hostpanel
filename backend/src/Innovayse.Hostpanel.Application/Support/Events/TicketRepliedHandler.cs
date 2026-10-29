@@ -1,5 +1,9 @@
+using Innovayse.Hostpanel.Application.Clients.Common.Enums;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Support.Events;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
@@ -18,18 +22,13 @@ public sealed class TicketRepliedHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Resolves the identity account behind a client's subject.</summary>
-    private readonly IIdentityProvider _identity;
-
     /// <summary>Initializes the handler.</summary>
     /// <param name="bus">Wolverine bus, used to dispatch the notification email.</param>
     /// <param name="context">The module's data context.</param>
-    /// <param name="identity">Resolves the identity account behind a client's subject.</param>
-    public TicketRepliedHandler(IMessageBus bus, IHostpanelDbContext context, IIdentityProvider identity)
+    public TicketRepliedHandler(IMessageBus bus, IHostpanelDbContext context)
     {
         _bus = bus;
         _context = context;
-        _identity = identity;
     }
 
     /// <summary>
@@ -50,27 +49,17 @@ public sealed class TicketRepliedHandler
             return;
         }
 
-        var data = new { ticket = new { id = evt.TicketId, ticket.Subject } };
+        var data = new TicketRepliedTemplateModel(new TicketTemplateData(evt.TicketId, ticket.Subject));
 
         if (evt.IsStaffReply)
         {
-            var userId = await _context.Clients
-                .AsNoTracking()
-                .Where(c => c.Id == ticket.ClientId)
-                .Select(c => c.UserId)
-                .FirstOrDefaultAsync(ct);
-            if (userId is null)
+            var client = await _bus.FindClientBriefAsync(ticket.ClientId, withEmail: true, ct);
+            if (client is not { Email: { } email })
             {
                 return;
             }
 
-            var user = await _identity.FindBySubjectAsync(userId, ct);
-            if (user is null)
-            {
-                return;
-            }
-
-            await _bus.InvokeAsync(new SendEmailCommand(user.Email, "ticket-replied", data), ct);
+            await _bus.InvokeAsync(new SendEmailCommand(email, client.Language, "ticket-replied", data, new ContactCopy(ticket.ClientId, ContactNotification.Support)), ct);
         }
         else if (ticket.DepartmentId is int departmentId)
         {
@@ -84,7 +73,7 @@ public sealed class TicketRepliedHandler
                 return;
             }
 
-            await _bus.InvokeAsync(new SendEmailCommand(departmentEmail, "ticket-replied", data), ct);
+            await _bus.InvokeAsync(new SendEmailCommand(departmentEmail, null, "ticket-replied", data), ct);
         }
     }
 }

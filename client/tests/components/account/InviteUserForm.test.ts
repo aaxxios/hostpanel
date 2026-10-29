@@ -6,6 +6,8 @@ import { mountAccount } from '~/tests/helpers/mountAccount'
 import InviteUserForm from '~/components/account/InviteUserForm.vue'
 import { useAccountStore } from '~/stores/account'
 import { ActionOutcome } from '~/types/actionoutcome'
+import { InvitePermissionMode } from '~/types/invitepermissionmode'
+import { TeamPermission } from '~/types/teampermission'
 
 vi.mock('~/composables/apis/useClientApi', () => ({ useClientApi: () => ({}) }))
 vi.mock('~/composables/apis/useBillingApi', () => ({ useBillingApi: () => ({}) }))
@@ -51,7 +53,7 @@ describe('InviteUserForm', () => {
     await Promise.resolve()
 
     expect(invite).toHaveBeenCalledWith({
-      email: 'jane@example.com', firstName: 'Jane', lastName: 'Doe', permissions: 'all'
+      email: 'jane@example.com', firstName: 'Jane', lastName: 'Doe', permissionMode: InvitePermissionMode.All, permissions: []
     })
   })
 
@@ -61,12 +63,15 @@ describe('InviteUserForm', () => {
 
     await fill(wrapper)
     await wrapper.find('[data-testid="account-invite-perm-choose"]').trigger('click')
-    await wrapper.find('[data-testid="account-invite-perm-tickets"]').trigger('click')
-    await wrapper.find('[data-testid="account-invite-perm-invoices"]').trigger('click')
+    await wrapper.find(`[data-testid="account-invite-perm-${TeamPermission.Tickets}"]`).trigger('click')
+    await wrapper.find(`[data-testid="account-invite-perm-${TeamPermission.Invoices}"]`).trigger('click')
     await wrapper.find('form').trigger('submit')
     await Promise.resolve()
 
-    expect(invite).toHaveBeenCalledWith(expect.objectContaining({ permissions: 'invoices,tickets' }))
+    expect(invite).toHaveBeenCalledWith(expect.objectContaining({
+      permissionMode: InvitePermissionMode.Choose,
+      permissions: [TeamPermission.Invoices, TeamPermission.Tickets]
+    }))
   })
 
   it('empties the form, reports success and asks for a fresh list', async () => {

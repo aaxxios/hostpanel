@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
- * Tracking & chat card — the tag-manager container and the live-chat server this storefront talks
+ * Tracking & chat card: the tag-manager container and the live-chat server this storefront talks
  * to.
  *
  * Every value here is empty on a fresh install and nothing loads until it is set; the tag
- * additionally waits for the visitor to accept all cookies. The API checks the shapes (a `GTM-…`
+ * additionally waits for the visitor to accept all cookies. The API checks the shapes (a `GTM-` id
  * id, an `https://` origin) and the page banner shows its refusal.
  */
 import { computed, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingDraft } from '@/composables/useSettingDraft'
 import SettingNotSeeded from '@/components/settings/SettingNotSeeded.vue'
+import SettingOutcome from '@/components/settings/SettingOutcome.vue'
 import SettingSaveButton from '@/components/settings/SettingSaveButton.vue'
 import SettingsSection from '@/components/settings/SettingsSection.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
@@ -21,7 +22,7 @@ import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { ChatProvider } from '@/types/chatprovider'
 import { SettingEnv, SettingKey } from '@/types/setting'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave } from '@/types/setting'
 import { ANALYTICS_ID_MAX_LENGTH, CHAT_SETTING_MAX_LENGTH } from '@/lib/limits'
 
 const { t } = useI18n()
@@ -30,13 +31,8 @@ const { t } = useI18n()
 const props = defineProps<{
   /** All system settings, as loaded from the backend. */
   settings: Setting[]
-  /** True while a save is in flight. */
-  saving?: boolean
-}>()
-
-const emit = defineEmits<{
-  /** Emitted with the row id and the new value when the operator saves a field. */
-  save: [id: number, value: string]
+  /** Persists one row and answers how it went; each control shows its own outcome. */
+  save: SettingSave
 }>()
 
 /** The settings list as a ref, which is what the draft composable watches. */
@@ -80,14 +76,15 @@ const TEXT_FIELDS = [
           :maxlength="ANALYTICS_ID_MAX_LENGTH"
           data-testid="tracking-gtm"
           class="min-w-64 flex-1"
-          @keyup.enter="gtm.submit((id, value) => emit('save', id, value))"
+          @keyup.enter="gtm.submit(save)"
         />
         <SettingSaveButton
           :dirty="gtm.dirty.value"
-          :saving="saving"
+          :saving="gtm.saving.value"
           data-testid="tracking-gtm-save"
-          @click="gtm.submit((id, value) => emit('save', id, value))"
+          @click="gtm.submit(save)"
         />
+        <SettingOutcome :outcome="gtm.outcome.value" />
       </UiStack>
       <UiText tone="muted" size="sm">
         {{ t('settings.trackingChat.gtm.hint') }}
@@ -113,10 +110,11 @@ const TEXT_FIELDS = [
         />
         <SettingSaveButton
           :dirty="provider.dirty.value"
-          :saving="saving"
+          :saving="provider.saving.value"
           data-testid="tracking-chat-provider-save"
-          @click="provider.submit((id, value) => emit('save', id, value))"
+          @click="provider.submit(save)"
         />
+        <SettingOutcome :outcome="provider.outcome.value" />
       </UiStack>
 
       <UiGrid :columns="2">
@@ -130,14 +128,15 @@ const TEXT_FIELDS = [
               :maxlength="CHAT_SETTING_MAX_LENGTH"
               :data-testid="`tracking-chat-${field.testid}`"
               class="min-w-0 flex-1"
-              @keyup.enter="field.draft.submit((id, value) => emit('save', id, value))"
+              @keyup.enter="field.draft.submit(save)"
             />
             <SettingSaveButton
               :dirty="field.draft.dirty.value"
-              :saving="saving"
+              :saving="field.draft.saving.value"
               :data-testid="`tracking-chat-${field.testid}-save`"
-              @click="field.draft.submit((id, value) => emit('save', id, value))"
+              @click="field.draft.submit(save)"
             />
+            <SettingOutcome :outcome="field.draft.outcome.value" />
           </UiStack>
         </template>
       </UiGrid>

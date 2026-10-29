@@ -1,17 +1,14 @@
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Constants;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.SDK.Plugins;
 using Innovayse.SDK.Plugins.Enums;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -22,10 +19,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <remarks>
 /// Bank transfer's on/off switch is exercised through the real admin
 /// integrations endpoint (our own code); the card gateway's <c>IsConfigured</c> and the loaded plugin set are
-/// faked, since neither a live card payment gateway secret nor an on-disk plugin belongs in this suite. Every
-/// case here was a live defect: bank transfer was listed with no gate at all, card payment gateway was gated on
-/// the secret key alone, and a hosted gateway that charges in AMD was offered to a client billed
-/// in USD, who then pressed Place Order and got a currency-mismatch error.
+/// faked, since neither a live card payment gateway secret nor an on-disk plugin belongs in this suite. The
+/// cases pin three gates: bank transfer is listed only when its switch is on, the card payment gateway needs
+/// both its secret key and its switch, and a hosted gateway that charges in AMD is not offered to a client
+/// billed in USD, who would otherwise be refused at Place Order with a currency-mismatch error.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory factory)
@@ -39,8 +36,8 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<ICardPaymentGateway>(_ => cardGateway);
-                services.AddScoped<IPluginRegistry>(_ => plugins);
+                services.AddSingleton<ICardPaymentGateway>(cardGateway);
+                services.AddSingleton<IPluginRegistry>(plugins);
             }));
 
     /// <summary>Switches an admin integration on or off through the real admin endpoint.</summary>
@@ -70,7 +67,7 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         await context.Settings.Where(x => x.Key.StartsWith(prefix)).ExecuteDeleteAsync();
     }
 
-    /// <summary>Builds a payment-plugin manifest the way the old unit test built one.</summary>
+    /// <summary>Builds a payment-plugin manifest for a test plugin.</summary>
     /// <param name="id">The module id.</param>
     /// <param name="name">The display name.</param>
     /// <returns>The manifest.</returns>
@@ -98,7 +95,7 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         return methods!.Select(m => m.Module).ToList();
     }
 
-    /// <summary>The bug from the screenshot: bank transfer offered with no admin switch at all.</summary>
+    /// <summary>Bank transfer is not offered while the admin has it switched off.</summary>
     [Fact]
     public async Task BankTransferIsNotOfferedWhenTheAdminHasItOff()
     {
@@ -148,7 +145,7 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         (await ListedModulesAsync(host.CreateClient())).Should().NotContain(BuiltInPaymentModules.Stripe);
     }
 
-    /// <summary>Configured and switched on together offer card payment gateway.</summary>
+    /// <summary>Configured and switched on together, the card payment gateway is offered.</summary>
     [Fact]
     public async Task CardGatewayIsOfferedWhenConfiguredAndSwitchedOn()
     {
@@ -171,9 +168,9 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         var host = factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<ICardPaymentGateway>(_ => new FakeCardPaymentGateway());
-                services.AddScoped<IPluginRegistry>(_ => registry);
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver);
+                services.AddScoped<ICardPaymentGateway, FakeCardPaymentGateway>();
+                services.AddSingleton<IPluginRegistry>(registry);
+                services.AddSingleton<IPaymentPluginResolver>(resolver);
             }));
 
         var methods = await host.CreateClient().GetFromJsonAsync<List<AvailablePaymentMethodDto>>("/api/payment-methods");
@@ -192,8 +189,8 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
     }
 
     /// <summary>
-    /// The screenshot: a client billed in USD was offered an AMD-only gateway, picked it, and was
-    /// refused at Place Order. The refusal is right; the offer was the defect.
+    /// A gateway in another currency is not offered: a client billed in USD must not be offered an
+    /// AMD-only gateway that Place Order would then refuse.
     /// </summary>
     [Fact]
     public async Task AGatewayInAnotherCurrencyIsNotOffered()
@@ -206,9 +203,9 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         var host = factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<ICardPaymentGateway>(_ => new FakeCardPaymentGateway());
-                services.AddScoped<IPluginRegistry>(_ => registry);
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver);
+                services.AddScoped<ICardPaymentGateway, FakeCardPaymentGateway>();
+                services.AddSingleton<IPluginRegistry>(registry);
+                services.AddSingleton<IPaymentPluginResolver>(resolver);
             }));
 
         // Anonymous caller bills in the base currency, USD; the gateway charges in AMD.
@@ -237,9 +234,9 @@ public sealed class ListAvailablePaymentMethodsTests(IntegrationTestFactory fact
         var host = factory.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services =>
             {
-                services.AddScoped<ICardPaymentGateway>(_ => new FakeCardPaymentGateway());
-                services.AddScoped<IPluginRegistry>(_ => registry);
-                services.AddScoped<IPaymentPluginResolver>(_ => resolver);
+                services.AddScoped<ICardPaymentGateway, FakeCardPaymentGateway>();
+                services.AddSingleton<IPluginRegistry>(registry);
+                services.AddSingleton<IPaymentPluginResolver>(resolver);
             }));
 
         // Anonymous caller's own currency is the base, USD; naming "amd" (any case) instead

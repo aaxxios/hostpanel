@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin.Users;
 
@@ -12,10 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin.Users;
 /// registered, a caller with only the Client role is refused, and the route is closed to a
 /// caller with no credential. This use case refuses nothing once authorized.
 /// </summary>
-/// <remarks>
-/// Split out of the deleted <c>AdminUsersEndpointTests</c>, which exercised only the anonymous
-/// boundary for this route; the admin-success path had no test before this batch.
-/// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host, in local mode.</param>
 public sealed class ListUsersTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

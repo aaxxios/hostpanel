@@ -1,98 +1,78 @@
 using Innovayse.Hostpanel.Application.Auth.Common;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Constants;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
+using Innovayse.Hostpanel.Shared.Models;
 
 namespace Innovayse.Hostpanel.Infrastructure.Auth;
+
 /// <summary>
-/// SSO-mode two-factor authentication: proxies to the SSO's own, already-working TOTP
+/// single sign-on mode two-factor authentication: proxies to the sign-on provider's own, already-working TOTP
 /// endpoints using the caller's own bearer token.
 ///
 /// <para>
 /// Not the service key: two-factor is a self-service action on the signed-in person's own
-/// account, and the SSO's TOTP endpoints authenticate exactly the way hostpanel's own
-/// <c>[Authorize]</c> endpoints already do in this mode — a bearer token identifying the
-/// person, not a credential identifying the platform. The existing current-request
-/// abstraction does not expose the raw header, so it is read directly off
-/// <see cref="HttpContext"/> here, which Infrastructure is allowed to do.
+/// account, and the sign-on provider's TOTP endpoints authenticate exactly the way hostpanel's own
+/// <c>[Authorize]</c> endpoints already do in this mode; a bearer token identifying the
+/// person, not a credential identifying the platform. The token comes from
+/// <see cref="ICallerAccessToken"/>; the request itself is read in the API, never here.
 /// </para>
 /// </summary>
 public sealed class SsoTwoFactorService : ITwoFactorService
 {
-    /// <summary>The typed client that calls the SSO's TOTP endpoints.</summary>
+    /// <summary>The typed client that calls the sign-on provider's TOTP endpoints.</summary>
     private readonly SsoTwoFactorClient _client;
 
-    /// <summary>Source of the current request's own bearer token.</summary>
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    /// <summary>The caller's own bearer token, read from the request by the API.</summary>
+    private readonly ICallerAccessToken _callerToken;
 
     /// <summary>Initializes a new instance of the <see cref="SsoTwoFactorService"/> class.</summary>
-    /// <param name="client">The typed client that calls the SSO's TOTP endpoints.</param>
-    /// <param name="httpContextAccessor">Source of the current request's own bearer token.</param>
-    public SsoTwoFactorService(SsoTwoFactorClient client, IHttpContextAccessor httpContextAccessor)
+    /// <param name="client">The typed client that calls the sign-on provider's TOTP endpoints.</param>
+    /// <param name="callerToken">The caller's own bearer token, read from the request by the API.</param>
+    public SsoTwoFactorService(SsoTwoFactorClient client, ICallerAccessToken callerToken)
     {
         _client = client;
-        _httpContextAccessor = httpContextAccessor;
+        _callerToken = callerToken;
     }
 
     /// <inheritdoc/>
-    public async Task<TwoFactorSetupDto?> StartSetupAsync(string userId, CancellationToken ct)
+    public async Task<Result<TwoFactorSetupDto>> StartSetupAsync(string userId, CancellationToken ct)
     {
-        var token = BearerToken();
+        var token = _callerToken.GetBearerToken();
         if (token is null)
         {
-            return null;
+            return Result<TwoFactorSetupDto>.FailureCode(SharedErrorCodes.Unauthorized);
         }
 
         var enrolment = await _client.EnableAsync(token, ct);
-        return new TwoFactorSetupDto(enrolment.Secret, enrolment.QrUri);
+        return Result<TwoFactorSetupDto>.Success(new TwoFactorSetupDto(enrolment.Secret, enrolment.QrUri));
     }
 
     /// <inheritdoc/>
     /// <remarks>
-    /// The SSO's verify response carries backup codes on success — incidental information
-    /// hostpanel has nowhere to put today, since <see cref="TwoFactorSetupDto"/> and this
-    /// method's <see cref="bool"/> result predate this proxy and are kept unchanged. They are
-    /// discarded here, not lost: two-factor never worked in this mode before this fix, so no
-    /// caller has ever seen a backup code from it. Surfacing them is follow-up work, not a
-    /// regression.
+    /// The sign-on provider's verify response carries backup codes on success, which hostpanel
+    /// has nowhere to show, so they are discarded here.
     /// </remarks>
-    public async Task<bool> EnableAsync(string userId, string code, CancellationToken ct)
+    public async Task<Result> EnableAsync(TwoFactorConfirmation confirmation, CancellationToken ct)
     {
-        var token = BearerToken();
-        if (token is null)
-        {
-            return false;
-        }
+        ArgumentNullException.ThrowIfNull(confirmation);
 
-        var result = await _client.VerifyAsync(token, code, ct);
-        return result is not null;
+        var token = _callerToken.GetBearerToken();
+        var verified = token is not null && await _client.VerifyAsync(token, confirmation.Code, ct) is not null;
+        return verified ? Result.Success() : Result.FailureCode(HostpanelErrorCodes.TWO_FACTOR_CODE_INVALID);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DisableAsync(string userId, string code, CancellationToken ct)
+    /// <remarks>
+    /// The current password is not read here: the sign-on provider owns the account and its
+    /// password, and asks for its own proof on its disable path.
+    /// </remarks>
+    public async Task<Result> DisableAsync(TwoFactorRemoval removal, CancellationToken ct)
     {
-        var token = BearerToken();
-        if (token is null)
-        {
-            return false;
-        }
+        ArgumentNullException.ThrowIfNull(removal);
 
-        return await _client.DisableAsync(token, code, ct);
-    }
-
-    /// <summary>
-    /// The current request's own bearer token, or null when it is not bearer-authenticated
-    /// (for example, an admin signed in through the cookie session instead) or there is no
-    /// current request at all.
-    /// </summary>
-    /// <returns>The bearer token, or null.</returns>
-    private string? BearerToken()
-    {
-        StringValues header = _httpContextAccessor.HttpContext?.Request.Headers.Authorization ?? StringValues.Empty;
-        var value = header.ToString();
-        return value.StartsWith(BearerScheme.HeaderPrefix, StringComparison.OrdinalIgnoreCase)
-            ? value[BearerScheme.HeaderPrefix.Length..]
-            : null;
+        var token = _callerToken.GetBearerToken();
+        var disabled = token is not null && await _client.DisableAsync(token, removal.Code, ct);
+        return disabled ? Result.Success() : Result.FailureCode(HostpanelErrorCodes.TWO_FACTOR_CODE_INVALID);
     }
 }

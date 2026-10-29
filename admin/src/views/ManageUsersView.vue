@@ -1,9 +1,11 @@
 <script setup lang="ts">
 /**
- * Manage Users — list all Identity users with edit, password reset, and delete actions.
+ * Manage Users: list all Identity users with edit, password reset, and delete actions.
  *
  * The list, the paging and every refusal sentence come from the users store; this screen only
- * renders them and routes the row actions (manage, reset email, change password).
+ * renders them and routes the row actions (manage, reset email, change password). Every action
+ * reports its outcome above the table (success, or the API's sentence); a refused load shows the
+ * sentence with a Retry button.
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -15,6 +17,7 @@ import ChangePasswordModal from '@/components/clients/ChangePasswordModal.vue'
 import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiEmptyState from '@/components/ui/UiEmptyState.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiFilterCard from '@/components/ui/UiFilterCard.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiPageHeader from '@/components/ui/UiPageHeader.vue'
@@ -71,7 +74,7 @@ const successTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 /**
  * Shows a success message and clears it after a few seconds.
  *
- * Auto-clearing matches the sibling client screens (ClientUsersView, ClientContactsView) — a
+ * Auto-clearing matches the sibling client screens (ClientUsersView, ClientContactsView): a
  * success needs acknowledging, not dismissing, which is why only this half expires.
  *
  * @param message - The message to display.
@@ -87,10 +90,17 @@ const showSuccess = (message: string): void => {
   }, NOTICE_VISIBLE_MS)
 }
 
+/**
+ * Loads the current page with the current search.
+ *
+ * @returns Resolves when the list has settled.
+ */
+const reload = (): Promise<void> => store.fetchAll(search.value || undefined)
+
 /** Applies the search filter, starting from the first page. */
 const applySearch = (): void => {
   store.page = 1
-  void store.fetchAll(search.value || undefined)
+  void reload()
 }
 
 /** Clears the search box and reloads the unfiltered list. */
@@ -106,7 +116,7 @@ const clearSearch = (): void => {
  */
 const goToPage = (p: number): void => {
   store.page = p
-  void store.fetchAll(search.value || undefined)
+  void reload()
 }
 
 /**
@@ -142,7 +152,8 @@ const handleSaveUser = async (
   savingUser.value = false
   if (saved) {
     editingUser.value = null
-    await store.fetchAll(search.value || undefined)
+    showSuccess(t('clients.manageUsers.userSaved'))
+    await reload()
   }
 }
 
@@ -154,7 +165,8 @@ const handleDeleteUser = async (): Promise<void> => {
   actionSuccess.value = null
   if (await store.deleteUser(editingUser.value.id)) {
     editingUser.value = null
-    await store.fetchAll(search.value || undefined)
+    showSuccess(t('clients.manageUsers.userDeleted'))
+    await reload()
   }
 }
 
@@ -191,6 +203,7 @@ const handleChangePassword = async (password: string): Promise<void> => {
   actionSuccess.value = null
   if (await store.changePassword(changingPasswordFor.value, password)) {
     changingPasswordFor.value = null
+    showSuccess(t('clients.manageUsers.passwordChanged'))
   }
   savingPassword.value = false
 }
@@ -226,7 +239,7 @@ onUnmounted(() => {
 
 <template>
   <UiStack gap="md" class="w-full">
-    <!-- Action feedback — sits above the table so a failed action never replaces it -->
+    <!-- Action feedback: sits above the table so a failed action never replaces it -->
     <UiAlert v-if="actionSuccess" variant="success" data-testid="users-action-success">
       {{ actionSuccess }}
     </UiAlert>
@@ -266,10 +279,14 @@ onUnmounted(() => {
       </UiStack>
     </UiFilterCard>
 
-    <!-- List load failed: replaces the table -->
-    <UiAlert v-if="store.error" variant="error" data-testid="users-error">
-      {{ store.error }}
-    </UiAlert>
+    <!-- List load failed: replaces the table, with a Retry -->
+    <UiErrorState
+      v-if="store.error"
+      :message="store.error"
+      :loading="store.loading"
+      testid="users-error"
+      @retry="reload"
+    />
 
     <!-- Table (also draws the loading and the empty state) -->
     <UiTable

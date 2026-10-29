@@ -1,4 +1,4 @@
-# XML Documentation Rules — Innovayse Backend
+# XML documentation rules for the HostPanel backend
 
 ## Rule
 
@@ -68,14 +68,14 @@ private void RecalculateTotal()
 
 ### Interface
 ```csharp
-/// <summary>Abstraction over a payment gateway provider (card processor, wallet, etc.).</summary>
-public interface IPaymentGateway
+/// <summary>Abstraction over the card gateway.</summary>
+public interface ICardPaymentGateway
 {
-    /// <summary>Charges the client's default payment method.</summary>
-    /// <param name="request">Charge details including amount and currency.</param>
+    /// <summary>Refunds a completed card payment in full.</summary>
+    /// <param name="instruction">The charge or payment intent to refund.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result containing the transaction ID and status.</returns>
-    Task<PaymentResult> ChargeAsync(ChargeInstruction request, CancellationToken ct);
+    /// <returns>The refund the gateway issued.</returns>
+    Task<CardRefundResult> RefundAsync(CardRefundInstruction instruction, CancellationToken ct);
 }
 ```
 

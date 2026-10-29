@@ -1,7 +1,4 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -9,7 +6,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>GET /api/tickets/client/{clientId}/stats</c>: staff can read a client's ticket
 /// statistics, and the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>New this batch: no grouped file exercised this route before.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetClientTicketStatsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

@@ -5,12 +5,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { mountPage, stubPublicPageRuntime } from '~/tests/helpers/publicPage'
+import { SeoPageType } from '~/types/seopagetype'
 import type { PublicPageSpies } from '~/tests/helpers/publicPage'
 
 /** The mocked content endpoints, hoisted so the mocked module can reach them. */
 const api = vi.hoisted(() => ({
   fetchAnnouncements: vi.fn(),
   fetchRecentAnnouncements: vi.fn(),
+  fetchAnnouncement: vi.fn(),
   fetchKbCategories: vi.fn(),
   fetchKbArticles: vi.fn(),
   fetchKbArticle: vi.fn(),
@@ -31,9 +33,8 @@ const { default: Page } = await import('~/pages/announcements/[id].vue')
 const ANNOUNCEMENT = {
   id: 11,
   title: 'Maintenance window',
-  excerpt: 'Short outage',
-  date: '2026-03-15T12:00:00Z',
-  body: '<p>We will <strong>restart</strong> servers.</p><script>window.hacked = true</script><img src="x" onerror="alert(1)">',
+  publishedAt: '2026-03-15T12:00:00Z',
+  content: '<p>We will <strong>restart</strong> servers.</p><script>window.hacked = true</script><img src="x" onerror="alert(1)">',
 }
 
 /** Spies of the stood-in runtime, renewed before each test. */
@@ -42,11 +43,11 @@ let spies: PublicPageSpies
 describe('pages/announcements/[id]', () => {
   beforeEach(() => {
     spies = stubPublicPageRuntime({ params: { id: '11' } })
-    api.fetchAnnouncements.mockReset()
+    api.fetchAnnouncement.mockReset()
   })
 
   it('shows the title, the publication date and a link back to the list', async () => {
-    api.fetchAnnouncements.mockResolvedValue({ items: [ANNOUNCEMENT] })
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
 
     const wrapper = await mountPage(Page)
 
@@ -56,7 +57,7 @@ describe('pages/announcements/[id]', () => {
   })
 
   it('renders the body through the allow-list and drops scripts and handlers', async () => {
-    api.fetchAnnouncements.mockResolvedValue({ items: [ANNOUNCEMENT] })
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
 
     const wrapper = await mountPage(Page)
 
@@ -67,33 +68,69 @@ describe('pages/announcements/[id]', () => {
     expect(body.html()).not.toContain('onerror')
   })
 
-  it('sets the page title and description from the announcement', async () => {
-    api.fetchAnnouncements.mockResolvedValue({ items: [ANNOUNCEMENT] })
+  it('reads the announcement by its route id from the detail endpoint', async () => {
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
 
     await mountPage(Page)
 
-    expect(spies.useSeoMeta).toHaveBeenCalledWith({ title: 'Maintenance window', description: 'Short outage' })
+    expect(api.fetchAnnouncement).toHaveBeenCalledWith('11')
+    expect(api.fetchAnnouncements).not.toHaveBeenCalled()
   })
 
-  it('shows the not-found state for an id the list does not hold', async () => {
-    api.fetchAnnouncements.mockResolvedValue({ items: [] })
+  it('gives the head a getter with a plain separator and a text-only description', async () => {
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
 
-    const wrapper = await mountPage(Page)
+    await mountPage(Page)
 
-    expect(wrapper.find('[data-testid="announcement-error"]').text()).toContain('announcements.errorDesc')
+    const options = (spies.useSeo.mock.calls[0]![0] as () => Record<string, unknown>)()
+    expect(options).toEqual({
+      title: 'Maintenance window | announcements.title',
+      description: 'We will restart servers.',
+      type: SeoPageType.Article,
+    })
+    expect(String(options.title)).not.toMatch(/[–—]/)
+    expect(spies.useSeoMeta).not.toHaveBeenCalled()
+  })
+
+  it('publishes Article structured data with the publication date', async () => {
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
+
+    await mountPage(Page)
+
+    const schema = (spies.injectSchema.mock.calls[0]![0] as () => object[])()
+    expect(schema).toEqual([
+      {
+        '@type': 'Article',
+        headline: 'Maintenance window',
+        description: 'We will restart servers.',
+        url: 'https://portal.test/canonical',
+        datePublished: '2026-03-15T12:00:00Z',
+      },
+    ])
+  })
+
+  it.each([
+    ['an unknown or unpublished id', () => api.fetchAnnouncement.mockRejectedValue({ statusCode: 404, data: { detail: 'Not found.' } }), 404],
+    ['an empty answer', () => api.fetchAnnouncement.mockResolvedValue(null), 404],
+    ['a 503 from the backend', () => api.fetchAnnouncement.mockRejectedValue({ statusCode: 503, data: { detail: 'Unavailable.' } }), 503],
+    ['a network error', () => api.fetchAnnouncement.mockRejectedValue(new TypeError('fetch failed')), 502],
+  ])('raises the right status for %s', async (_name, arrange, status) => {
+    arrange()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const errorHandler = vi.fn()
+
+    const wrapper = await mountPage(Page, { errorHandler })
+
+    expect(spies.createError).toHaveBeenCalledWith(expect.objectContaining({ statusCode: status }))
+    expect(errorHandler).toHaveBeenCalledWith(expect.objectContaining({ statusCode: status }), expect.anything(), expect.anything())
     expect(wrapper.find('[data-testid="announcement-heading"]').exists()).toBe(false)
-  })
-
-  it('shows the not-found state when the list is refused', async () => {
-    api.fetchAnnouncements.mockRejectedValue({ data: { detail: 'Content unavailable.' } })
-
-    const wrapper = await mountPage(Page)
-
-    expect(wrapper.find('[data-testid="announcement-error"]').exists()).toBe(true)
+    consoleError.mockRestore()
+    consoleWarn.mockRestore()
   })
 
   it('shows placeholders while the announcement loads', async () => {
-    api.fetchAnnouncements.mockResolvedValue({ items: [ANNOUNCEMENT] })
+    api.fetchAnnouncement.mockResolvedValue(ANNOUNCEMENT)
     vi.stubGlobal('useAsyncData', async () => ({ pending: ref(true) }))
 
     const wrapper = await mountPage(Page)

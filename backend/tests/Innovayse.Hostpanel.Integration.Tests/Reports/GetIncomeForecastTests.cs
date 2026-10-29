@@ -1,16 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/income-forecast</c> against Postgres: twelve months of projected income.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetIncomeForecastTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -27,6 +23,26 @@ public sealed class GetIncomeForecastTests(IntegrationTestFactory factory) : ICl
         rows.Should().HaveCount(12);
     }
 
+    /// <summary>
+    /// The forecast windows add up the same income the annual report books: payments less refunds,
+    /// settled totals, no credit, the foreign invoice converted to the base currency.
+    /// </summary>
+    [Fact]
+    public async Task BuildsTheWindowsFromTheBookedIncome()
+    {
+        var scenario = await IncomeTestSeeds.SeedAsync(factory, 2032);
+        var client = await ReportsTestSeeds.AdminClientAsync(factory);
+
+        var rows = (await client.GetFromJsonAsync<List<JsonElement>>("/api/reports/income-forecast?year=2032"))!;
+
+        rows.Select(r => r.GetProperty("monthly").GetDecimal())
+            .Should().Equal(100m, 300m, -50m, 40m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m);
+        rows[2].GetProperty("quarterly").GetDecimal().Should().Be(350m);
+        rows[3].GetProperty("total").GetDecimal().Should().Be(390m);
+        rows[0].GetProperty("annual").GetDecimal().Should().Be(390m);
+        rows.Should().OnlyContain(r => r.GetProperty("currency").GetString() == scenario.BaseCurrency);
+    }
+
     /// <summary>The route is not for anonymous callers.</summary>
     [Fact]
     public async Task RefusesAnonymous()
@@ -36,7 +52,7 @@ public sealed class GetIncomeForecastTests(IntegrationTestFactory factory) : ICl
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

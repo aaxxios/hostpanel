@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Products;
+
 /// <summary>
 /// One line of a product's specification, such as "Disk" / "10 GB".
 /// Belongs to a <see cref="Product"/>.
@@ -17,7 +18,7 @@ namespace Innovayse.Hostpanel.Domain.Products;
 /// <para>
 /// That makes the label the thing that has to match between products, and it is
 /// stored per product rather than in a shared catalogue: two products spelling
-/// the same feature differently produce two rows. The trade is deliberate — it
+/// the same feature differently produce two rows. The trade is deliberate: it
 /// keeps a product's specification editable in one place.
 /// </para>
 /// </remarks>
@@ -35,7 +36,7 @@ public sealed class ProductFeature : BaseEntity
     /// <summary>Gets the position of this line within the product, ascending.</summary>
     public int SortOrder { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private ProductFeature() { }
 
     /// <summary>

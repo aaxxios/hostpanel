@@ -42,13 +42,12 @@ public class Result
 
     /// <summary>
     /// Create a refusal carrying only its code. The sentence a person reads is resolved from
-    /// <c>ErrorMessages.resx</c> by that code at the API boundary, so a handler has none to supply
-    /// (rules/localization.md).
+    /// <c>ErrorMessages.resx</c> by that code at the API boundary, so a handler has none to supply.
     /// </summary>
     /// <remarks>
     /// A separate name rather than a one-argument <c>Failure</c> overload: <c>Failure(string)</c>
     /// already binds its single argument to the <b>message</b>, leaving the code null, and that call
-    /// fails silently — the boundary answers <c>HOSTPANEL_UNEXPECTED</c> with the code sitting in the
+    /// fails silently; the boundary answers <c>HOSTPANEL_UNEXPECTED</c> with the code sitting in the
     /// message slot.
     /// </remarks>
     /// <param name="errorCode">A <c>HostpanelErrorCodes</c> constant.</param>
@@ -71,13 +70,13 @@ public class Result
         new(false, error, errorCode, new Dictionary<string, List<string>> { { fieldName, [error] } });
 
     /// <summary>
-    /// Create failure result carrying one structured detail the caller can act on — which attachment failed —
+    /// Create failure result carrying one structured detail the caller can act on, which attachment failed,
     /// alongside the sentence.
     /// </summary>
     /// <param name="error">Human-readable error message.</param>
     /// <param name="errorCode">Machine-readable error code.</param>
     /// <param name="detailKey">The camelCase key the detail is read under, e.g. <c>attachmentId</c>.</param>
-    /// <param name="detailValue">The detail itself — an identifier, never a sentence.</param>
+    /// <param name="detailValue">The detail itself: an identifier, never a sentence.</param>
     /// <returns>A failed <see cref="Result"/> whose <c>Errors</c> holds the one detail.</returns>
     public static Result FailureWithDetail(string error, string errorCode, string detailKey, string detailValue) =>
         new(false, error, errorCode, new Dictionary<string, List<string>> { { detailKey, [detailValue] } });

@@ -1,15 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>PUT /api/clients/{id}/contacts/{contactId}</c>: editing an existing contact.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -20,7 +16,7 @@ public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassF
         var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
         var admin = await ClientsTestSeeds.AdminClientAsync(factory);
         var added = await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Billing"));
-        added.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        added.StatusCode.Should().Be(HttpStatusCode.Created);
         var contacts = await admin.GetFromJsonAsync<JsonElement>($"/api/clients/{clientId}");
         var contactId = contacts.GetProperty("contacts").EnumerateArray().Single().GetProperty("id").GetInt32();
 
@@ -45,7 +41,7 @@ public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassF
         await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_NOT_FOUND);
     }
 
-    /// <summary>Updating a contact id that is not this client's answers 404 with <c>MY_CONTACT_NOT_FOUND</c>.</summary>
+    /// <summary>Updating a contact id that is not this client's answers 404 with <c>CLIENT_CONTACT_NOT_FOUND</c>.</summary>
     [Fact]
     public async Task UpdateRefusesAWrongContactId()
     {
@@ -57,7 +53,7 @@ public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassF
             $"/api/clients/{clientId}/contacts/{wrongContactId}", ClientsTestSeeds.ContactBody("Probe"));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_CONTACT_NOT_FOUND);
     }
 
     /// <summary>Updating a contact is not for anonymous callers.</summary>
@@ -83,9 +79,8 @@ public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassF
 
     /// <summary>
     /// Updating a contact id that is not the caller's own, through the portal's own
-    /// <c>PUT /api/clients/me/contacts/{contactId}</c>, answers 404 with <c>MY_CONTACT_NOT_FOUND</c>.
+    /// <c>PUT /api/clients/me/contacts/{contactId}</c>, answers 404 with <c>CLIENT_CONTACT_NOT_FOUND</c>.
     /// </summary>
-    /// <remarks>Split from the deleted <c>MyProfileEndpointTests</c> (A7 Task 5).</remarks>
     [Fact]
     public async Task MyContactsWrongIdRefusesNotFound()
     {
@@ -94,6 +89,44 @@ public sealed class UpdateContactTests(IntegrationTestFactory factory) : IClassF
         var response = await client.PutAsJsonAsync("/api/clients/me/contacts/999999", ClientsTestSeeds.ContactBody("Anyone"));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_CONTACT_NOT_FOUND);
+    }
+
+    /// <summary>Moving a contact onto the address another contact of the client uses answers 409 <c>CONTACT_EMAIL_IN_USE</c>; keeping its own is fine.</summary>
+    [Fact]
+    public async Task UpdateRefusesAnAddressAnotherContactUses()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var first = $"first-{Guid.NewGuid():N}@example.test";
+        var second = $"second-{Guid.NewGuid():N}@example.test";
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("First", first, true)))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+        var secondId = await (await admin.PostAsJsonAsync(
+            $"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Second", second, true))).Content.ReadFromJsonAsync<int>();
+
+        var clash = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}/contacts/{secondId}", ClientsTestSeeds.ContactBody("Second", first, true));
+        var own = await admin.PutAsJsonAsync(
+            $"/api/clients/{clientId}/contacts/{secondId}", ClientsTestSeeds.ContactBody("Renamed", second, true));
+
+        clash.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ClientsTestSeeds.AssertCodeAsync(clash, HostpanelErrorCodes.CONTACT_EMAIL_IN_USE);
+        own.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>Updating a contact leaves one activity line naming the client and the acting admin.</summary>
+    [Fact]
+    public async Task UpdateIsAuditedWithTheActingAdmin()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+        var contactId = await (await admin.PostAsJsonAsync(
+            $"/api/clients/{clientId}/contacts", ClientsTestSeeds.ContactBody("Billing"))).Content.ReadFromJsonAsync<int>();
+
+        (await admin.PutAsJsonAsync($"/api/clients/{clientId}/contacts/{contactId}", ClientsTestSeeds.ContactBody("Renamed")))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Modified Contact");
     }
 }

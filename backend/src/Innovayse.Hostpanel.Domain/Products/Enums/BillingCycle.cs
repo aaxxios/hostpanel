@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Products.Enums;
+
 /// <summary>How often a product bills.</summary>
 public enum BillingCycle
 {

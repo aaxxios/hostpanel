@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 /// <summary>
 /// Test-host-only controller that plays a misbehaving provider: each action sets every vendor
 /// header it can think of on the response, as a careless proxy of an upstream answer would.
-/// Registered only by <see cref="LeakGuardTests"/> through an application part; it does not exist
+/// Registered only by <see cref="Innovayse.Hostpanel.Integration.Tests.Security.LeakGuardTests"/> through an application part; it does not exist
 /// in the production host.
 /// </summary>
 [ApiController]

@@ -1,13 +1,16 @@
 /**
  * Tests for the auth store's refusal wording: the API's own sentence wins, the only client
  * sentences are the shared no-answer line and the sign-in loop line, and there is no
- * status-to-sentence table.
+ * status-to-sentence table. Also the session probe, and that the store remembers its answer
+ * (signed in or signed out) until the session changes.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { AuthMode } from '@/types/auth'
 import { callOf, json, problem, stubFetch, stubOffline } from '../helpers/fetch'
+import { stubRoutes } from '../helpers/routes'
 import { NO_ANSWER } from '../helpers/storeHooks'
 
 describe('auth store sentences', () => {
@@ -159,5 +162,84 @@ describe('auth store session probe', () => {
 
     expect(store.user).toEqual({ email: 'a@b.c', roles: ['Admin'] })
     expect(store.emailVerified).toBe(true)
+  })
+})
+
+describe('authStore.checkSession', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('asks once and remembers a signed-out answer', async () => {
+    const fetchMock = stubFetch(problem('Sign in.', 401))
+    const store = useAuthStore()
+    expect(store.sessionChecked).toBe(false)
+
+    await store.checkSession()
+    await store.checkSession()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(store.sessionChecked).toBe(true)
+    expect(store.isAuthenticated).toBe(false)
+  })
+
+  it('asks once and remembers a signed-in answer', async () => {
+    const fetchMock = stubFetch(json({ email: 'a@b.c', roles: ['Admin'], emailVerified: true }))
+    const store = useAuthStore()
+
+    await store.checkSession()
+    await store.checkSession()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(store.isAuthenticated).toBe(true)
+  })
+
+  it('asks again after a probe that got no answer', async () => {
+    const fetchMock = stubOffline()
+    const store = useAuthStore()
+
+    await store.checkSession()
+    expect(store.sessionChecked).toBe(false)
+    await store.checkSession()
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('marks the session as known once a sign-in has loaded the user', async () => {
+    stubRoutes({
+      'POST /api/auth/login': () => json({ accessToken: 'token' }),
+      'GET /api/auth/me': () => json({ email: 'a@b.c', roles: ['Admin'], emailVerified: true }),
+    })
+    const store = useAuthStore()
+
+    expect(await store.signInLocal('a@b.c', 'secret')).toBe('done')
+
+    expect(store.sessionChecked).toBe(true)
+  })
+
+  it('asks again after a confirmed email address resets the session state', async () => {
+    stubFetch(new Response(null, { status: 200 }))
+    const store = useAuthStore()
+    store.sessionChecked = true
+
+    expect(await store.verifyEmail('t', 'a@b.c')).toBe(true)
+
+    expect(store.sessionChecked).toBe(false)
+  })
+
+  it('treats the session as known and ended after sign-out', async () => {
+    stubFetch(new Response(null, { status: 204 }))
+    const store = useAuthStore()
+    store.mode = AuthMode.Local
+    store.user = { email: 'a@b.c', roles: ['Admin'] }
+
+    await store.logout()
+
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.sessionChecked).toBe(true)
   })
 })

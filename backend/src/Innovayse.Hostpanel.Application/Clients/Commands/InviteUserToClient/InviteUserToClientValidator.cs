@@ -4,6 +4,7 @@ using Innovayse.Hostpanel.Application.Resources;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Clients.Commands.InviteUserToClient;
 
 /// <summary>Validates <see cref="InviteUserToClientCommand"/> before the handler executes.</summary>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Open New Ticket page -- form to create a support ticket on behalf of a client.
+ * Open New Ticket page: form to create a support ticket on behalf of a client.
  * Navigates to the ticket detail page on success.
  */
 import { ref, computed, onMounted } from 'vue'
@@ -9,9 +9,9 @@ import { useI18n } from 'vue-i18n'
 import { useClientTicketsStore } from '@/stores/clientTickets'
 import { TICKET_PRIORITY_OPTIONS } from '@/lib/constants'
 import { TicketPriority } from '@/types/ticket'
-import UiAlert from '@/components/ui/UiAlert.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
+import UiErrorState from '@/components/ui/UiErrorState.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
 import UiHeading from '@/components/ui/UiHeading.vue'
@@ -20,10 +20,12 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiLink from '@/components/ui/UiLink.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
 import { UiAlignItems } from '@/utils/ui/layout'
 import { UiSize } from '@/utils/ui/size'
+import { UiTone } from '@/utils/ui/tone'
 import { ClientSection, clientItemPath, clientSectionPath } from '@/lib/routes'
 
 const { t } = useI18n()
@@ -105,11 +107,14 @@ onMounted(() => {
       <UiHeading :level="1" variant="card">{{ t('shared.openNewTicket') }}</UiHeading>
     </UiStack>
 
-    <UiAlert v-if="store.error" variant="error" data-testid="client-open-ticket-error">
-      {{ store.error }}
-    </UiAlert>
+    <UiErrorState
+      v-if="store.departmentsError !== null"
+      :message="store.departmentsError"
+      testid="client-open-ticket-departments-error"
+      @retry="store.fetchDepartments"
+    />
 
-    <UiCard padding="lg">
+    <UiCard v-else padding="lg">
       <UiStack>
         <UiField :label="t('shared.subject')">
           <template #default="{ id }">
@@ -155,6 +160,7 @@ onMounted(() => {
             {{ store.loading ? t('shared.creating') : t('clients.clientOpenTicket.openTicket') }}
           </UiButton>
         </UiStack>
+        <UiStatusMessage :message="store.error" :tone="UiTone.Danger" data-testid="client-open-ticket-error" />
       </UiStack>
     </UiCard>
   </UiStack>

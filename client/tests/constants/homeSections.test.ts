@@ -13,7 +13,12 @@ import {
 } from '~/constants/homeSections'
 import { HomeSectionId } from '~/types/homesectionid'
 
-/** Prefixes a path with a locale, as `useLocalePath()` does. */
+/**
+ * Prefixes a path with a locale, as `useLocalePath()` does.
+ *
+ * @param path Unprefixed path.
+ * @returns The path under `/ru`.
+ */
 const ruPath = (path: string): string => `/ru${path === '/' ? '' : path}`
 
 describe('homeSections', () => {

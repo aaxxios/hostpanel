@@ -11,7 +11,7 @@ namespace Innovayse.Hostpanel.Application.Support.Queries.ListPredefinedReplies;
 /// </summary>
 /// <remarks>
 /// The category join is an inner join, on purpose: a reply whose category row no longer exists is
-/// not returned. That is the pre-conversion repository's own behaviour, kept exactly.
+/// not returned.
 /// </remarks>
 public sealed class ListPredefinedRepliesHandler
 {

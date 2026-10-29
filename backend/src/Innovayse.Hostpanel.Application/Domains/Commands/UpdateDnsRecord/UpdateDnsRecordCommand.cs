@@ -10,4 +10,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.UpdateDnsRecord;
 /// <param name="Value">New record value.</param>
 /// <param name="Ttl">New time-to-live in seconds.</param>
 /// <param name="Priority">New priority for MX/SRV records; null to clear.</param>
-public record UpdateDnsRecordCommand(int? DomainId, int? RecordId, string Value, int Ttl, int? Priority);
+public sealed record UpdateDnsRecordCommand(int? DomainId, int? RecordId, string Value, int Ttl, int? Priority);

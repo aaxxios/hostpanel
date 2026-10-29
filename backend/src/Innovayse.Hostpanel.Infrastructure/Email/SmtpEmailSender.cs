@@ -1,36 +1,84 @@
+using System.Net.Sockets;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Notifications;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 using Innovayse.Hostpanel.Infrastructure.Email.Enums;
 using Innovayse.Hostpanel.Infrastructure.Email.Settings;
+using Innovayse.Hostpanel.Shared.Infrastructure;
+using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace Innovayse.Hostpanel.Infrastructure.Email;
+
 /// <summary>
 /// Sends emails via SMTP using MailKit.
 /// Implements <see cref="IEmailSender"/> using the settings from <see cref="SmtpOptions"/>.
 /// </summary>
-internal sealed class SmtpEmailSender : IEmailSender
+public sealed class SmtpEmailSender : IEmailSender
 {
-    /// <summary>Initializes a new instance of the <see cref="SmtpEmailSender"/> class.</summary>
-    /// <param name="options">The options this class uses.</param>
-    public SmtpEmailSender(IOptions<SmtpOptions> options)
-    {
-        _settings = options.Value;
-    }
-
     /// <summary>Resolved SMTP configuration.</summary>
     private readonly SmtpOptions _settings;
+
+    /// <summary>Records the relay's own wording of a refusal, which no caller stores or shows.</summary>
+    private readonly ILogger<SmtpEmailSender> _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="SmtpEmailSender"/> class.</summary>
+    /// <param name="options">The relay's host, port, encryption, credentials and sender address.</param>
+    /// <param name="logger">Records the relay's own wording of a refusal.</param>
+    public SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<SmtpEmailSender> logger)
+    {
+        _settings = options.Value;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Sends an email message via the configured SMTP server.
     /// </summary>
     /// <param name="message">The email message to send.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A task that completes when the message is accepted by the SMTP server.</returns>
-    public async Task SendAsync(EmailMessage message, CancellationToken ct)
+    /// <returns><see cref="EmailSendResult.Sent"/> once the server accepted the message, otherwise the classified reason it did not.</returns>
+    public async Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken ct)
+    {
+        try
+        {
+            await DeliverAsync(message, ct);
+            return EmailSendResult.Sent;
+        }
+        catch (Exception ex) when (JobFailure.IsFailure(ex, ct))
+        {
+            // The relay's text can name servers, addresses and credential hints, so it goes to the
+            // log only; callers get the closed reason, which is all they store or show.
+            var failure = Classify(ex);
+            _logger.LogError(ex, "The SMTP relay did not accept a message: {Failure}.", failure);
+            return EmailSendResult.Failed(failure);
+        }
+    }
+
+    /// <summary>Maps what the mail library threw to the closed set of reasons callers understand.</summary>
+    /// <param name="ex">The exception the send ended with.</param>
+    /// <returns>The reason.</returns>
+    private static EmailSendFailure Classify(Exception ex) => ex switch
+    {
+        SmtpCommandException { ErrorCode: SmtpErrorCode.RecipientNotAccepted } => EmailSendFailure.RecipientRejected,
+        SmtpCommandException { ErrorCode: SmtpErrorCode.SenderNotAccepted } => EmailSendFailure.SenderRejected,
+        SmtpCommandException { ErrorCode: SmtpErrorCode.MessageNotAccepted } => EmailSendFailure.MessageRejected,
+        AuthenticationException => EmailSendFailure.AuthenticationRejected,
+        SslHandshakeException => EmailSendFailure.SecureConnectionFailed,
+        ParseException => EmailSendFailure.RecipientRejected,
+        TimeoutException or OperationCanceledException => EmailSendFailure.Timeout,
+        SocketException or IOException or ServiceNotConnectedException => EmailSendFailure.RelayUnreachable,
+        _ => EmailSendFailure.Unknown,
+    };
+
+    /// <summary>Builds the MIME message and hands it to the configured SMTP server.</summary>
+    /// <param name="message">The email message to send.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task that completes when the server accepted the message; it throws otherwise.</returns>
+    private async Task DeliverAsync(EmailMessage message, CancellationToken ct)
     {
         var mime = new MimeMessage();
         mime.From.Add(new MailboxAddress(_settings.From.Name, _settings.From.Address));
@@ -44,17 +92,13 @@ internal sealed class SmtpEmailSender : IEmailSender
 
         // SecureSocketOptions rather than the bool overload: that overload maps false to
         // "no TLS at all", which cannot express the difference between the three wire
-        // protocols here. 465 is implicit TLS — the session is encrypted before the first
-        // command — while 587 negotiates it with STARTTLS after a plaintext greeting, and a
+        // protocols here. 465 is implicit TLS, the session is encrypted before the first
+        // command, while 587 negotiates it with STARTTLS after a plaintext greeting, and a
         // catcher on 1025 speaks neither.
         //
-        // The deployment states which; the port no longer decides. It used to, with UseSsl
-        // as an override, and that was one value short of the question: `false` could not be
-        // told apart from "nobody set this", so a relay on a non-standard port that wants TLS
-        // from the first byte looked exactly like a local catcher — and guessing that one
-        // wrong puts the relay's password on the wire in the clear. The override existed
-        // precisely because the guess was wrong somewhere; SmtpEncryption.Ssl is that
-        // override, now spelled as the answer rather than as a correction to one.
+        // The deployment states which; the port does not decide. A relay on a non-standard port
+        // that wants TLS from the first byte must not be mistaken for a local catcher, because
+        // guessing that one wrong puts the relay's password on the wire in the clear.
         //
         // Encryption is checked at startup (see AddInfrastructure), so null cannot reach here
         // from a running host. It still refuses rather than falling through to None: an
@@ -72,7 +116,7 @@ internal sealed class SmtpEmailSender : IEmailSender
 
         // Only when a username is configured. A local catcher accepts no credentials at all
         // and refuses the AUTH command, and authenticating with a blank username against a
-        // real relay fails the send outright — which is what a mis-spelled configuration key
+        // real relay fails the send outright, which is what a mis-spelled configuration key
         // produced here, silently, for every password reset and address verification.
         if (!string.IsNullOrWhiteSpace(_settings.Username))
         {

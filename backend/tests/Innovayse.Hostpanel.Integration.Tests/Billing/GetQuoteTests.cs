@@ -1,8 +1,6 @@
 using System.Net;
-using FluentAssertions;
+using System.Text.Json;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -10,11 +8,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>GET /api/billing/quotes/{id}</c> against Postgres: reading a single quote, and the
 /// <c>QUOTE_NOT_FOUND</c> refusal for an id that names no quote.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetQuoteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>An admin reads back the quote they just created.</summary>
+    /// <summary>An admin reads back the quote they just created, named after its client.</summary>
     [Fact]
     public async Task GetByIdReturnsTheCreatedQuote()
     {
@@ -25,6 +22,8 @@ public sealed class GetQuoteTests(IntegrationTestFactory factory) : IClassFixtur
         var response = await admin.GetAsync($"/api/billing/quotes/{quoteId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
     }
 
     /// <summary>Reading an id that names no quote answers 404 with the <c>QUOTE_NOT_FOUND</c> code.</summary>

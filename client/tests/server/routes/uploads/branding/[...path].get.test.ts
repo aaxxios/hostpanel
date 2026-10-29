@@ -49,8 +49,12 @@ describe('GET /uploads/branding/**', () => {
     expect(event.responseHeaders['Content-Type']).toBe('image/x-icon')
   })
 
-  it('refuses an empty path, a backslash, and dot segments with 400, without calling the backend', async () => {
-    for (const path of ['', 'a\\b.png', '../secret.png', 'a/./b.png', 'a//b.png']) {
+  it('refuses an empty path, a backslash, dot segments and their encoded forms with 400, without calling the backend', async () => {
+    const paths = [
+      '', 'a\\b.png', '../secret.png', 'a/./b.png', 'a//b.png',
+      '%2e%2e/secret.png', '..%2fsecret.png', 'a%5cb.png', '%252e%252e/secret.png',
+    ]
+    for (const path of paths) {
       const error = await refusal(() => route.default(makeEvent({ params: { path } })))
 
       expect(error).toMatchObject({ statusCode: 400 })

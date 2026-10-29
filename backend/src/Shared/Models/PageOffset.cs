@@ -5,7 +5,7 @@ namespace Innovayse.Hostpanel.Shared.Models;
 /// </summary>
 /// <remarks>
 ///     The obvious <c>(pageNumber - 1) * pageSize</c> overflows <see cref="int" /> for a large page
-///     number — <c>?pageNumber=2147483647</c> wraps to a negative value, which reaches Postgres as
+///     number: <c>?pageNumber=2147483647</c> wraps to a negative value, which reaches Postgres as
 ///     <c>OFFSET -N</c> and surfaces as an unhandled 500. Computing in <see cref="long" /> and
 ///     clamping yields an empty page instead, which is the correct answer past the last page.
 /// </remarks>

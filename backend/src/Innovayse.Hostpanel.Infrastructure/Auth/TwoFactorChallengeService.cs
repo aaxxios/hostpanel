@@ -142,24 +142,17 @@ public sealed class TwoFactorChallengeService : ITwoFactorChallengeService
     }
 
     /// <summary>Finds the state of a challenge, creating it on first sight. Call only under the lock.</summary>
-    /// <param name="challenge">The challenge.</param>
+    /// <param name="challenge">The challenge the state is tracked for.</param>
     /// <returns>The state, shared by every request that presents the same challenge.</returns>
     private ChallengeState StateOf(TwoFactorChallengeDto challenge)
     {
         return _cache.GetOrCreate(CacheKeyPrefix + challenge.Id, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = Lifetime;
+
+            // Never evicted under memory pressure: a dropped state would reopen a spent challenge.
+            entry.Priority = CacheItemPriority.NeverRemove;
             return new ChallengeState();
         })!;
-    }
-
-    /// <summary>What is remembered about one challenge.</summary>
-    private sealed class ChallengeState
-    {
-        /// <summary>Gets or sets the attempts taken so far.</summary>
-        public int Attempts { get; set; }
-
-        /// <summary>Gets or sets a value indicating whether a correct code already completed the challenge.</summary>
-        public bool Spent { get; set; }
     }
 }

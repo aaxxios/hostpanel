@@ -1,8 +1,10 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetTransactionById;
 
@@ -12,11 +14,16 @@ public sealed class GetTransactionByIdHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetTransactionByIdHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public GetTransactionByIdHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Returns the transaction with the given ID.</summary>
@@ -35,15 +42,10 @@ public sealed class GetTransactionByIdHandler
             return Result<TransactionDto>.FailureCode(HostpanelErrorCodes.TRANSACTION_NOT_FOUND);
         }
 
-        var client = await _context.Clients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == t.ClientId, ct);
-        var clientName = client is not null
-            ? $"{client.FirstName} {client.LastName}".Trim()
-            : null;
+        var client = await _bus.GetRequiredClientBriefAsync(t.ClientId, withEmail: false, ct);
 
         return Result<TransactionDto>.Success(new TransactionDto(
-            t.Id, t.ClientId, clientName, t.Date, t.Description, t.TransactionId,
+            t.Id, t.ClientId, client.FullName, t.Date, t.Description, t.TransactionId,
             t.InvoiceId, t.PaymentMethod, t.AmountIn, t.AmountOut, t.Fees, t.AddedToCredit, t.Currency));
     }
 }

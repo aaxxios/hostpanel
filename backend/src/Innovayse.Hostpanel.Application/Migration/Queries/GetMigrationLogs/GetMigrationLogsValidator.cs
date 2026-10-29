@@ -1,17 +1,15 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
-using Innovayse.Hostpanel.Domain.Migration;
-using Innovayse.Hostpanel.Domain.Migration.Enums;
 using Microsoft.Extensions.Localization;
+
 namespace Innovayse.Hostpanel.Application.Migration.Queries.GetMigrationLogs;
 
 /// <summary>
 ///     Validator for GetMigrationLogsQuery. Checks the job id and that each optional filter, when
-///     present, names a member of its enum — a rule this handler used to resolve itself with a
-///     hand-thrown <see cref="InvalidOperationException"/>, which is exactly the shape a validator
-///     exists for. Page and page size carry safe defaults the handler does not clamp further, so
-///     no rule is declared for them — decided, not forgotten.
+///     present, is a defined member of its enum (a value the query string cannot name at all is
+///     already refused by model binding). Page and page size carry safe defaults the handler does
+///     not clamp further, so no rule is declared for them.
 /// </summary>
 public sealed class GetMigrationLogsValidator : LocalizedValidator<GetMigrationLogsQuery>
 {
@@ -27,11 +25,11 @@ public sealed class GetMigrationLogsValidator : LocalizedValidator<GetMigrationL
             .WithMessage(L["MigrationJobIdInvalid"]);
 
         RuleFor(x => x.Action)
-            .Must(value => value is null || Enum.TryParse<MigrationLogAction>(value, true, out _))
-            .WithMessage(x => L["InvalidFilterValue", x.Action!]);
+            .IsInEnum()
+            .WithMessage(x => L["InvalidFilterValue", x.Action!.Value.ToString()]);
 
         RuleFor(x => x.EntityType)
-            .Must(value => value is null || Enum.TryParse<MigrationEntityType>(value, true, out _))
-            .WithMessage(x => L["InvalidFilterValue", x.EntityType!]);
+            .IsInEnum()
+            .WithMessage(x => L["InvalidFilterValue", x.EntityType!.Value.ToString()]);
     }
 }

@@ -174,15 +174,15 @@
                       <UiText as="span" tone="inherit" weight="semibold" class="text-xl text-classic-ink group-hover:text-classic-brand transition-colors">.{{ ext }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.register, DEFAULT_YEARS)) }}</UiText>
                       <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.transfer, DEFAULT_YEARS)) }}</UiText>
                       <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="center">
-                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
+                      <UiText as="span" tone="inherit" weight="semibold" class="block text-lg tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.renew, DEFAULT_YEARS)) }}</UiText>
                       <UiText as="span" size="xs" tone="inherit" class="text-classic-muted">{{ $t('domains.pricing.perYear') }}</UiText>
                     </UiTableTd>
                     <UiTableTd align="right" class="!pr-6">
@@ -223,15 +223,15 @@
                 <UiStack direction="row" gap="xs" class="mb-4 p-3 rounded-md bg-classic-surface-2 border border-classic-border">
                   <UiStack gap="none" class="flex-1 text-center">
                     <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.register') }}</UiText>
-                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.register[ONE_YEAR_KEY]) }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.register, DEFAULT_YEARS)) }}</UiText>
                   </UiStack>
                   <UiStack gap="none" class="flex-1 text-center border-x border-classic-border">
                     <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.transfer') }}</UiText>
-                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.transfer?.[ONE_YEAR_KEY]) }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.transfer, DEFAULT_YEARS)) }}</UiText>
                   </UiStack>
                   <UiStack gap="none" class="flex-1 text-center">
                     <UiText as="span" size="xs" tone="inherit" class="block mb-1 text-classic-muted">{{ $t('domains.pricing.renew') }}</UiText>
-                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(tld.renew?.[ONE_YEAR_KEY]) }}</UiText>
+                    <UiText as="span" size="sm" tone="inherit" weight="semibold" class="block tabular-nums text-classic-ink">{{ formatPrice(priceForYears(tld.renew, DEFAULT_YEARS)) }}</UiText>
                   </UiStack>
                 </UiStack>
 
@@ -321,8 +321,10 @@ import { useCurrencyStore } from '~/stores/currency'
 import { useCatalogStore } from '~/stores/catalog'
 import { useDomainsStore } from '~/stores/domains'
 import { DomainActionOutcome } from '~/types/domainactionoutcome'
-import type { TldPricing } from '~/types/tldpricing'
+import type { TldPriceEntry } from '~/types/tldpriceentry'
 import { formatMoney } from '~/utils/formatMoney'
+import { tldPriceEntry } from '~/utils/tldPriceEntry'
+import { ONE_YEAR, priceForYears } from '~/utils/tldPeriodPrice'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 import { DOMAIN_BILLING_CYCLE } from '~/constants/pricingCycle'
 import { CartItemType } from '~/types/cartitemtype'
@@ -332,13 +334,10 @@ import { ALL_CATEGORY } from '~/templates/aurora/types/allcategory'
 import { tldCategoryLabel, tldCategorySlug } from '~/utils/tldCategory'
 
 /** One extension's entry of the price table. */
-type TldEntry = TldPricing['pricing'][string]
+type TldEntry = TldPriceEntry
 
 /** Registration period, in years, of a quick add and of the one-year price columns. */
-const DEFAULT_YEARS = 1
-
-/** Key of the one-year price in a period-keyed price record. */
-const ONE_YEAR_KEY = '1'
+const DEFAULT_YEARS = ONE_YEAR
 
 /** Base name used when a quick search starts from an empty search box. */
 const FALLBACK_BASE_NAME = 'example'
@@ -363,7 +362,7 @@ domainsStore.reset()
 const domainProductId = ref<number | null>(null)
 
 // SEO and structured data live in pages/domains/index.vue so both templates emit
-// the same head. Nothing template-specific was removed here.
+// the same head.
 
 /** The text in the search box. */
 const searchQuery = ref(typeof route.query[DOMAIN_SEARCH_QUERY_PARAM] === 'string' ? route.query[DOMAIN_SEARCH_QUERY_PARAM] : '')
@@ -398,8 +397,7 @@ const searchDomain = async (): Promise<void> => {
 }
 
 /**
- * Currency store. TLD pricing is priced in the payer's own currency, never the page's language;
- * see `docs/superpowers/specs/2026-09-13-multi-currency-pricing-design.md` section 5.
+ * Currency store. TLD pricing is priced in the payer's own currency, never the page's language.
  */
 const currencyStore = useCurrencyStore()
 
@@ -462,14 +460,13 @@ const quickSearch = (ext: string): void => {
  * @returns True when the TLD is priced.
  */
 const canAddDomain = (domain: string): boolean => {
-  const entry = tldPricing.value?.pricing?.[tldOf(domain)]
-  return !!entry
+  return !!tldPriceEntry(tldPricing.value, tldOf(domain))
 }
 
 /**
  * Adds a domain registration to the cart.
  *
- * Refuses when the TLD has no one-year registration price. The price is the API's, already
+ * Refuses when the TLD has no registration price for the period. The price is the API's, already
  * converted to the payer's currency. Callers gate the button on {@link canAddDomain} first;
  * this is the second line of defence.
  *
@@ -482,8 +479,8 @@ const addDomainToCart = (domain: string, years: number = DEFAULT_YEARS): void =>
   }
 
   const tld = tldOf(domain)
-  const entry = tldPricing.value?.pricing?.[tld]
-  if (!entry?.register?.[ONE_YEAR_KEY]) {
+  const amount = priceForYears(tldPriceEntry(tldPricing.value, tld)?.register, years)
+  if (amount === null) {
     return
   }
 
@@ -492,7 +489,7 @@ const addDomainToCart = (domain: string, years: number = DEFAULT_YEARS): void =>
     name: domain,
     billingcycle: DOMAIN_BILLING_CYCLE,
     cycleLabel: t('domains.years', years),
-    amount: parseFloat(entry.register[ONE_YEAR_KEY]),
+    amount,
     currency: currencyStore.payerCode,
     domain,
     itemType: CartItemType.Domain,
@@ -510,16 +507,16 @@ const isTldSupported = computed<boolean>(() => {
   if (!result.value) {
     return true
   }
-  return !!tldPricing.value?.pricing?.[tldOf(result.value.domain)]
+  return !!tldPriceEntry(tldPricing.value, tldOf(result.value.domain))
 })
 
 /** Unique TLD categories with their counts, from the pricing data. */
 const allCategories = computed(() => {
-  if (!tldPricing.value?.pricing) {
+  if (!tldPricing.value) {
     return []
   }
   const cats = new Map<string, number>()
-  for (const tld of Object.values(tldPricing.value.pricing)) {
+  for (const tld of tldPricing.value.pricing) {
     for (const cat of (tld.categories ?? [])) {
       cats.set(cat, (cats.get(cat) ?? 0) + 1)
     }
@@ -548,14 +545,14 @@ const chooseCategory = (value: string): void => {
 }
 
 /** How many extensions the table holds before filtering. */
-const totalTldCount = computed(() => Object.keys(tldPricing.value?.pricing ?? {}).length)
+const totalTldCount = computed(() => tldPricing.value?.pricing.length ?? 0)
 
 /** The extensions that pass the category filter, as `[extension, entry]` pairs. */
 const displayedTlds = computed<Array<[string, TldEntry]>>(() => {
-  if (!tldPricing.value?.pricing) {
+  if (!tldPricing.value) {
     return []
   }
-  const entries = Object.entries(tldPricing.value.pricing)
+  const entries = tldPricing.value.pricing.map((entry): [string, TldEntry] => [entry.tld, entry])
   const category = activeCategory.value
   if (!category) {
     return entries
@@ -564,16 +561,16 @@ const displayedTlds = computed<Array<[string, TldEntry]>>(() => {
 })
 
 /**
- * Formats a price string with the payer's currency.
+ * Formats a price with the payer's currency.
  *
- * @param price - Price value as a string, or undefined when the extension has none.
- * @returns Formatted price, or the "not available" label for a missing, free-marker or -1 price.
+ * @param price - The period's price, or null when that period is not offered.
+ * @returns Formatted price, or the "not available" label when there is none.
  */
-const formatPrice = (price: string | undefined): string => {
-  if (!price || price === '-1' || price === '0.00') {
+const formatPrice = (price: number | null): string => {
+  if (price === null) {
     return t('domains.pricing.notAvailable')
   }
   const code = tldPricing.value?.currency?.code
-  return formatMoney(parseFloat(price), currencyStore.moneyCurrencyFor(code))
+  return formatMoney(price, currencyStore.moneyCurrencyFor(code))
 }
 </script>

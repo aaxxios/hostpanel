@@ -1,6 +1,7 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
+using Innovayse.Hostpanel.Domain.Plugins;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Admin.Plugins.Commands.RemovePlugin;
@@ -16,5 +17,11 @@ public sealed class RemovePluginValidator : LocalizedValidator<RemovePluginComma
         : base(localizer)
     {
         RuleFor(x => x.Id).NotEmpty().WithMessage(L["PluginIdRequired"]);
+
+        // The id names a folder on disk, so only the plugin id rule's shape reaches the handler.
+        RuleFor(x => x.Id)
+            .Must(PluginIdentifier.IsValid)
+            .When(x => !string.IsNullOrEmpty(x.Id))
+            .WithMessage(L["PluginIdInvalid"]);
     }
 }

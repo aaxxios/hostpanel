@@ -15,16 +15,16 @@ namespace Innovayse.Hostpanel.Shared.Extensions;
 /// <remarks>
 /// <para>
 /// The empty body is invisible to a client: the frontend reads <c>type</c>/<c>detail</c> out of
-/// the response, so an unauthenticated call was indistinguishable from a transport failure — and
+/// the response, so an unauthenticated call was indistinguishable from a transport failure, and
 /// those are the two cases the client has *different* sentences for. Every other error path goes
 /// through <see cref="Middleware.ExceptionHandlingMiddleware"/> and emits the same
 /// <see cref="ErrorResponse"/> with <c>application/problem+json</c>; the authentication handler
 /// short-circuits before that middleware can run, so it needs its own hook.
 /// </para>
 /// <para>
-/// The writer attaches from an <c>AddJwtBearer(options =&gt; …)</c> callback where a product has one,
-/// and through <c>PostConfigure</c> where it does not — this product does not, because its Bearer
-/// scheme is registered inside the <c>Innovayse.Auth</c> package. Either way it runs after whatever
+/// The writer attaches from an <c>AddJwtBearer(options =&gt; { })</c> callback where a product has one,
+/// and through <c>PostConfigure</c> where it does not: this product does not, because its Bearer
+/// scheme is registered inside the shared authentication package. Either way it runs after whatever
 /// that package configured, which is why <c>Events</c> is reused rather than replaced: assigning a
 /// fresh <see cref="JwtBearerEvents"/> would silently drop any handler already attached.
 /// </para>
@@ -47,9 +47,9 @@ public static class ProblemDetailsAuthEventsExtensions
     /// </summary>
     /// <remarks>
     /// Written as an extension on the options rather than on the service collection so it can be
-    /// called straight from an <c>AddJwtBearer(options =&gt; { … options.UseProblemDetailsResponses(); })</c>
+    /// called straight from an <c>AddJwtBearer(options =&gt; { options.UseProblemDetailsResponses(); })</c>
     /// callback, which is where a product that registers its own bearer scheme wants it. This
-    /// product has no such callback — its scheme comes from <c>Innovayse.Auth</c> — so
+    /// product has no such callback, its scheme comes from the shared authentication package, so
     /// <see cref="ConfigureProblemDetailsAuthEvents"/> reaches the same options through
     /// <c>PostConfigure</c> and calls this. One method, two ways in.
     /// </remarks>

@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { startStubServer } from './stubServer'
 import type { StubServer } from './stubServer'
+import { HttpMethod } from '~/types/httpmethod'
 
 /** The stub started by the current test. */
 let stub: StubServer | undefined
@@ -26,12 +27,12 @@ describe('test infrastructure', () => {
   it('records what reached the stub server and returns the scripted reply', async () => {
     stub = await startStubServer(() => ({ status: 201, body: { ok: true } }))
 
-    const response = await fetch(`${stub.baseUrl}/ping`, { method: 'POST', headers: { 'x-language': 'ru' }, body: 'hi' })
+    const response = await fetch(`${stub.baseUrl}/ping`, { method: HttpMethod.Post, headers: { 'x-language': 'ru' }, body: 'hi' })
 
     expect(response.status).toBe(201)
     expect(await response.json()).toEqual({ ok: true })
     expect(stub.requests).toHaveLength(1)
-    expect(stub.requests[0]).toMatchObject({ method: 'POST', url: '/ping', body: 'hi' })
+    expect(stub.requests[0]).toMatchObject({ method: HttpMethod.Post, url: '/ping', body: 'hi' })
     expect(stub.requests[0]?.headers['x-language']).toBe('ru')
   })
 })

@@ -1,12 +1,12 @@
 /**
- * Global auth guard plugin — runs on CLIENT SIDE ONLY
+ * Global auth guard plugin: runs on CLIENT SIDE ONLY
  *
  * Provides a global `$handleAuthExpired()` function that clears all
  * client-side auth state and redirects to the login page, carrying the page the customer was
  * on as `?redirect=` so signing in again returns them there.
  *
  * Called from `apiFetch` when a 401 reaches the client (meaning the
- * server-side token refresh also failed — the session is truly expired). Off the signed-in area
+ * server-side token refresh also failed: the session is truly expired). Off the signed-in area
  * the state is still cleared but the visitor stays put.
  *
  * Uses a `provide` pattern rather than `app:error` or `vue:error` hooks
@@ -46,11 +46,11 @@ export default defineNuxtPlugin(() => {
         authedCookie.value = null
 
         // Only a page that needs a session is left behind. A 401 on a public page is either a
-        // refused credential or code on the sign-in form -- navigating anyway rebuilt the URL
-        // without its `?redirect=`, so a customer who mistyped a password was returned to the
-        // dashboard instead of the page they had come for -- or the identity read the header makes
-        // on every page for a visitor whose `authed` cookie outlived the session, which bounced
-        // the home page, the catalogue and the cart to the sign-in form.
+        // refused credential or code on the sign-in form (navigating anyway would rebuild the URL
+        // without its `?redirect=`, so a customer who mistyped a password would be returned to
+        // the dashboard instead of the page they had come for) or the identity read the header
+        // makes on every page for a visitor whose `authed` cookie outlived the session, which
+        // would bounce the home page, the catalogue and the cart to the sign-in form.
         if (!isPrivateClientPath(router.currentRoute.value.path)) {
           return
         }

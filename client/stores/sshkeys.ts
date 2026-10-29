@@ -44,7 +44,7 @@ export const useSshKeysStore = defineStore('sshKeys', () => {
 
   /**
    * Whether listed keys can be revoked: whenever the service is active, even when keys can no
-   * longer be added (SSH switched off on the server, the service moved) — removing access never
+   * longer be added (SSH switched off on the server, the service moved), because removing access never
    * depends on access being available.
    */
   const canRevoke = computed(() => Boolean(access.value) && access.value?.state !== SshAccessState.ServiceInactive)
@@ -67,7 +67,7 @@ export const useSshKeysStore = defineStore('sshKeys', () => {
   }
 
   /**
-   * Loads the access summary, then — unless the service is inactive — the key list.
+   * Loads the access summary, then, unless the service is inactive, the key list.
    *
    * @param serviceId - Service id.
    * @returns Resolves when both settled; a failure lands in {@link loadError}.

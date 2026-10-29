@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +11,10 @@ namespace Innovayse.Hostpanel.Integration.Tests.Services;
 /// <summary><c>GET api/me/services/{id}/ssh/keys</c>: records, server presence, isolation and staleness.</summary>
 public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    /// <summary>Lists the SSH keys of a service and asserts it answered 200.</summary>
+    /// <param name="http">The signed-in client.</param>
+    /// <param name="serviceId">The service.</param>
+    /// <returns>The listed keys.</returns>
     private static async Task<JsonElement[]> ListAsync(HttpClient http, int serviceId)
     {
         var response = await http.GetAsync($"/api/me/services/{serviceId}/ssh/keys");
@@ -20,6 +22,8 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         return (await response.Content.ReadFromJsonAsync<JsonElement[]>())!;
     }
 
+    /// <summary>Each listed key shows whether the server still holds it, and no key material is returned.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task Keys_ShowWhetherTheServerStillHoldsThemAndNoKeyMaterialAsync()
     {
@@ -37,6 +41,8 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         JsonSerializer.Serialize(keys).Should().NotContain("AAAAC3Nza");
     }
 
+    /// <summary>Two services with the same username on different servers each see only their own keys.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task SameUsernameOnTwoServers_EachServiceSeesOnlyItsOwnKeysAsync()
     {
@@ -49,6 +55,8 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         SshTestSeeds.Agents(factory).AgentFor(serverB).KeysOf("web").Should().BeEmpty();
     }
 
+    /// <summary>After the service moves to another server its old keys are stale and their presence is not checked.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task ServiceMovedToAnotherServer_OldKeysAreStaleAndTheNewServerIsNotAskedAboutThemAsync()
     {
@@ -63,6 +71,8 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         key.GetProperty("presentOnServer").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
+    /// <summary>Another client's service answers 404 with the service-not-found code.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task AStrangersService_Returns404Async()
     {
@@ -75,6 +85,8 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SERVICE_NOT_FOUND);
     }
 
+    /// <summary>A suspended service answers 409 with the access-unavailable code.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task SuspendedService_Returns409Async()
     {
@@ -83,7 +95,7 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         {
             var context = scope.ServiceProvider.GetRequiredService<IHostpanelDbContext>();
             var service = await context.ClientServices.SingleAsync(s => s.Id == serviceId);
-            service.Suspend("test", hostingAlreadyUpdated: true);
+            service.Suspend(DateTimeOffset.UtcNow, "test", hostingAlreadyUpdated: true);
             await context.SaveChangesAsync(CancellationToken.None);
         }
 
@@ -93,6 +105,10 @@ public sealed class ListMySshKeysTests(IntegrationTestFactory factory) : IClassF
         (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(HostpanelErrorCodes.SSH_ACCESS_UNAVAILABLE);
     }
 
+    /// <summary>Points a service at another server directly in the database.</summary>
+    /// <param name="serviceId">The service to move.</param>
+    /// <param name="serverId">The new server.</param>
+    /// <returns>A task that completes when the row is updated.</returns>
     private async Task MoveServiceAsync(int serviceId, int serverId)
     {
         using var scope = factory.Services.CreateScope();

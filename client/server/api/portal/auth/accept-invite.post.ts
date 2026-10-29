@@ -4,30 +4,26 @@
  * Completes a client invitation: the account that is signed in right now is linked to the
  * client that issued the invitation, with the permissions the invitation carried.
  *
- * This route did not exist. `pages/client/accept-invite.vue` has posted here since it was
- * written and every one of those posts was answered by Nitro's own 404 — nobody has ever
- * completed an invitation through the portal.
- *
  * **The backend decides who accepts, not this route.** `POST /api/auth/accept-invite` is
  * `[Authorize]` and its command carries a token and nothing else
  * (`AcceptInvitationCommand(string Token)`); the handler asks the credential who the caller
  * is. So the only thing that travels from here is the token, and a request with no
- * signed-in session cannot succeed no matter what it carries — which is why that case is
+ * signed-in session cannot succeed no matter what it carries, which is why that case is
  * answered here rather than forwarded.
  *
- * **It takes no password.** The page's password fields had nowhere to go: there is no
- * endpoint in this product that sets a password from an invitation token, and the invited
- * person gets their credentials from the identity provider. Forwarding a password to an
- * endpoint that ignores it would have told them their password was set when nothing had
- * read it.
+ * **It takes no password.** There is no endpoint in this product that sets a password from
+ * an invitation token, and the invited person gets their credentials from the identity
+ * provider. Forwarding a password to an endpoint that ignores it would tell them their
+ * password was set when nothing had read it.
  *
  * @module server/api/portal/auth/accept-invite.post
  */
 
 import { PortalErrorCode } from '~/constants/portalErrorCode'
 import { resolveAccessToken } from '~/server/utils/portal-session'
+import { HttpMethod } from '~/types/httpmethod'
 
-/** Body this route accepts. The password the page used to send is deliberately not here. */
+/** Body this route accepts: the token only, deliberately no password. */
 interface AcceptInviteBody {
   /** The invitation token lifted out of the `?token=` query of the invitation mail's link. */
   token?: string
@@ -49,7 +45,7 @@ interface ErrorWithStatus {
  * Builds the refusal for a visitor who has not signed in yet.
  *
  * Answered **403, not 401**, on purpose. `apiFetch` treats a 401 as "the session is dead",
- * hands off to `$handleAuthExpired` and navigates away — which would throw the invitation
+ * hands off to `$handleAuthExpired` and navigates away, which would throw the invitation
  * token off the page before anyone could act on it. Nobody's session expired here; the
  * visitor simply arrived from their mail client without one, and the page has to keep the
  * token in hand while it sends them to sign in.
@@ -59,8 +55,8 @@ interface ErrorWithStatus {
 const signInRequired = () => {
   return createError({
     statusCode: 403,
-    // `data.code` is the only part of an H3Error that reaches the browser — `server/error.ts`
-    // exists to keep it — and it is what the page branches on to show the sign-in step.
+    // `data.code` is the only part of an H3Error that reaches the browser, `server/error.ts`
+    // exists to keep it, and it is what the page branches on to show the sign-in step.
     //
     // This is the one refusal in the portal whose sentence is not the API's, because the API
     // never sees the request: the page words it from `client.acceptInvite.signInRequired`.
@@ -81,15 +77,15 @@ export default defineEventHandler(async (event): Promise<AcceptInviteResult> => 
   const body = await readBody<AcceptInviteBody>(event)
   const token = typeof body?.token === 'string' ? body.token : ''
 
-  // The only guard made before a request is possible. Everything else — an empty token
-  // included — goes to the backend so the wording stays where the rule is.
+  // The only guard made before a request is possible. Everything else, an empty token
+  // included, goes to the backend so the wording stays where the rule is.
   if (!(await resolveAccessToken(event))) {
     throw signInRequired()
   }
 
   try {
     return await internalApiCall<AcceptInviteResult>(event, '/auth/accept-invite', {
-      method: 'POST',
+      method: HttpMethod.Post,
       body: { token },
     })
   } catch (err: unknown) {

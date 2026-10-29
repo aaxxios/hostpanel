@@ -1,7 +1,8 @@
 namespace Innovayse.Hostpanel.Domain.Clients.Enums;
+
 /// <summary>
 /// Granular permissions that can be assigned to non-owner users linked to a client account.
-/// Stored as a bit-flags integer — multiple permissions are combined via bitwise OR.
+/// Stored as a bit-flags integer: multiple permissions are combined via bitwise OR.
 /// </summary>
 [Flags]
 public enum ClientPermission : int

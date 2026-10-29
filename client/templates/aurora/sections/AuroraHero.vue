@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 /**
- * aurora hero — the homepage's headline, calls to action and headline figures.
+ * aurora hero: the homepage's headline, calls to action and headline figures.
  * The badge and the figures are operator settings and each is hidden while empty.
  * Carries the page's only visible h1.
  */

@@ -5,7 +5,7 @@ using Innovayse.Hostpanel.Application.Migration.Common;
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// An <see cref="IMigrationSource"/> that hands back one page of JSON-seeded records per dataset --
+/// An <see cref="IMigrationSource"/> that hands back one page of JSON-seeded records per dataset:
 /// a fake port standing in for the legacy install's own HTTP endpoint, which a test must not call.
 /// </summary>
 /// <remarks>
@@ -22,15 +22,15 @@ public sealed class FakeMigrationSource : IMigrationSource
     private readonly Dictionary<string, string> _datasetsByName = new(StringComparer.Ordinal);
 
     /// <summary>The totals <see cref="GetTotalsAsync"/> answers with. Every count starts at zero.</summary>
-    public MigrationSourceTotals Totals { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public MigrationSourceTotals Totals { get; set; } = MigrationSourceTotals.Empty;
 
     /// <summary>How many times <see cref="PingAsync"/> was called.</summary>
     public int PingCallCount { get; private set; }
 
     /// <summary>
     /// Seeds one dataset's single page of records as a raw JSON array. A test cannot construct the
-    /// importer's own record type directly -- every one is a <c>private sealed record</c> nested
-    /// inside its importer -- so the caller writes the array literally, matching the record's
+    /// importer's own record type directly (every one is a <c>private sealed record</c> nested
+    /// inside its importer) so the caller writes the array literally, matching the record's
     /// positional parameter names exactly: <see cref="JsonSerializer"/> matches case-sensitively by
     /// default, and a positional record's generated properties are PascalCase.
     /// </summary>
@@ -42,20 +42,21 @@ public sealed class FakeMigrationSource : IMigrationSource
     }
 
     /// <inheritdoc/>
-    public Task PingAsync(string sourceUrl, string accessKey, CancellationToken ct = default)
+    public Task PingAsync(MigrationSourceEndpoint source, CancellationToken ct)
     {
         PingCallCount++;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<MigrationSourceTotals> GetTotalsAsync(string sourceUrl, string accessKey, CancellationToken ct = default) =>
+    public Task<MigrationSourceTotals> GetTotalsAsync(MigrationSourceEndpoint source, CancellationToken ct) =>
         Task.FromResult(Totals);
 
     /// <inheritdoc/>
     public Task<MigrationRecordPage<TRecord>> GetRecordPageAsync<TRecord>(
-        string sourceUrl, string accessKey, string dataSet, int page, int perPage, CancellationToken ct = default)
+        MigrationSourceEndpoint source, MigrationPageSelection selection, CancellationToken ct)
     {
+        var (dataSet, page, _, _) = selection;
         // Every seeded dataset here is exactly one page; a second page always ends the pull.
         if (page > 1 || !_datasetsByName.TryGetValue(dataSet, out var json))
         {

@@ -1,23 +1,20 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
+
 /// <summary>
 /// The data context's currency questions (<see cref="CurrencyExtensions"/> and the
 /// <c>Currencies</c> table directly) against the migrated schema: the seed the
-/// <c>AddCurrencies</c> migration wrote, the ordering the dissolved <c>ICurrencyRepository</c>
-/// used to promise, and the partial unique index that keeps the base currency singular.
+/// <c>AddCurrencies</c> migration wrote, the ordering the currency lists rely on, and the partial unique index that keeps the base currency singular.
 /// </summary>
 /// <remarks>
 /// A real PostgreSQL rather than an in-memory provider, because two of the things worth pinning
-/// only exist there — the migration's seed rows and the filtered index — and because the context's
+/// only exist there (the migration's seed rows and the filtered index), and because the context's
 /// full model (jsonb dictionaries on <c>TldConfig</c>) does not build on any other provider.
 /// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>

@@ -1,6 +1,6 @@
 /**
- * Tests of CreditsReviewerView: it mounts, shows its title and data, and shows the refusal sentence when the API
- * refuses.
+ * Tests of CreditsReviewerView: it mounts, shows its title, the totals per currency and each credit
+ * in its own currency, and shows the refusal sentence with Retry when the API refuses.
  */
 import { vi } from 'vitest'
 import CreditsReviewerView from '@/views/CreditsReviewerView.vue'
@@ -14,10 +14,13 @@ runReportCase({
   view: CreditsReviewerView,
   routes: {
     'GET /reports/credits-reviewer': () => json({
-      totalCount: 1,
-      totalAmount: 5,
-      rows: [{ id: 1, clientId: 2, clientName: 'Beta', date: '2024-01-01', description: 'Gift', amount: 5, adminUser: null }],
+      totals: [{ currency: 'AMD', totalCount: 1, totalAmount: 5000 }],
+      rows: {
+        items: [{ id: 1, clientId: 2, clientName: 'Beta', date: '2024-01-01', description: 'Gift', currency: 'AMD', amount: 5000 }],
+        pageNumber: 1, pageSize: 50, totalCount: 1, totalPages: 1,
+      },
     }),
   },
-  expected: ['Credits Reviewer', 'Beta', 'Gift', '$5.00'],
+  expected: ['Credits Reviewer', 'Beta', 'Gift', 'AMD'],
+  retryable: true,
 })

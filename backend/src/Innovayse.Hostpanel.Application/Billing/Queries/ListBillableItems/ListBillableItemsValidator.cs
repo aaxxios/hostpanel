@@ -1,7 +1,6 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.ListBillableItems;
@@ -14,8 +13,6 @@ public sealed class ListBillableItemsValidator : LocalizedValidator<ListBillable
     public ListBillableItemsValidator(IStringLocalizer<ApplicationValidationMessages> localizer)
         : base(localizer)
     {
-        RuleFor(x => x.Type)
-            .Must(t => t is null or nameof(BillableItemType.OneTime) or nameof(BillableItemType.Recurring))
-            .WithMessage(L["BillableItemTypeInvalid"]);
+        RuleFor(x => x.Type).IsInEnum().WithMessage(L["BillableItemTypeInvalid"]);
     }
 }

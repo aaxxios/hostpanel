@@ -9,17 +9,19 @@
 /** The kinds of saved payment method the card gateway reports; a closed set, so an enum. */
 export enum PaymentMethodType {
   /** A debit or credit card. */
-  Card = 'card',
-  /** A bank account (the gateway's `us_bank_account`). */
-  BankAccount = 'us_bank_account'
+  Card = 'Card',
+  /** A bank account debited directly. */
+  BankAccount = 'BankAccount',
+  /** Any other method the gateway reports. */
+  Other = 'Other'
 }
 
 /** One saved method exactly as the API sends it (camelCase). */
 export interface PaymentMethodWire {
-  /** Gateway payment method ID (e.g. "pm_1AbC...") */
+  /** Gateway payment method ID (e.g. "pm_1AbC"). */
   id: string
-  /** The gateway's payment method type, a {@link PaymentMethodType} value */
-  type: string
+  /** The kind of method */
+  type: PaymentMethodType
   /** Card network (e.g. "visa"), or the bank name for a bank account */
   brand?: string | null
   /** Last four digits of the card or account number */
@@ -34,24 +36,22 @@ export interface PaymentMethodWire {
 
 /** One saved method as the client renders it. */
 export interface PaymentMethod {
-  /** Gateway payment method ID (e.g. "pm_1AbC...") */
+  /** Gateway payment method ID (e.g. "pm_1AbC"). */
   id: string
-  /** The gateway's payment method type, a {@link PaymentMethodType} value */
-  type: string
-  /** Display label, e.g. "Visa •••• 4242"; falls back to gateway_name when absent */
+  /** The kind of method */
+  type: PaymentMethodType
+  /** Display label, e.g. "Visa •••• 4242"; falls back to gatewayName when absent */
   description: string
   /** Gateway name shown when there is no description */
-  gateway_name: string
-  /** Legacy sub-contact this card's billing address is assigned to, if any */
-  contact_id?: number
+  gatewayName: string
   /** Last four digits of the card or account number */
-  card_last_four?: string | null
+  cardLastFour?: string | null
   /** Formatted card expiry (MM/YY) */
-  card_expiry?: string | null
+  cardExpiry?: string | null
   /** Card network (e.g. "visa") */
-  card_type?: string | null
+  cardType?: string | null
   /** Bank name, for a bank account payment method */
-  bank_name?: string | null
+  bankName?: string | null
   /** Whether this is the client's default method */
-  is_default?: boolean
+  isDefault?: boolean
 }

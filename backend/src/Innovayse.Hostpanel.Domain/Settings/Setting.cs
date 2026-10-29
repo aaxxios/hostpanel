@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Settings;
+
 /// <summary>Represents a system-wide configuration key-value setting.</summary>
 public sealed class Setting : BaseEntity, IAggregateRoot
 {
@@ -14,7 +15,7 @@ public sealed class Setting : BaseEntity, IAggregateRoot
     /// <summary>Gets the optional description of this setting.</summary>
     public string? Description { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Setting() { }
 
     /// <summary>

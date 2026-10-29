@@ -13,13 +13,18 @@ public sealed class GetMigrationStatusHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>
     ///     Initializes the handler.
     /// </summary>
     /// <param name="context">The module's data context.</param>
-    public GetMigrationStatusHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetMigrationStatusHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
@@ -38,6 +43,6 @@ public sealed class GetMigrationStatusHandler
             return Result<MigrationJobDto>.FailureCode(HostpanelErrorCodes.MIGRATION_JOB_NOT_FOUND);
         }
 
-        return Result<MigrationJobDto>.Success(job.ToDto());
+        return Result<MigrationJobDto>.Success(job.ToDto(_clock.UtcNow));
     }
 }

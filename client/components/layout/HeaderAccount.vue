@@ -120,10 +120,10 @@ const open = ref(false)
 const rootRef = ref<ComponentPublicInstance | null>(null)
 
 /** Given name, empty until the profile request resolves. */
-const firstName = computed(() => user.value?.firstname ?? '')
+const firstName = computed(() => user.value?.firstName ?? '')
 
 /** Family name, empty until the profile request resolves. */
-const lastName = computed(() => user.value?.lastname ?? '')
+const lastName = computed(() => user.value?.lastName ?? '')
 
 /** E-mail address, empty until the profile request resolves. */
 const email = computed(() => user.value?.email ?? '')

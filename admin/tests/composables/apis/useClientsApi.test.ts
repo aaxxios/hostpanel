@@ -6,7 +6,31 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useClientsApi } from '@/composables/apis/useClientsApi'
 import { ApiError } from '@/composables/useApi'
+import { ClientStatus } from '@/types/client'
+import type { UpdateClientPayload } from '@/types/updateclientpayload'
 import { json, problem, stubFetch, callOf } from '../../helpers/fetch'
+
+/** A complete client update, as the PUT endpoint takes it (a full replacement, never a patch). */
+const update: UpdateClientPayload = {
+  email: null,
+  firstName: 'A',
+  lastName: 'B',
+  companyName: null,
+  phone: null,
+  address: {},
+  preferences: {},
+  notifications: { general: true, invoice: true, support: true, product: true, domain: true, affiliate: false },
+  settings: {
+    overdueNotices: true,
+    taxExempt: false,
+    separateInvoices: false,
+    disableCcProcessing: false,
+    marketingOptIn: false,
+    statusUpdate: true,
+    allowSso: true,
+  },
+  status: null,
+}
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -16,7 +40,7 @@ describe('useClientsApi', () => {
   it('list sends page, size and only the filters that are set', async () => {
     const mock = stubFetch(json({ items: [], totalCount: 0 }))
 
-    await useClientsApi().list(2, 20, { search: 'acme', email: '', status: 'Active' })
+    await useClientsApi().list(2, 20, { search: 'acme', email: '', status: ClientStatus.Active })
     expect(callOf(mock).url).toBe('/api/clients?page=2&pageSize=20&search=acme&status=Active')
   })
 
@@ -32,9 +56,9 @@ describe('useClientsApi', () => {
     const api = useClientsApi()
 
     await api.create({ email: 'a@b.c' } as never)
-    await api.update(4, { firstName: 'A' })
+    await api.update(4, update)
     expect(callOf(mock, 0)).toMatchObject({ url: '/api/clients/admin', method: 'POST', body: { email: 'a@b.c' } })
-    expect(callOf(mock, 1)).toMatchObject({ url: '/api/clients/4', method: 'PUT', body: { firstName: 'A' } })
+    expect(callOf(mock, 1)).toMatchObject({ url: '/api/clients/4', method: 'PUT', body: update })
   })
 
   it('searchUsers asks the admin users endpoint for the first page', async () => {

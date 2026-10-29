@@ -99,6 +99,8 @@ const buildStores = (options: { empty?: boolean, methods?: { module: string, dis
     itemPrice: () => '$9.99',
     changeGuestCurrency: vi.fn(),
     loadPaymentMethods: vi.fn(async () => undefined),
+    resetFlow: vi.fn(),
+    refreshCartPrices: vi.fn(async () => undefined),
     placeOrder,
   }
   return { error, selectedMethod, submitting, submittingLabel, submittingHint, placeOrder }
@@ -143,7 +145,7 @@ describe('AuroraCheckout', () => {
   })
 
   it('shows the signed-in account line instead of the guest form, and signs out on "not you"', async () => {
-    const { signOut } = stubAuroraGlobals({ user: { firstname: 'Ann', lastname: 'Lee', email: 'ann@acme.test' } })
+    const { signOut } = stubAuroraGlobals({ user: { firstName: 'Ann', lastName: 'Lee', email: 'ann@acme.test' } })
     buildStores()
     const wrapper = await mountPage()
 

@@ -9,6 +9,7 @@ import type { ProductFeature } from '~/types/productfeature'
  * @param label Feature name.
  * @param value Value for this product.
  * @param sortOrder Position within the product.
+ * @returns The line.
  */
 const line = (productId: number, label: string, value: string, sortOrder: number): ProductFeature =>
   ({ id: productId * 100 + sortOrder, productId, label, value, sortOrder })

@@ -1,16 +1,16 @@
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Infrastructure.Auth;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Auth;
+
 /// <summary>
 /// Integration tests for the local identity provider, against a real PostgreSQL container.
 ///
 /// <para>
-/// These are the contract with deployments that have no SSO: the behaviour here is what
+/// These are the contract with deployments that have no external sign-on provider: the behaviour here is what
 /// this product has always done, and it has to keep doing it after identity moves behind
 /// an interface.
 /// </para>
@@ -100,7 +100,7 @@ public sealed class LocalIdentityProviderTests(IntegrationTestFactory factory)
     /// legacy ones that resolve to nobody.
     /// </summary>
     [Fact]
-    public async Task GetEmailsBySubjectsAsync_AnswersOnlyForKnownSubjectsAsync()
+    public async Task GetAccountsBySubjectsAsync_AnswersOnlyForKnownSubjectsAsync()
     {
         using var scope = factory.Services.CreateScope();
         var provider = scope.ServiceProvider.GetRequiredService<IIdentityProvider>();
@@ -110,26 +110,26 @@ public sealed class LocalIdentityProviderTests(IntegrationTestFactory factory)
             scope.ServiceProvider, $"bulk2-{Guid.NewGuid():N}@example.com", "Edsger", "Dijkstra");
         var unknown = $"not-a-subject-{Guid.NewGuid():N}";
 
-        var emails = await provider.GetEmailsBySubjectsAsync(
+        var accounts = await provider.GetAccountsBySubjectsAsync(
             [one.Id, two.Id, unknown], CancellationToken.None);
 
-        emails.Should().HaveCount(2);
-        emails[one.Id].Should().Be(one.Email);
-        emails[two.Id].Should().Be(two.Email);
-        emails.ContainsKey(unknown).Should().BeFalse();
+        accounts.Should().HaveCount(2);
+        accounts[one.Id].Email.Should().Be(one.Email);
+        accounts[two.Id].Email.Should().Be(two.Email);
+        accounts.ContainsKey(unknown).Should().BeFalse();
     }
 
     /// <summary>An empty request costs no query and returns nothing.</summary>
     [Fact]
-    public async Task GetEmailsBySubjectsAsync_ForNoSubjects_ReturnsEmptyAsync()
+    public async Task GetAccountsBySubjectsAsync_ForNoSubjects_ReturnsEmptyAsync()
     {
         using var scope = factory.Services.CreateScope();
 
-        var emails = await scope.ServiceProvider
+        var accounts = await scope.ServiceProvider
             .GetRequiredService<IIdentityProvider>()
-            .GetEmailsBySubjectsAsync([], CancellationToken.None);
+            .GetAccountsBySubjectsAsync([], CancellationToken.None);
 
-        emails.Should().BeEmpty();
+        accounts.Should().BeEmpty();
     }
 
     /// <summary>
@@ -149,13 +149,15 @@ public sealed class LocalIdentityProviderTests(IntegrationTestFactory factory)
                 scope.ServiceProvider, $"page-{marker}-{i}@example.com", $"Page{i}", marker);
         }
 
-        var (first, total) = await provider.ListAsync(marker, page: 1, pageSize: 2, CancellationToken.None);
-        var (second, _) = await provider.ListAsync(marker, page: 2, pageSize: 2, CancellationToken.None);
+        var first = await provider.ListAsync(new IdentityAccountListQuery(marker, Page: 1, PageSize: 2), CancellationToken.None);
+        var second = await provider.ListAsync(new IdentityAccountListQuery(marker, Page: 2, PageSize: 2), CancellationToken.None);
 
-        total.Should().Be(5);
-        first.Should().HaveCount(2);
-        second.Should().HaveCount(2);
-        first.Select(x => x.Subject).Should().NotIntersectWith(second.Select(x => x.Subject));
+        first.TotalCount.Should().Be(5);
+        first.PageNumber.Should().Be(1);
+        first.TotalPages.Should().Be(3);
+        first.Items.Should().HaveCount(2);
+        second.Items.Should().HaveCount(2);
+        first.Items.Select(x => x.Subject).Should().NotIntersectWith(second.Items.Select(x => x.Subject));
     }
 
     /// <summary>Search matches on name as well as address.</summary>
@@ -168,10 +170,10 @@ public sealed class LocalIdentityProviderTests(IntegrationTestFactory factory)
         await CreateUserAsync(
             scope.ServiceProvider, $"named-{Guid.NewGuid():N}@example.com", "Katherine", surname);
 
-        var (items, total) = await provider.ListAsync(
-            surname.ToLowerInvariant(), page: 1, pageSize: 10, CancellationToken.None);
+        var page = await provider.ListAsync(
+            new IdentityAccountListQuery(surname.ToLowerInvariant(), Page: 1, PageSize: 10), CancellationToken.None);
 
-        total.Should().Be(1);
-        items.Should().ContainSingle().Which.LastName.Should().Be(surname);
+        page.TotalCount.Should().Be(1);
+        page.Items.Should().ContainSingle().Which.LastName.Should().Be(surname);
     }
 }

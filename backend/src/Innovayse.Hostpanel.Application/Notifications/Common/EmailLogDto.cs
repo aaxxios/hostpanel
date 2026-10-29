@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
+
 namespace Innovayse.Hostpanel.Application.Notifications.Common;
 
 /// <summary>DTO representing a single email log entry returned by queries.</summary>
@@ -6,5 +8,5 @@ namespace Innovayse.Hostpanel.Application.Notifications.Common;
 /// <param name="Subject">The email subject line that was sent.</param>
 /// <param name="SentAt">The UTC timestamp at which the send was attempted.</param>
 /// <param name="Success">Whether the email was delivered successfully.</param>
-/// <param name="Error">Error message if the send failed; <see langword="null"/> on success.</param>
-public record EmailLogDto(int Id, string To, string Subject, DateTimeOffset SentAt, bool Success, string? Error);
+/// <param name="Failure">Why the send failed; <see langword="null"/> on success.</param>
+public record EmailLogDto(int Id, string To, string Subject, DateTimeOffset SentAt, bool Success, EmailSendFailure? Failure);

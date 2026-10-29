@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Innovayse.Hostpanel.Domain.Auth;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Domain.Clients.Enums;
@@ -67,19 +68,18 @@ internal sealed class DemoPeopleSeeder
     /// <returns>The id of the published demo client, for the seeders that attach data to it.</returns>
     public async Task<int> SeedAsync(CancellationToken ct)
     {
-        await EnsureAccountAsync(_options.AdminEmail!, _options.AdminPassword!, "Demo", "Admin", Roles.Admin, ct);
+        await EnsureAccountAsync(_options.AdminEmail!, _options.AdminPassword!, "Demo", "Admin", Role.Admin, ct);
         await SeedStaffAsync(ct);
 
-        var (demoClient, demoCreated) = await EnsureClientAsync(
-            new DemoClientProfile(
-                _options.ClientEmail!, _options.ClientPassword!, "Demo", "Client", "Brightleaf Studio LLC",
-                "+1 555 0110", "15 Harbour Street", "Northvale", null, "00001", "US", "USD",
-                ClientStatus.Active, 120m),
-            DemoAnchor.SignupDate(0, _today),
-            ct);
+        var demoProfile = new DemoClientProfile(
+            _options.ClientEmail!, _options.ClientPassword!, "Demo", "Client", "Brightleaf Studio LLC",
+            "+1 555 0110", "15 Harbour Street", "Northvale", null, "00001", "US", "USD",
+            ClientStatus.Active, 120m);
+        var (demoClient, demoCreated) = await EnsureClientAsync(demoProfile, DemoAnchor.SignupDate(0, _today), ct);
         if (demoCreated)
         {
             await CompleteDemoClientAsync(demoClient, ct);
+            await ApplyStatusAsync(demoClient, demoProfile.Status, ct);
         }
 
         (string First, string Last, string Company, string Phone, string Street, string City, string? State, string PostCode, string Country, string Currency, ClientStatus Status, decimal Credit)[] fillers =
@@ -154,16 +154,15 @@ internal sealed class DemoPeopleSeeder
         {
             var (first, last, company, phone, street, city, state, postCode, country, currency, status, credit) = fillers[i];
             var email = $"{first}.{last}@{FillerMailDomain}".ToLowerInvariant();
-            var (client, created) = await EnsureClientAsync(
-                new DemoClientProfile(
-                    email, NewGeneratedPassword(), first, last, company, phone, street, city, state, postCode, country, currency,
-                    status, credit),
-                DemoAnchor.SignupDate(i + 1, _today),
-                ct);
+            var profile = new DemoClientProfile(
+                email, NewGeneratedPassword(), first, last, company, phone, street, city, state, postCode, country, currency,
+                status, credit);
+            var (client, created) = await EnsureClientAsync(profile, DemoAnchor.SignupDate(i + 1, _today), ct);
 
             if (created)
             {
                 await CompleteFillerAsync(client, i, ct);
+                await ApplyStatusAsync(client, profile.Status, ct);
             }
         }
 
@@ -185,12 +184,12 @@ internal sealed class DemoPeopleSeeder
     /// <returns>A task that completes once the accounts exist.</returns>
     private async Task SeedStaffAsync(CancellationToken ct)
     {
-        (string Local, string First, string Last, string Role)[] staff =
+        (string Local, string First, string Last, Role Role)[] staff =
         [
-            ("support.lead", "Rafael", "Torres", Roles.Admin),
-            ("billing.manager", "Julia", "Weiss", Roles.Admin),
-            ("partner.north", "Peter", "Hall", Roles.Reseller),
-            ("partner.south", "Mila", "Stone", Roles.Reseller),
+            ("support.lead", "Rafael", "Torres", Role.Admin),
+            ("billing.manager", "Julia", "Weiss", Role.Admin),
+            ("partner.north", "Peter", "Hall", Role.Reseller),
+            ("partner.south", "Mila", "Stone", Role.Reseller),
         ];
 
         foreach (var (local, first, last, role) in staff)
@@ -212,30 +211,32 @@ internal sealed class DemoPeopleSeeder
         client.UpdatePreferences(
             PaymentMethodNames.Card, "Demo Client", "Long-standing customer; prefers invoices by email and pays by card.");
         client.UpdateNotifications(true, true, true, true, true, false);
-        client.UpdateSettings(false, true, false, false, false, true, true, true);
+        client.UpdateSettings(true, false, false, false, true, true, true);
         client.SetCardGatewayCustomerId($"demo-customer-{client.Id}");
 
-        client.AddContact(
+        client.AddContact(new ContactDetails(
             "Nina", "Avery", "Brightleaf Studio LLC", $"nina.avery@{FillerMailDomain}", "+1 555 0111", ContactType.Technical,
-            "15 Harbour Street", null, "Northvale", null, "00001", "US", true, false, true, true, true, false);
-        client.AddContact(
+            new PostalAddress("15 Harbour Street", null, "Northvale", null, "00001", "US"),
+            new ContactNotifications(true, false, true, true, true, false)));
+        client.AddContact(new ContactDetails(
             "Gary", "Sawyer", "Brightleaf Studio LLC", $"gary.sawyer@{FillerMailDomain}", "+1 555 0112", ContactType.General,
-            "15 Harbour Street", null, "Northvale", null, "00001", "US", true, false, false, false, false, false);
+            new PostalAddress("15 Harbour Street", null, "Northvale", null, "00001", "US"),
+            new ContactNotifications(true, false, false, false, false, false)));
 
         var editor = await EnsureAccountAsync(
-            $"team.editor@{FillerMailDomain}", NewGeneratedPassword(), "Taylor", "Editor", Roles.Client, ct);
+            $"team.editor@{FillerMailDomain}", NewGeneratedPassword(), "Taylor", "Editor", Role.Client, ct);
         var finance = await EnsureAccountAsync(
-            $"team.finance@{FillerMailDomain}", NewGeneratedPassword(), "Lusine", "Finance", Roles.Client, ct);
+            $"team.finance@{FillerMailDomain}", NewGeneratedPassword(), "Lusine", "Finance", Role.Client, ct);
         client.AddUser(editor.Id, OperationsPermissions);
         client.AddUser(finance.Id, FinancePermissions);
         await _db.SaveChangesAsync(ct);
 
         // One invitation already accepted (the editor above), two still waiting for an answer.
-        var accepted = Invitation.Create(client.Id, editor.Email!, "Taylor", "Editor", OperationsPermissions);
-        accepted.Accept();
+        var accepted = Invitation.Create(client.Id, editor.Email!, "Taylor", "Editor", OperationsPermissions, _today);
+        accepted.Accept(_today);
         _db.Invitations.Add(accepted);
-        _db.Invitations.Add(Invitation.Create(client.Id, $"design.lead@{FillerMailDomain}", "Mari", "Designer", ClientPermission.ViewProductsServices));
-        _db.Invitations.Add(Invitation.Create(client.Id, $"auditor@{FillerMailDomain}", "Karen", "Auditor", FinancePermissions));
+        _db.Invitations.Add(Invitation.Create(client.Id, $"design.lead@{FillerMailDomain}", "Mari", "Designer", ClientPermission.ViewProductsServices, _today));
+        _db.Invitations.Add(Invitation.Create(client.Id, $"auditor@{FillerMailDomain}", "Karen", "Auditor", FinancePermissions, _today));
         await _db.SaveChangesAsync(ct);
     }
 
@@ -248,17 +249,18 @@ internal sealed class DemoPeopleSeeder
     {
         if (index % 2 == 0)
         {
-            client.AddContact(
+            client.AddContact(new ContactDetails(
                 "Operations", "Team", client.CompanyName, $"ops.{index}@{FillerMailDomain}", client.Phone, ContactType.Technical,
-                client.Street, null, client.City, client.State, client.PostCode, client.Country, true, false, true, true, true, false);
+                new PostalAddress(client.Street, null, client.City, client.State, client.PostCode, client.Country),
+                new ContactNotifications(true, false, true, true, true, false)));
         }
 
         if (index == 1)
         {
             var member = await EnsureAccountAsync(
-                $"team.lane@{FillerMailDomain}", NewGeneratedPassword(), "Owen", "Lane", Roles.Client, ct);
+                $"team.lane@{FillerMailDomain}", NewGeneratedPassword(), "Owen", "Lane", Role.Client, ct);
             client.AddUser(member.Id, ClientPermission.ViewProductsServices | ClientPermission.ViewPayInvoices);
-            _db.Invitations.Add(Invitation.Create(client.Id, $"bookkeeper.lane@{FillerMailDomain}", "Ruth", "Keeper", FinancePermissions));
+            _db.Invitations.Add(Invitation.Create(client.Id, $"bookkeeper.lane@{FillerMailDomain}", "Ruth", "Keeper", FinancePermissions, _today));
         }
 
         await _db.SaveChangesAsync(ct);
@@ -274,7 +276,7 @@ internal sealed class DemoPeopleSeeder
     /// <returns>The existing (password synced) or the new account.</returns>
     /// <exception cref="InvalidOperationException">Identity refused the account, the password or the role.</exception>
     private async Task<AppUser> EnsureAccountAsync(
-        string email, string password, string firstName, string lastName, string role, CancellationToken ct)
+        string email, string password, string firstName, string lastName, Role role, CancellationToken ct)
     {
         var existing = await _users.FindByEmailAsync(email);
         if (existing is not null)
@@ -311,7 +313,7 @@ internal sealed class DemoPeopleSeeder
                 $"The demo account {email} could not be created: {string.Join("; ", created.Errors.Select(e => e.Code))}.");
         }
 
-        var granted = await _users.AddToRoleAsync(user, role);
+        var granted = await _users.AddToRoleAsync(user, role.ToString());
         if (!granted.Succeeded)
         {
             throw new InvalidOperationException(
@@ -327,33 +329,36 @@ internal sealed class DemoPeopleSeeder
     /// <param name="role">The role to grant.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>A task that completes once the row is saved.</returns>
-    private async Task GrantSubjectRoleAsync(string subject, string role, CancellationToken ct)
+    private async Task GrantSubjectRoleAsync(string subject, Role role, CancellationToken ct)
     {
         if (await _db.SubjectRoles.AnyAsync(r => r.Subject == subject && r.Role == role, ct))
         {
             return;
         }
 
-        _db.SubjectRoles.Add(new SubjectRole { Subject = subject, Role = role });
+        _db.SubjectRoles.Add(SubjectRole.Grant(subject, role));
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Creates a client with its account, address, billing contact, state and credit when it does not exist yet.</summary>
+    /// <summary>
+    /// Creates a client with its account, address, billing contact and credit when it does not exist yet. The
+    /// profile's account state is applied by <see cref="ApplyStatusAsync"/> once the caller has added the rest.
+    /// </summary>
     /// <param name="profile">What to create.</param>
     /// <param name="signedUpAt">The moment the customer signed up, so the account is dated like the history that follows it.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>The client, and whether this call created it.</returns>
-    private async Task<(Client Client, bool Created)> EnsureClientAsync(DemoClientProfile profile, DateTimeOffset signedUpAt, CancellationToken ct)
+    private async Task<DemoSeededClient> EnsureClientAsync(DemoClientProfile profile, DateTimeOffset signedUpAt, CancellationToken ct)
     {
-        var user = await EnsureAccountAsync(profile.Email, profile.Password, profile.FirstName, profile.LastName, Roles.Client, ct);
+        var user = await EnsureAccountAsync(profile.Email, profile.Password, profile.FirstName, profile.LastName, Role.Client, ct);
 
         var existing = await _db.Clients.FirstOrDefaultAsync(c => c.UserId == user.Id, ct);
         if (existing is not null)
         {
-            return (existing, false);
+            return new DemoSeededClient(existing, false);
         }
 
-        var client = Client.Create(user.Id, profile.FirstName, profile.LastName, profile.Email, profile.Company);
+        var client = Client.Create(user.Id, profile.FirstName, profile.LastName, profile.Email, _today, profile.Company);
         client.Update(profile.FirstName, profile.LastName, profile.Company, profile.Phone);
         client.UpdateAddress(profile.Street, null, profile.City, profile.State, profile.PostCode, profile.Country);
         client.SetCurrency(profile.Currency);
@@ -366,22 +371,34 @@ internal sealed class DemoPeopleSeeder
         _db.Clients.Add(client);
         await _db.SaveChangesAsync(ct);
 
-        client.AddContact(
+        client.AddContact(new ContactDetails(
             profile.FirstName, profile.LastName, profile.Company, profile.Email, profile.Phone, ContactType.Billing,
-            null, null, null, null, null, null, true, true, true, true, true, true);
+            new PostalAddress(null, null, null, null, null, null),
+            new ContactNotifications(true, true, true, true, true, true)));
+        await _db.SaveChangesAsync(ct);
 
-        // The state is applied last: a suspended or closed account takes no further changes of ours.
-        if (profile.Status == ClientStatus.Suspended)
+        return new DemoSeededClient(client, true);
+    }
+
+    /// <summary>
+    /// Puts a seeded customer in the account state it ends up in. Called once its contacts, users and
+    /// invitations are in place: a suspended or closed account takes no further changes of ours.
+    /// </summary>
+    /// <param name="client">The customer, fully seeded.</param>
+    /// <param name="status">The account state to end in; <see cref="ClientStatus.Active"/> leaves it as created.</param>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>A task that completes once the state is saved.</returns>
+    private async Task ApplyStatusAsync(Client client, ClientStatus status, CancellationToken ct)
+    {
+        if (status == ClientStatus.Suspended)
         {
-            client.Suspend();
+            client.Suspend(_today);
         }
-        else if (profile.Status == ClientStatus.Closed)
+        else if (status == ClientStatus.Closed)
         {
-            client.Close();
+            client.Close(_today);
         }
 
         await _db.SaveChangesAsync(ct);
-
-        return (client, true);
     }
 }

@@ -2,11 +2,11 @@
  * Fixtures for the orders, services and domain lists: one row of each as the list endpoints
  * return it.
  */
-import type { DomainRegistration } from '../../src/types/domain'
+import { DomainStatus, type DomainRegistration } from '../../src/types/domain'
 import type { OrderListItem } from '../../src/types/order'
 import { OrderStatus } from '../../src/types/order'
-import type { PagedResult } from '../../src/types/pagedresult'
-import type { ServiceListItem } from '../../src/types/service'
+import type { PaginatedList } from '../../src/types/paginatedlist'
+import { BillingCycle, ServiceStatus, type ServiceListItem } from '../../src/types/service'
 
 /** An order waiting for the operator, so accept and cancel are offered. */
 export const pendingOrder: OrderListItem = {
@@ -23,8 +23,8 @@ export const pendingOrder: OrderListItem = {
   createdAt: '2026-10-10T10:00:00Z',
 }
 
-/** `GET /api/orders` — one page with the pending order. */
-export const ordersPage: PagedResult<OrderListItem> = { items: [pendingOrder], totalCount: 1, page: 1, pageSize: 20 }
+/** `GET /api/orders`: one page with the pending order. */
+export const ordersPage: PaginatedList<OrderListItem> = { items: [pendingOrder], pageNumber: 1, pageSize: 20, totalCount: 1, totalPages: 1 }
 
 /** Product name of the hosting service, kept non-null so tests can assert on it. */
 export const hostingProductName = 'Shared Hosting'
@@ -38,13 +38,13 @@ export const hostingService: ServiceListItem = {
   domain: 'engines.example.test',
   price: 9.99,
   priceCurrency: 'USD',
-  billingCycle: 'monthly',
-  status: 'Active',
+  billingCycle: BillingCycle.Monthly,
+  status: ServiceStatus.Active,
   nextDueDate: '2026-12-01T00:00:00Z',
 }
 
-/** `GET /api/services` — one page with the hosting service. */
-export const servicesPage: PagedResult<ServiceListItem> = { items: [hostingService], totalCount: 1, page: 1, pageSize: 20 }
+/** `GET /api/services`: one page with the hosting service. */
+export const servicesPage: PaginatedList<ServiceListItem> = { items: [hostingService], pageNumber: 1, pageSize: 20, totalCount: 1, totalPages: 1 }
 
 /** A registered domain of the second client. */
 export const registeredDomain: DomainRegistration = {
@@ -58,9 +58,9 @@ export const registeredDomain: DomainRegistration = {
   priceCurrency: 'USD',
   nextDueDate: '2027-01-01T00:00:00Z',
   expiresAt: '2027-01-01T00:00:00Z',
-  status: 'Active',
+  status: DomainStatus.Active,
   autoRenew: true,
 }
 
-/** `GET /api/domains` — one page with the domain. */
-export const domainsPage: PagedResult<DomainRegistration> = { items: [registeredDomain], totalCount: 1, page: 1, pageSize: 20 }
+/** `GET /api/domains`: one page with the domain. */
+export const domainsPage: PaginatedList<DomainRegistration> = { items: [registeredDomain], pageNumber: 1, pageSize: 20, totalCount: 1, totalPages: 1 }

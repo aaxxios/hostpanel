@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using System.Text.Json;
 using Innovayse.Hostpanel.Domain.Support.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -11,20 +9,20 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// <c>GET /api/tickets/client/{clientId}</c>: staff can list a specific client's tickets, and
 /// the action is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>TicketsListingEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ListClientTicketsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>Staff can list a specific client's tickets.</summary>
+    /// <summary>Staff can list a specific client's tickets, each named after that client.</summary>
     [Fact]
     public async Task StaffCanListAClientsTicketsAsync()
     {
         var client = await SupportTestSeeds.AdminClientAsync(factory);
         var departmentId = await SupportTestSeeds.CreateDepartmentAsync(client);
+        var clientId = (await ClientsTestSeeds.SeedClientAsync(factory)).ClientId;
 
         var ticketResponse = await client.PostAsJsonAsync("/api/tickets", new
         {
-            clientId = 1,
+            clientId,
             subject = "Listing test ticket",
             message = "Filed by staff on behalf of the client.",
             departmentId,
@@ -32,7 +30,22 @@ public sealed class ListClientTicketsTests(IntegrationTestFactory factory) : ICl
         });
         ticketResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var response = await client.GetAsync("/api/tickets/client/1");
+        var response = await client.GetAsync($"/api/tickets/client/{clientId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Should().ContainSingle()
+            .Which.GetProperty("clientName").GetString().Should().Be("Ada Lovelace");
+    }
+
+    /// <summary>The route id wins over a client id sent in the query, and paging binds from the query.</summary>
+    [Fact]
+    public async Task TheRouteClientIdWinsOverTheQueryAsync()
+    {
+        var client = await SupportTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.GetAsync("/api/tickets/client/1?clientId=999&page=1&pageSize=5");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }

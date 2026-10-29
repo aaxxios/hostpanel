@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Support;
 
@@ -12,10 +9,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Support;
 /// announcement is refused <c>ANNOUNCEMENT_NOT_FOUND</c>, and the action is closed to a caller
 /// with no credential.
 /// </summary>
-/// <remarks>
-/// Split out of the deleted <c>KnowledgeBaseAndContentEndpointTests</c>; the unknown-id refusal and
-/// the anonymous boundary are new this batch.
-/// </remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DeleteAnnouncementTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

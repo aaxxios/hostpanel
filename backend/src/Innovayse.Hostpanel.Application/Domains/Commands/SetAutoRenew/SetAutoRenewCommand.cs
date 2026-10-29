@@ -6,4 +6,4 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetAutoRenew;
 /// member here would make the body required before <c>with { DomainId = id }</c> ever ran.
 /// </param>
 /// <param name="Value">The desired auto-renew flag value.</param>
-public record SetAutoRenewCommand(int? DomainId, bool Value);
+public sealed record SetAutoRenewCommand(int? DomainId, bool Value);

@@ -44,7 +44,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("ClientId")
+                    b.Property<int?>("ClientId")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -61,9 +61,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("CreatedAt");
+                    b.HasIndex("ClientId", "CreatedAt");
 
                     b.ToTable("ActivityLogs");
                 });
@@ -131,6 +129,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("InvoiceId");
 
                     b.ToTable("BillableItems");
                 });
@@ -213,7 +215,19 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExternalId")
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("GatewayCheckCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("GatewayCheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("GatewayConcludedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("GatewayModule")
                         .HasMaxLength(100)
@@ -222,6 +236,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("GatewayOrderId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset?>("GatewayStalledNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("GatewayStartedAt")
                         .HasColumnType("timestamp with time zone");
@@ -243,6 +260,9 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("RefundStartedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -268,6 +288,21 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("GatewayOrderId")
+                        .HasFilter("\"GatewayOrderId\" IS NOT NULL");
+
+                    b.HasIndex("ClientId", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("\"ExternalId\" IS NOT NULL");
+
+                    b.HasIndex("Status", "DueDate");
+
+                    b.HasIndex("Status", "PaidAt");
 
                     b.ToTable("Invoices");
                 });
@@ -301,9 +336,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("RenewalAppliedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("RenewalAttemptAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("RenewalPeriodEnd")
@@ -456,7 +493,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<decimal>("Total")
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
 
                     b.ToTable("Quotes");
                 });
@@ -475,7 +520,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("DiscountPercent")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
@@ -551,7 +596,13 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
+                    b.HasIndex("Date");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("ClientId", "Date");
 
                     b.ToTable("Transactions");
                 });
@@ -629,7 +680,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<bool>("LateFees")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("LateFees");
 
                     b.Property<bool>("MarketingOptIn")
                         .HasColumnType("boolean");
@@ -705,6 +757,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -957,7 +1015,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DomainId");
+                    b.HasIndex("DomainId", "ReminderType", "SentAt");
 
                     b.ToTable("DomainReminders");
                 });
@@ -1050,9 +1108,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("FirstPaymentAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m);
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<bool>("IsLocked")
                         .HasColumnType("boolean");
@@ -1084,19 +1140,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<string>("PriceCurrency")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasDefaultValue("USD");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<string>("PromotionCode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<decimal>("RecurringAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m);
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("timestamp with time zone");
@@ -1105,14 +1157,16 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("RegistrarModule")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("RegistrarRef")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<int>("RegistrationPeriod")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1131,14 +1185,24 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<bool>("WhoisPrivacy")
                         .HasColumnType("boolean");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
 
                     b.HasIndex("ExpiresAt");
 
+                    b.HasIndex("LinkedServiceId");
+
                     b.HasIndex("Name")
                         .IsUnique();
+
+                    b.HasIndex("Status", "ExpiresAt");
 
                     b.ToTable("Domains");
                 });
@@ -1242,6 +1306,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -1354,6 +1424,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
@@ -1408,6 +1484,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AnnouncementsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("AnnouncementsImported")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -1419,6 +1500,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasDefaultValue(0);
 
                     b.Property<int>("AnnouncementsTotal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("ClientsFailed")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
@@ -1437,6 +1523,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("ContactsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("ContactsImported")
                         .HasColumnType("integer");
 
@@ -1451,6 +1542,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("DomainsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("DomainsImported")
                         .HasColumnType("integer");
 
@@ -1461,6 +1557,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("DomainsTotal")
                         .HasColumnType("integer");
+
+                    b.Property<int>("DownloadsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("DownloadsImported")
                         .ValueGeneratedOnAdd()
@@ -1476,10 +1577,6 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
 
                     b.Property<bool>("ExportAnnouncements")
                         .ValueGeneratedOnAdd()
@@ -1556,6 +1653,16 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("Failure")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("ErrorMessage");
+
+                    b.Property<int>("InvoicesFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("InvoicesImported")
                         .HasColumnType("integer");
 
@@ -1572,6 +1679,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int>("KnowledgebaseFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("KnowledgebaseImported")
                         .HasColumnType("integer");
 
@@ -1587,8 +1699,16 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTimeOffset?>("LastHeartbeatAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("LastPingAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("NetworkIssuesFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("NetworkIssuesImported")
                         .ValueGeneratedOnAdd()
@@ -1605,6 +1725,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<int>("OrdersFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("OrdersImported")
                         .HasColumnType("integer");
 
@@ -1615,6 +1740,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("OrdersTotal")
                         .HasColumnType("integer");
+
+                    b.Property<int>("ProductsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("ProductsImported")
                         .HasColumnType("integer");
@@ -1627,6 +1757,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("ProductsTotal")
                         .HasColumnType("integer");
 
+                    b.Property<int>("QuotesFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("QuotesImported")
                         .HasColumnType("integer");
 
@@ -1637,6 +1772,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("QuotesTotal")
                         .HasColumnType("integer");
+
+                    b.Property<int>("ServicesFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("ServicesImported")
                         .HasColumnType("integer");
@@ -1661,6 +1801,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("TicketRepliesFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TicketRepliesImported")
                         .HasColumnType("integer");
 
@@ -1671,6 +1816,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("TicketRepliesTotal")
                         .HasColumnType("integer");
+
+                    b.Property<int>("TicketsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("TicketsImported")
                         .HasColumnType("integer");
@@ -1683,6 +1833,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("TicketsTotal")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TransactionsFailed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TransactionsImported")
                         .HasColumnType("integer");
 
@@ -1693,6 +1848,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<int>("TransactionsTotal")
                         .HasColumnType("integer");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -1735,9 +1896,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("SkipReason")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
-                    b.HasIndex("JobId");
+                    b.HasKey("Id");
 
                     b.HasIndex("JobId", "Action");
 
@@ -1756,9 +1919,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Error")
+                    b.Property<string>("Failure")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("Error");
 
                     b.Property<DateTimeOffset>("SentAt")
                         .HasColumnType("timestamp with time zone");
@@ -1777,6 +1941,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("To", "SentAt");
 
                     b.ToTable("EmailLogs");
                 });
@@ -1800,6 +1966,13 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("en");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1812,7 +1985,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Slug")
+                    b.HasIndex("Slug", "Language")
                         .IsUnique();
 
                     b.ToTable("EmailTemplates");
@@ -1824,15 +1997,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<h1>Welcome!</h1><p>Hello, your account has been created successfully.</p>",
                             Description = "Sent on client registration",
                             IsActive = true,
+                            Language = "en",
                             Slug = "welcome",
-                            Subject = "Welcome to Innovayse!"
+                            Subject = "Welcome to {{ site.name }}!"
                         },
                         new
                         {
                             Id = 2,
-                            Body = "<p>Your invoice for {{invoice.total}} is ready.</p>",
+                            Body = "<p>Your invoice for {{invoice.total}} {{invoice.currency}} is ready.</p>",
                             Description = "Sent when invoice created",
                             IsActive = true,
+                            Language = "en",
                             Slug = "invoice-created",
                             Subject = "Invoice #{{invoice.id}} Created"
                         },
@@ -1842,6 +2017,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<p>Thank you for your payment of {{invoice.total}}.</p>",
                             Description = "Sent on payment",
                             IsActive = true,
+                            Language = "en",
                             Slug = "payment-received",
                             Subject = "Payment Received"
                         },
@@ -1851,6 +2027,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<p>Your hosting service has been provisioned.</p>",
                             Description = "Sent when service provisioned",
                             IsActive = true,
+                            Language = "en",
                             Slug = "service-provisioned",
                             Subject = "Your Service is Ready"
                         },
@@ -1860,6 +2037,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<p>We received your support request.</p>",
                             Description = "Sent when ticket created",
                             IsActive = true,
+                            Language = "en",
                             Slug = "ticket-created",
                             Subject = "Support Ticket #{{ticket.id}} Created"
                         },
@@ -1869,6 +2047,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<p>There's a new reply on your support ticket.</p>",
                             Description = "Sent when a reply is added to a ticket",
                             IsActive = true,
+                            Language = "en",
                             Slug = "ticket-replied",
                             Subject = "New Reply on Ticket #{{ticket.id}}: {{ticket.subject}}"
                         },
@@ -1878,6 +2057,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                             Body = "<p>Your support ticket \"{{ticket.subject}}\" has been closed. We'd love your feedback.</p>",
                             Description = "Sent when a ticket is closed",
                             IsActive = true,
+                            Language = "en",
                             Slug = "ticket-closed",
                             Subject = "Support Ticket #{{ticket.id}} Closed"
                         });
@@ -1930,12 +2110,25 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("InvoiceId");
+
                     b.HasIndex("OrderNumber")
                         .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("Orders");
                 });
@@ -1966,7 +2159,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<decimal>("FirstPaymentAmount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Hostname")
                         .HasMaxLength(253)
@@ -1984,11 +2177,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<decimal>("RecurringAmount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<int?>("Years")
                         .HasColumnType("integer");
@@ -1996,6 +2190,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
 
                     b.ToTable("OrderItems");
                 });
@@ -2024,6 +2220,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("Url")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -2111,14 +2313,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Website")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 
@@ -2245,6 +2450,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
@@ -2294,6 +2505,36 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("ProjectTranslations");
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Scheduling.JobRun", b =>
+                {
+                    b.Property<string>("JobName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("LastStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastSucceededAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("JobName");
+
+                    b.ToTable("JobRuns");
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.Server", b =>
                 {
                     b.Property<int>("Id")
@@ -2303,15 +2544,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AccessHash")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(10719)
+                        .HasColumnType("character varying(10719)");
 
                     b.Property<int?>("AccountsCount")
                         .HasColumnType("integer");
 
                     b.Property<string>("ApiToken")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(5383)
+                        .HasColumnType("character varying(5383)");
 
                     b.Property<string>("AssignedIpAddresses")
                         .HasMaxLength(2000)
@@ -2402,8 +2643,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(45)");
 
                     b.Property<string>("Password")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(2719)
+                        .HasColumnType("character varying(2719)");
 
                     b.Property<int?>("ServerGroupId")
                         .HasColumnType("integer");
@@ -2453,6 +2694,77 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("ServerGroups");
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.ServerSshSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid?>("AgentBinding")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AgentHost")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AgentHostKeyFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("AgentPort")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AgentPrivateKey")
+                        .HasMaxLength(42719)
+                        .HasColumnType("character varying(42719)");
+
+                    b.Property<string>("AgentPublicKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("AgentUsername")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("ConnectTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsHealthy")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastHealthCheckAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OperationTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ServerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SshHostname")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("SshPort")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId")
+                        .IsUnique();
+
+                    b.ToTable("ServerSshSettings");
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Services.CancellationRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -2482,6 +2794,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
 
                     b.ToTable("CancellationRequests");
                 });
@@ -2529,8 +2843,11 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(253)
                         .HasColumnType("character varying(253)");
 
+                    b.Property<int?>("FirstInvoiceId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("FirstPaymentAmount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<DateTimeOffset?>("NextRenewalAt")
                         .HasColumnType("timestamp with time zone");
@@ -2539,8 +2856,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Password")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
+                        .HasMaxLength(1415)
+                        .HasColumnType("character varying(1415)");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(50)
@@ -2561,14 +2878,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("RecurringAmount")
-                        .HasColumnType("numeric");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<int?>("ServerId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("SubscriptionId")
                         .HasMaxLength(256)
@@ -2591,7 +2909,19 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("Status", "NextRenewalAt");
 
                     b.ToTable("ClientServices");
                 });
@@ -2615,8 +2945,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(10719)
+                        .HasColumnType("character varying(10719)");
 
                     b.HasKey("Id");
 
@@ -2680,9 +3010,17 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("VisibleUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
+
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("SortOrder");
 
@@ -2710,7 +3048,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Features")
-                        .HasColumnType("text");
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<string>("Locale")
                         .IsRequired()
@@ -2735,77 +3074,6 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SlideTranslations");
-                });
-
-            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.ServerSshSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<Guid?>("AgentBinding")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AgentHost")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("AgentHostKeyFingerprint")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("AgentPort")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("AgentPrivateKey")
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
-
-                    b.Property<string>("AgentPublicKey")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("AgentUsername")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<int>("ConnectTimeoutSeconds")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool?>("IsHealthy")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("LastHealthCheckAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("OperationTimeoutSeconds")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ServerId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("SshHostname")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int>("SshPort")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServerId")
-                        .IsUnique();
-
-                    b.ToTable("ServerSshSettings");
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.SshKey", b =>
@@ -3110,6 +3378,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasIndex("Name");
 
+                    b.HasIndex("ParentCategoryId");
+
                     b.ToTable("KbCategories");
                 });
 
@@ -3210,6 +3480,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ParentCategoryId");
+
                     b.ToTable("PredefinedReplyCategories");
                 });
 
@@ -3269,11 +3541,19 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
+                    b.HasIndex("DepartmentId");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("ClientId", "CreatedAt");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("Tickets");
                 });
@@ -3373,6 +3653,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
@@ -3471,6 +3757,10 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
+                    b.Property<string>("PendingTwoFactorSecret")
+                        .HasMaxLength(735)
+                        .HasColumnType("character varying(735)");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
 
@@ -3487,7 +3777,8 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("TwoFactorSecret")
-                        .HasColumnType("text");
+                        .HasMaxLength(735)
+                        .HasColumnType("character varying(735)");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -3503,6 +3794,25 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataProtectionKeys");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -3637,6 +3947,37 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Audit.ActivityLog", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.BillableItem", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Invoice", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.InvoiceItem", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
@@ -3664,6 +4005,15 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Quote", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.QuoteItem", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Billing.Quote", null)
@@ -3671,6 +4021,20 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .HasForeignKey("QuoteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Billing.Transaction", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Clients.ClientUser", b =>
@@ -3727,6 +4091,20 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Domains.RegisteredDomain", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Services.ClientService", null)
+                        .WithMany()
+                        .HasForeignKey("LinkedServiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Faqs.FaqTranslation", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Faqs.Faq", null)
@@ -3745,12 +4123,41 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Migration.MigrationLog", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Migration.MigrationJob", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.Order", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Orders.OrderItem", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Orders.Order", null)
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -3807,20 +4214,52 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Servers.ServerSshSettings", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Servers.Server", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Services.CancellationRequest", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Services.ClientService", null)
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Services.ClientService", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Slides.Slide", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Slides.SlideTranslation", b =>
                 {
                     b.HasOne("Innovayse.Hostpanel.Domain.Slides.Slide", null)
                         .WithMany("Translations")
                         .HasForeignKey("SlideId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Ssh.ServerSshSettings", b =>
-                {
-                    b.HasOne("Innovayse.Hostpanel.Domain.Servers.Server", null)
-                        .WithMany()
-                        .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -3839,8 +4278,56 @@ namespace Innovayse.Hostpanel.Infrastructure.Migrations
                     b.HasOne("Innovayse.Hostpanel.Domain.Support.DownloadCategory", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.DownloadCategory", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Support.DownloadCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.KbCategory", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Support.KbCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.PredefinedReply", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Support.PredefinedReplyCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.PredefinedReplyCategory", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Support.PredefinedReplyCategory", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_PredefinedReplyCategories_ParentCategoryId");
+                });
+
+            modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.Ticket", b =>
+                {
+                    b.HasOne("Innovayse.Hostpanel.Domain.Clients.Client", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Innovayse.Hostpanel.Domain.Support.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Innovayse.Hostpanel.Domain.Support.TicketReply", b =>

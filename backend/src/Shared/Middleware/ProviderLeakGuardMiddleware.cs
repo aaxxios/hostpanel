@@ -20,7 +20,7 @@ public sealed class ProviderLeakGuardMiddleware
 
     /// <summary>
     /// Headers a response may carry. Everything else is removed. <c>Retry-After</c> and
-    /// <c>X-RateLimit-Remaining</c> are the edge limiter's 429 contract (rules/security.md); they are
+    /// <c>X-RateLimit-Remaining</c> are the edge limiter's 429 contract; they are
     /// ours, never a provider's.
     /// </summary>
     private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)

@@ -3,14 +3,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="Client"/>.</summary>
 public sealed class ClientConfiguration : IEntityTypeConfiguration<Client>
 {
     /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<Client> builder)
     {
-
         builder.HasKey(x => x.Id);
+
+        // Two writers that both read the credit balance cannot both save over it, the
+        // second save fails with ConcurrencyConflictException instead of losing the first change.
+        builder.UseXminConcurrencyToken();
 
         builder.Property(x => x.UserId)
             .IsRequired()
@@ -43,6 +47,10 @@ public sealed class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(x => x.CreditBalance).HasColumnType("numeric(18,4)").HasDefaultValue(0m);
 
         builder.Property(x => x.CreatedAt).IsRequired();
+
+        // Client has no late fee flag; the column is mapped as a shadow property so it stays in the table and
+        // the migration is additive. A later cleanup drops the column and this shadow property together.
+        builder.Property<bool>("LateFees").HasColumnName("LateFees").HasColumnType("boolean");
 
         builder.Property(x => x.RegistrationIp).HasMaxLength(45);
         builder.Property(x => x.RegistrationUserAgent).HasMaxLength(500);

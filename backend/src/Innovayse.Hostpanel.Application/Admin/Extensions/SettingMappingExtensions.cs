@@ -11,7 +11,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Extensions;
 public static class SettingMappingExtensions
 {
     /// <summary>Maps a setting to its DTO, leaving out the value of a secret.</summary>
-    /// <param name="setting">The setting.</param>
+    /// <param name="setting">The stored setting row.</param>
     /// <param name="secrecy">Decides whether the setting's value may leave the server.</param>
     /// <returns>The mapped DTO.</returns>
     public static SettingDto ToDto(this Setting setting, SettingSecrecy secrecy)

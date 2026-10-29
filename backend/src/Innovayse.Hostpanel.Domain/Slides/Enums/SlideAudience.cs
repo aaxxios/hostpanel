@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Slides.Enums;
+
 /// <summary>Determines which visitors see a slide.</summary>
 public enum SlideAudience
 {

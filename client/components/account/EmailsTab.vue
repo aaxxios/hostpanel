@@ -33,7 +33,7 @@
         </UiTableHead>
         <UiTableBody>
           <UiTableRow v-for="email in paged" :key="email.id" :data-testid="`account-email-${email.id}`">
-            <UiTableTd class="text-gray-500 dark:text-gray-400 whitespace-nowrap text-sm">{{ formatDateTime(email.date) }}</UiTableTd>
+            <UiTableTd class="text-gray-500 dark:text-gray-400 whitespace-nowrap text-sm">{{ formatDateTime(email.sentAt) }}</UiTableTd>
             <UiTableTd class="text-gray-900 dark:text-white font-medium">{{ email.subject }}</UiTableTd>
             <UiTableTd align="right">
               <UiButton data-testid="emails-view" size="sm" variant="subtle" :to="clientEmailPath(email.id)">

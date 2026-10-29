@@ -8,21 +8,14 @@
  * two steps: create the first account, then claim the Admin role with the setup token the
  * API printed to its log.
  *
- * **What it used to be, and why it could not work.** It posted
- * `{ email, password, firstName, lastName }` anonymously to `POST /api/auth/setup` and
- * expected an access token back. Every part of that had moved on: the endpoint is
- * `[Authorize]`, so an anonymous post is refused before the body is looked at; it takes no
- * account fields, because it grants a role to the caller rather than creating anybody; and
- * it answers `{ success }`, never a token. It also wrote its own refusal sentences
- * (`'Setup failed. Please check your inputs and try again.'`) over whatever the server had
- * explained, and its two client-only rules ran nowhere the endpoint could enforce them. It
- * would have failed on any deployment that reached it — and nothing routed to it, so
- * nothing did.
+ * The claim step runs signed in: `POST /api/auth/setup` is `[Authorize]`, takes no account
+ * fields because it grants a role to the caller rather than creating anybody, and answers
+ * `{ success }`, never a token.
  *
  * **On an SSO deployment this screen never appears.** The router guard sends it to /login
- * unless the API reported `local` and reported setup as outstanding — registration and the
- * setup token are both local-mode concepts, and under SSO the corresponding endpoints
- * answer 404.
+ * unless the API reported `local` and reported setup as outstanding. Registration is a
+ * local-mode concept and under an external sign-on provider its endpoint answers 404;
+ * there the setup token is asked for on the sign-in screen instead.
  *
  * Every failure shown here is the sentence the API returned. There are no client-side
  * validation rules: the password rules belong to the server, which is the only place they
@@ -76,7 +69,7 @@ const email = ref('')
  * Password field value.
  *
  * One field, not a field and a confirmation. A confirmation is a rule, and a rule that
- * only runs in the browser is not a rule — the endpoint is reachable without this page.
+ * only runs in the browser is not a rule: the endpoint is reachable without this page.
  * `POST /api/auth/register` has no confirmation field to validate against, so asking for
  * one here would have been a check the server could never make.
  */
@@ -116,8 +109,8 @@ const handleCreateAccount = async (): Promise<void> => {
   }
 
   const outcome = await authStore.signInLocal(email.value, password.value)
-  // 'totp' cannot happen on an account created seconds ago — there is no second factor
-  // to have enrolled — but it is not treated as success either: only a session that
+  // 'totp' cannot happen on an account created seconds ago, there is no second factor
+  // to have enrolled, but it is not treated as success either: only a session that
   // actually exists lets the next step work.
   if (outcome !== SignInResult.Done) {
     return
@@ -133,9 +126,7 @@ const handleCreateAccount = async (): Promise<void> => {
  * @returns Promise resolving once the attempt has been handled.
  */
 const handleClaimAdmin = async (): Promise<void> => {
-  const granted = await authStore.claimAdminRole(
-    authStore.setupTokenRequired ? setupToken.value : undefined,
-  )
+  const granted = await authStore.claimAdminRole(setupToken.value)
   if (!granted) {
     return
   }
@@ -236,28 +227,26 @@ onMounted(() => {
         </UiText>
 
         <!--
-          The token field appears only when the API said one is wanted. It is the answer
+          The token field is always shown while setup is outstanding. It is the answer
           to a real problem rather than ceremony: registration is public, so on a box that
           is reachable before its owner has finished configuring it, whoever claimed first
           would own the installation.
         -->
-        <template v-if="authStore.setupTokenRequired">
-          <UiText tone="secondary" size="md">
-            {{ t('auth.setup.theApiPrintedASetup') }}
-            {{ t('auth.login.logsCommand') }}
-            {{ t('auth.setup.andPasteItHereRestarting') }}
-          </UiText>
-          <UiInput
-            v-model="setupToken"
-            :label="t('auth.setup.setupToken')"
-            autocomplete="off"
-            :placeholder="t('auth.setup.pasteTheTokenFromThe')"
-            required
-            :autofocus="true"
-            :disabled="authStore.loading"
-            data-testid="setup-token"
-          />
-        </template>
+        <UiText tone="secondary" size="md">
+          {{ t('auth.setup.theApiPrintedASetup') }}
+          {{ t('auth.login.logsCommand') }}
+          {{ t('auth.setup.andPasteItHereRestarting') }}
+        </UiText>
+        <UiInput
+          v-model="setupToken"
+          :label="t('auth.setup.setupToken')"
+          autocomplete="off"
+          :placeholder="t('auth.setup.pasteTheTokenFromThe')"
+          required
+          :autofocus="true"
+          :disabled="authStore.loading"
+          data-testid="setup-token"
+        />
 
         <UiButton
           variant="primary"

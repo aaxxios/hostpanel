@@ -15,6 +15,7 @@ public sealed class StartMyGatewayPaymentValidator : LocalizedValidator<StartMyG
     {
         RuleFor(x => x.InvoiceId).MustBePositiveId(L["InvoiceIdInvalid"]);
         RuleFor(x => x.Module).NotEmpty().WithMessage(L["GatewayModuleRequired"]);
-        RuleFor(x => x.ReturnUrl).NotEmpty().WithMessage(L["ReturnUrlRequired"]);
+        RuleFor(x => x.ReturnUrl).NotEmpty().WithMessage(L["ReturnUrlRequired"])
+            .MustBeAbsoluteWebUrl(L["ReturnUrlInvalid"]);
     }
 }

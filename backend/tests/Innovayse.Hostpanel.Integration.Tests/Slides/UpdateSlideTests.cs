@@ -1,16 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Slides.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Slides;
 
 /// <summary>
-/// Integration tests for the <c>UpdateSlide</c> use case — <c>PUT /api/admin/slides/{id}</c>.
+/// Integration tests for the <c>UpdateSlide</c> use case: <c>PUT /api/admin/slides/{id}</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateSlideTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
@@ -80,5 +78,34 @@ public sealed class UpdateSlideTests(IntegrationTestFactory factory) : IClassFix
         var response = await factory.CreateClient().PutAsJsonAsync("/api/admin/slides/1", SlidesTestSeeds.CreateBody());
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A negative sort order is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task Update_NegativeSortOrder_RefusesWithValidationError()
+    {
+        var client = await SlidesTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PutAsJsonAsync("/api/admin/slides/999999", SlidesTestSeeds.CreateBody(sortOrder: -1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await SlidesTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
+    }
+
+    /// <summary>Pointing a slide at a product that does not exist answers 404 with <c>PRODUCT_NOT_FOUND</c> and keeps the slide as it was.</summary>
+    [Fact]
+    public async Task Update_UnknownProduct_RefusesNotFound()
+    {
+        var client = await SlidesTestSeeds.AdminClientAsync(factory);
+        var created = await client.PostAsJsonAsync("/api/admin/slides", SlidesTestSeeds.CreateBody());
+        var id = await created.Content.ReadFromJsonAsync<int>();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/admin/slides/{id}", SlidesTestSeeds.CreateBody(sortOrder: 5, productId: SlidesTestSeeds.NoSuchId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await SlidesTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.PRODUCT_NOT_FOUND);
+        var afterRefusal = await client.GetFromJsonAsync<JsonElement>($"/api/admin/slides/{id}");
+        afterRefusal.GetProperty("sortOrder").GetInt32().Should().Be(0);
     }
 }

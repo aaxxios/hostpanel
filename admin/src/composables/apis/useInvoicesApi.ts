@@ -11,14 +11,15 @@ import type {
   CreatedId,
   CreateInvoicePayload,
   Invoice,
+  InvoiceDetail,
   InvoiceFilters,
   InvoiceItemUpdate,
   InvoiceOptionsPayload,
   InvoicePaymentPayload,
   InvoiceRefundPayload,
 } from '@/types/invoice'
-import type { PagedResult } from '@/types/pagedresult'
-import { API_BASE, ApiPath } from '@/lib/apiPaths'
+import type { PaginatedList } from '@/types/paginatedlist'
+import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
 /**
@@ -27,7 +28,7 @@ import { HttpMethod } from '@/types/http'
  * @returns One typed function per invoice endpoint the admin panel uses.
  */
 export const useInvoicesApi = () => {
-  const { request } = useApi()
+  const { request, href } = useApi()
 
   /**
    * Lists invoices across all clients.
@@ -37,8 +38,8 @@ export const useInvoicesApi = () => {
    * @param filters - Optional status and date filters.
    * @returns One page of invoices.
    */
-  const list = (page: number, pageSize: number, filters: InvoiceFilters = {}): Promise<PagedResult<Invoice>> =>
-    request<PagedResult<Invoice>>(`${ApiPath.Billing}${buildQuery({ page, pageSize, ...filters })}`)
+  const list = (page: number, pageSize: number, filters: InvoiceFilters = {}): Promise<PaginatedList<Invoice>> =>
+    request<PaginatedList<Invoice>>(`${ApiPath.Billing}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Lists the invoices of one client.
@@ -54,8 +55,8 @@ export const useInvoicesApi = () => {
     page: number,
     pageSize: number,
     filters: InvoiceFilters = {},
-  ): Promise<PagedResult<Invoice>> =>
-    request<PagedResult<Invoice>>(`${ApiPath.Billing}/client/${clientId}${buildQuery({ page, pageSize, ...filters })}`)
+  ): Promise<PaginatedList<Invoice>> =>
+    request<PaginatedList<Invoice>>(`${ApiPath.Billing}/client/${clientId}${buildQuery({ page, pageSize, ...filters })}`)
 
   /**
    * Loads one invoice with its lines and transactions.
@@ -63,7 +64,7 @@ export const useInvoicesApi = () => {
    * @param id - The invoice id.
    * @returns The invoice.
    */
-  const get = (id: number): Promise<Invoice> => request<Invoice>(`${ApiPath.Billing}/${id}`)
+  const get = (id: number): Promise<InvoiceDetail> => request<InvoiceDetail>(`${ApiPath.Billing}/${id}`)
 
   /**
    * Creates an invoice for a client.
@@ -111,16 +112,6 @@ export const useInvoicesApi = () => {
    * @returns Nothing.
    */
   const publish = (id: number): Promise<void> => request<void>(`${ApiPath.Billing}/${id}/publish`, { method: HttpMethod.Post })
-
-  /**
-   * Attempts to capture payment through the configured gateway.
-   *
-   * @param id - The invoice id.
-   * @param currency - ISO 4217 currency to charge in.
-   * @returns Nothing.
-   */
-  const pay = (id: number, currency: string): Promise<void> =>
-    request<void>(`${ApiPath.Billing}/${id}/pay`, { method: HttpMethod.Post, body: JSON.stringify({ currency }) })
 
   /**
    * Cancels an invoice.
@@ -198,15 +189,13 @@ export const useInvoicesApi = () => {
     request<void>(`${ApiPath.Billing}/bulk`, { method: HttpMethod.Post, body: JSON.stringify({ invoiceIds, action }) })
 
   /**
-   * Builds the address of an invoice's PDF download.
-   *
-   * A download is a browser navigation, not a request `useApi` can make, so the page needs the
-   * address itself; the session cookie goes with it like any other same-origin request.
+   * The address of an invoice's PDF download. A download is a browser navigation, not a request,
+   * so the page opens the address `useApi` builds for it.
    *
    * @param id - Invoice id.
    * @returns The address to open.
    */
-  const pdfUrl = (id: number): string => `${API_BASE}${ApiPath.Billing}/${id}/pdf`
+  const pdfUrl = (id: number): string => href(`${ApiPath.Billing}/${id}/pdf`)
 
   return {
     list,
@@ -218,7 +207,6 @@ export const useInvoicesApi = () => {
     updateOptions,
     updateNotes,
     publish,
-    pay,
     cancel,
     addPayment,
     applyCredit,

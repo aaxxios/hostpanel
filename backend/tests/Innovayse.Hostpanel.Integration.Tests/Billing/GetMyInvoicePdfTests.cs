@@ -1,9 +1,7 @@
 using System.Net;
 using System.Reflection;
-using FluentAssertions;
 using Innovayse.Hostpanel.API.Controllers;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.AspNetCore.Http;
@@ -65,8 +63,9 @@ public sealed class GetMyInvoicePdfTests(IntegrationTestFactory factory) : IClas
     }
 
     /// <summary>
-    /// The action documents every status it can answer, with the error body on each refusal, so the
-    /// generated API description matches what a client can actually receive.
+    /// The action documents every status it answers itself, with the error body on each refusal, so the
+    /// generated API description matches what a client can actually receive; the 429 is declared once
+    /// on the controller.
     /// </summary>
     [Fact]
     public void GetMyPdf_DeclaresEveryStatus()
@@ -83,7 +82,6 @@ public sealed class GetMyInvoicePdfTests(IntegrationTestFactory factory) : IClas
             (StatusCodes.Status401Unauthorized, typeof(ErrorResponse)),
             (StatusCodes.Status403Forbidden, typeof(ErrorResponse)),
             (StatusCodes.Status404NotFound, typeof(ErrorResponse)),
-            (StatusCodes.Status429TooManyRequests, typeof(ErrorResponse)),
         });
     }
 

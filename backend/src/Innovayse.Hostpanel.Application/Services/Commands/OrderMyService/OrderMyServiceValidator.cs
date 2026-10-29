@@ -1,8 +1,6 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Common.Validators;
 using Innovayse.Hostpanel.Application.Resources;
-using Innovayse.Hostpanel.Domain.Products;
-using Innovayse.Hostpanel.Domain.Products.Enums;
 using Microsoft.Extensions.Localization;
 
 namespace Innovayse.Hostpanel.Application.Services.Commands.OrderMyService;
@@ -16,9 +14,6 @@ public sealed class OrderMyServiceValidator : LocalizedValidator<OrderMyServiceC
         : base(localizer)
     {
         RuleFor(x => x.ProductId).MustBePositiveId(L["OrderServiceProductIdInvalid"]);
-        RuleFor(x => x.BillingCycle)
-            .NotEmpty()
-            .Must(c => c.ToLowerInvariant() is BillingCycleNames.Monthly or BillingCycleNames.Annual or BillingCycleNames.Annually)
-            .WithMessage(L["OrderServiceBillingCycleInvalid"]);
+        RuleFor(x => x.BillingCycle).IsInEnum().WithMessage(L["OrderServiceBillingCycleInvalid"]);
     }
 }

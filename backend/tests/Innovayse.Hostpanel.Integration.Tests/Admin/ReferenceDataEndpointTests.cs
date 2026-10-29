@@ -2,9 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -48,7 +45,7 @@ public sealed class ReferenceDataEndpointTests(IntegrationTestFactory factory) :
         countries!.Should().Contain(c => c.GetProperty("code").GetString() == "US");
     }
 
-    /// <summary>Currencies are readable by an anonymous caller — the storefront needs them before sign-in.</summary>
+    /// <summary>Currencies are readable by an anonymous caller: the storefront needs them before sign-in.</summary>
     [Fact]
     public async Task GetCurrencies_IsAnonymousAndReturnsTheListAsync()
     {

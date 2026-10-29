@@ -12,20 +12,18 @@
 import { backendLanguage } from '~/server/utils/api'
 import { readTokenPayload } from '~/server/utils/auth-cookie'
 import { resolveAccessToken } from '~/server/utils/portal-session'
+import { signOnFetch } from '~/server/utils/signon-http'
 import { buildClientMenu } from '~/server/utils/clientMenu'
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
   const accessToken = await resolveAccessToken(event)
   if (!accessToken) {
     throw createError({ statusCode: 401 })
   }
 
-  const profile = await $fetch<Record<string, unknown>>(`${config.ssoUrl}/api/account/profile`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  const profile = await signOnFetch<Record<string, unknown>>('/api/account/profile', { accessToken })
 
-  // Extract ssoSub from JWT for account-switching (widget needs it to call /api/portal/auth/sso/switch)
+  // Extract ssoSub from JWT for account-switching (widget needs it to GET /api/portal/auth/sso/switch)
   let ssoSub = (profile.sub as string | undefined) || ''
   if (!ssoSub) {
     const sub = readTokenPayload(accessToken)?.['sub']

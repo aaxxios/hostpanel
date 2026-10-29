@@ -1,7 +1,7 @@
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Products.Common;
-using Innovayse.Hostpanel.Application.Products.Constants;
+using Innovayse.Hostpanel.Application.Products.Extensions;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +45,7 @@ public sealed class UpdateProductFeatureHandler
         // Renaming a line onto a label the product already uses would hide one of them
         // from the comparison table, which keys its rows on the label. This line itself
         // is excluded, so saving a line without renaming it is never blocked.
-        if (await ProductFeatureLabels.ExistsWithLabelAsync(_context, feature.ProductId, cmd.Label, cmd.Id, ct))
+        if (await _context.ProductFeatureLabelExistsAsync(feature.ProductId, cmd.Label, cmd.Id, ct))
         {
             return Result.FailureCode(HostpanelErrorCodes.PRODUCT_FEATURE_LABEL_DUPLICATE);
         }

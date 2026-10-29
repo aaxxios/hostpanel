@@ -111,7 +111,27 @@ describe('SlideFormView', () => {
     stubRouteTable(routes)
     const { wrapper } = await mountScreen(SlideFormView, {}, '/settings/slides/99/edit', '/settings/slides/:id/edit')
 
-    expect(wrapper.get('[data-testid="slide-form-error"]').text()).toBe('Slide #99 not found.')
+    expect(wrapper.get('[data-testid="slide-form-load-error"]').text()).toBe('Slide #99 not found.')
+    expect(wrapper.find('[data-testid="slide-form-title"]').exists()).toBe(false)
+  })
+
+  it('offers a retry when the slide cannot be loaded', async () => {
+    let refused = true
+    stubRouteTable({
+      ...routes,
+      'GET /admin/slides': () => (refused ? problem('Not allowed.', 403) : json([stored])),
+    })
+    const { wrapper } = await mountScreen(SlideFormView, {}, '/settings/slides/3/edit', '/settings/slides/:id/edit')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="slide-form-load-error"]').text()).toBe('Not allowed.')
+    })
+    refused = false
+    await wrapper.get('[data-testid="slide-form-load-error-retry"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect((wrapper.get('[data-testid="slide-form-title"]').element as HTMLInputElement).value).toBe('Hello')
+    })
   })
 
   it('shows the API sentence when saving is refused and stays on the form', async () => {
@@ -144,7 +164,7 @@ describe('SlideFormView', () => {
   })
 
   it('stages the uploaded image URL and previews it', async () => {
-    stubRouteTable({ ...routes, 'POST /admin/slides/upload-image': () => json({ url: '/img/up.png' }) })
+    stubRouteTable({ ...routes, 'POST /admin/storefront/upload-image': () => json({ url: '/img/up.png' }) })
     const { wrapper } = await mountScreen(SlideFormView, {}, '/settings/slides/create', '/settings/slides/create')
     const input = wrapper.get('[data-testid="slide-form-image-file"]')
     Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'a.png')], configurable: true })

@@ -38,8 +38,8 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** The hosting plans the catalogue answers with. */
 const plans: PortalProduct[] = [
-  { id: 2, pid: 2, groupId: 1, name: 'Starter', description: 'Small sites', pricing: { monthly: 5, annual: 50 } },
-  { id: 3, pid: 3, groupId: 1, name: 'Business', description: 'Busy sites', pricing: { monthly: 15, annual: 150 } },
+  { id: 2, groupId: 1, name: 'Starter', description: 'Small sites', pricing: { monthly: 5, annual: 50 } },
+  { id: 3, groupId: 1, name: 'Business', description: 'Busy sites', pricing: { monthly: 15, annual: 150 } },
 ]
 
 /** What the template component is given, recorded for the assertions. */
@@ -59,7 +59,11 @@ const TemplateHosting = defineComponent({
 /** What the stood-in runtime recorded for the current test. */
 let spies: PublicPageSpies
 
-/** Mounts the page and lets the catalogue and the currencies load. */
+/**
+ * Mounts the page and lets the catalogue and the currencies load.
+ *
+ * @returns The wrapper.
+ */
 const mountHosting = async () => {
   const wrapper = await mountPage(HostingPage)
   await flushPromises()

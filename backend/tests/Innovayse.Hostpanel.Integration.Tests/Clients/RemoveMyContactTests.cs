@@ -2,13 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
@@ -22,7 +19,7 @@ public sealed class RemoveMyContactTests(IntegrationTestFactory factory) : IClas
     {
         var (client, _, _) = await ClientsTestSeeds.RegisterClientAsync(factory, "remove-my-contact");
         (await client.PostAsJsonAsync("/api/clients/me/contacts", ClientsTestSeeds.ContactBody("Gone")))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            .StatusCode.Should().Be(HttpStatusCode.Created);
         var listed = await client.GetFromJsonAsync<JsonElement>("/api/clients/me/contacts");
         var contactId = listed.EnumerateArray().Single().GetProperty("id").GetInt32();
 
@@ -33,7 +30,7 @@ public sealed class RemoveMyContactTests(IntegrationTestFactory factory) : IClas
         after.GetArrayLength().Should().Be(0);
     }
 
-    /// <summary>A contact id that is not on the caller's account answers 404 with <c>MY_CONTACT_NOT_FOUND</c>.</summary>
+    /// <summary>A contact id that is not on the caller's account answers 404 with <c>CLIENT_CONTACT_NOT_FOUND</c>.</summary>
     [Fact]
     public async Task RemoveMyContactRefusesAnUnknownContact()
     {
@@ -42,7 +39,7 @@ public sealed class RemoveMyContactTests(IntegrationTestFactory factory) : IClas
         var response = await client.DeleteAsync("/api/clients/me/contacts/999999");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_CONTACT_NOT_FOUND);
     }
 
     /// <summary>A caller with the Client role but no client row owns no account and is linked to none, so the permission gate refuses with 403 <c>CLIENT_PERMISSION_DENIED</c>.</summary>

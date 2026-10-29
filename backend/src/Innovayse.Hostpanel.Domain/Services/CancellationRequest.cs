@@ -1,7 +1,9 @@
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
+
 namespace Innovayse.Hostpanel.Domain.Services;
+
 /// <summary>
 /// Represents a client's request to cancel one of their services.
 /// Linked to a <see cref="ClientService"/> via <see cref="ServiceId"/>.
@@ -24,7 +26,7 @@ public sealed class CancellationRequest : BaseEntity
     /// <summary>Gets the UTC timestamp when the request was submitted.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private CancellationRequest() { }
 
     /// <summary>
@@ -42,7 +44,6 @@ public sealed class CancellationRequest : BaseEntity
             Type = type,
             Reason = reason,
             Status = CancellationStatus.Open,
-            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 

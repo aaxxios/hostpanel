@@ -1,4 +1,5 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Application.Reports.Common;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,11 +15,16 @@ public sealed class NewCustomersHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public NewCustomersHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public NewCustomersHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the query.</summary>
@@ -29,7 +35,7 @@ public sealed class NewCustomersHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var year = query.Year ?? DateTime.UtcNow.Year;
+        var year = query.Year ?? _clock.UtcNow.UtcDateTime.Year;
 
         var newClients = await _context.Clients.AsNoTracking()
             .Where(c => c.CreatedAt.Year == year)

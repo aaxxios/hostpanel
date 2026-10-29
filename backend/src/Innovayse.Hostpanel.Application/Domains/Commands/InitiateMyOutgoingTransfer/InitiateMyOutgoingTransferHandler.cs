@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.InitiateMyOutgoingTransfer;
+
 /// <summary>
 /// Starts an outgoing transfer of one of the calling client's own domains, refusing every domain
 /// that is not theirs.
@@ -36,21 +37,21 @@ public sealed class InitiateMyOutgoingTransferHandler
     /// <param name="cmd">The command. It names no account: this acts on the caller's own domain.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// The EPP authorization code to hand to the gaining registrar, or <c>DOMAIN_NOT_FOUND</c>
+    /// The EPP authorization code, as an <see cref="EppCodeDto"/>, to hand to the gaining registrar, or <c>DOMAIN_NOT_FOUND</c>
     /// when the domain is not the caller's, when no such domain exists, or when the caller has no
     /// client record, or <c>DOMAIN_NO_REGISTRAR_REF</c> when the domain carries no registrar
     /// reference, or <c>DOMAIN_OUTGOING_TRANSFER_UPSTREAM_FAILED</c> when the registrar rejects the
     /// request, or <c>DOMAIN_EPP_CODE_UPSTREAM_FAILED</c> when the registrar returns no code.
     /// </returns>
     /// <exception cref="UnauthorizedAccessException">Thrown when the request carries no subject.</exception>
-    public async Task<Result<string>> HandleAsync(InitiateMyOutgoingTransferCommand cmd, CancellationToken ct)
+    public async Task<Result<EppCodeDto>> HandleAsync(InitiateMyOutgoingTransferCommand cmd, CancellationToken ct)
     {
         var ownershipOutcome = await _ownership.RequireOwnedByCallerAsync(cmd.DomainId, ct);
         if (ownershipOutcome.IsFailure)
         {
-            return Result<string>.FailureCode(ownershipOutcome.ErrorCode!);
+            return Result<EppCodeDto>.FailureCode(ownershipOutcome.ErrorCode!);
         }
 
-        return await _bus.InvokeAsync<Result<string>>(new InitiateOutgoingTransferCommand(cmd.DomainId), ct);
+        return await _bus.InvokeAsync<Result<EppCodeDto>>(new InitiateOutgoingTransferCommand(cmd.DomainId), ct);
     }
 }

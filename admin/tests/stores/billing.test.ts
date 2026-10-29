@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useBillingStore } from '@/stores/billing'
+import { InvoiceRefundType } from '@/types/invoice'
 import { json, problem, stubFetch, stubOffline, callOf } from '../helpers/fetch'
 
 /** Sentence the client writes when nothing answered. */
@@ -21,7 +22,7 @@ afterEach(() => {
 
 describe('billingStore loads', () => {
   it('fetchAll fills the list and the total, sending only set filters', async () => {
-    const mock = stubFetch(json({ items: [{ id: 1 }], totalCount: 7, page: 1, pageSize: 25 }))
+    const mock = stubFetch(json({ items: [{ id: 1 }], pageNumber: 1, pageSize: 25, totalCount: 7, totalPages: 1 }))
     const store = useBillingStore()
 
     await store.fetchAll(1, 25, 'Paid')
@@ -93,14 +94,6 @@ describe('billingStore mutations', () => {
     expect(mock).toHaveBeenCalledTimes(1)
   })
 
-  it('payInvoice requests a USD capture', async () => {
-    const mock = stubFetch(new Response(null, { status: 204 }), json({ id: 5 }))
-    const store = useBillingStore()
-
-    await store.payInvoice(5)
-    expect(callOf(mock, 0)).toMatchObject({ url: '/api/billing/5/pay', body: { currency: 'USD' } })
-  })
-
   it('duplicateInvoice returns the new id or null', async () => {
     const store = useBillingStore()
     stubFetch(json({ id: 11 }))
@@ -143,7 +136,11 @@ describe('billingStore mutations', () => {
     expect(await store.addPayment(5, { date: 'a', gateway: 'g', transactionId: 't', amount: 1 })).toBe(true)
     expect(await store.applyCredit(5, 1)).toBe(true)
     expect(await store.removeCredit(5, 1)).toBe(true)
-    expect(await store.refundPayment(5, { transactionId: 't', amount: 1, refundType: 'Full', gateway: 'g' })).toBe(true)
+    expect(await store.refundPayment(5, { amount: 1, refundType: InvoiceRefundType.Gateway })).toBe(true)
     expect(mock).toHaveBeenCalledTimes(14)
+  })
+
+  it('pdfUrl gives the address of the invoice PDF download', () => {
+    expect(useBillingStore().pdfUrl(5)).toBe('/api/billing/5/pdf')
   })
 })

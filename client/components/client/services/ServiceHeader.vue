@@ -3,8 +3,8 @@
     <UiStack direction="row" align="center">
       <UiTile :icon="Server" tone="primary" size="xl" />
       <UiStack gap="none">
-        <UiHeading :level="1" size="subsection">{{ productNameOrFallback($t, service.name, service.id) }}</UiHeading>
-        <UiText size="sm" tone="muted">{{ service.domain || service.groupname }}</UiText>
+        <UiHeading :level="1" size="subsection">{{ service.productName }}</UiHeading>
+        <UiText size="sm" tone="muted">{{ service.domain || $t('client.dashboard.noDomain') }}</UiText>
       </UiStack>
     </UiStack>
     <UiStack direction="row" align="center" gap="sm">
@@ -31,16 +31,15 @@
  */
 import { computed } from 'vue'
 import { Monitor, Server } from 'lucide-vue-next'
-import type { ServiceDetail } from '~/types/servicedetail'
+import type { ClientService } from '~/types/clientservice'
 import { Permission } from '~/composables/usePermissions'
 import { useClientStore } from '~/stores/client'
 import { ServiceStatus } from '~/types/servicestatus'
-import { productNameOrFallback } from '~/utils/displayFallback'
 
 /** Props of ServiceHeader. */
 interface Props {
   /** The service being shown. */
-  service: ServiceDetail
+  service: ClientService
   /** Whether the control-panel sign-in is in flight. */
   ssoLoading: boolean
 }
@@ -59,7 +58,7 @@ const store = useClientStore()
 
 /** Whether the control-panel button is offered: an active service on a known server, to a person allowed single sign-on. */
 const canLogin = computed(() =>
-  Boolean(props.service.serverhostname)
+  Boolean(props.service.server)
   && props.service.status === ServiceStatus.Active
   && store.mayDo(Permission.AllowSingleSignOn))
 </script>

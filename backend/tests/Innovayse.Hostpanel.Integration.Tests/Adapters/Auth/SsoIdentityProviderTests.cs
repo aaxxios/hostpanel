@@ -1,33 +1,32 @@
 using System.Net;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Infrastructure.Auth;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Auth;
+
 /// <summary>
-/// Unit tests for the SSO-backed identity provider, against a stub SSO HTTP server.
+/// Unit tests for the provider-backed identity provider, against a stub sign-on provider HTTP server.
 ///
 /// <para>
 /// No database and no container: what is worth checking here is how this product reads
-/// the SSO's replies, and above all that it tells "no such account" apart from "the SSO
+/// the sign-on provider's replies, and above all that it tells "no such account" apart from "the sign-on provider
 /// did not answer". Confusing those two would let a network fault read as a deleted
 /// customer.
 /// </para>
 /// </summary>
 public sealed class SsoIdentityProviderTests : IAsyncLifetime
 {
-    /// <summary>The loopback server standing in for the SSO; started per test class instance.</summary>
+    /// <summary>The loopback server standing in for the sign-on provider; started per test class instance.</summary>
     private StubHttpServer sso = null!;
 
-    /// <summary>Starts the stub SSO server before each test.</summary>
+    /// <summary>Starts the stub sign-on provider server before each test.</summary>
     /// <returns>A task that completes when the server listens.</returns>
     public async Task InitializeAsync()
     {
         sso = await StubHttpServer.StartAsync();
     }
 
-    /// <summary>Stops the stub SSO server after each test.</summary>
+    /// <summary>Stops the stub sign-on provider server after each test.</summary>
     /// <returns>A task that completes when the server is down.</returns>
     public async Task DisposeAsync()
     {
@@ -59,7 +58,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
     /// <returns>The scripted reply.</returns>
     private static StubReply Status(HttpStatusCode status) => new(status, string.Empty);
 
-    /// <summary>Verifies: Find By Subject Async - Returns The Account.</summary>
+    /// <summary>Finding by subject returns the account the sign-on provider holds.</summary>
     [Fact]
     public async Task FindBySubjectAsync_ReturnsTheAccountAsync()
     {
@@ -75,26 +74,24 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         found.LastName.Should().Be("Lovelace");
     }
 
-    /// <summary>Verifies: Find By Subject Async - When The Sso Has No Such Account - Returns Null.</summary>
+    /// <summary>Finding by subject returns null when the sign-on provider has no such account.</summary>
     [Fact]
     public async Task FindBySubjectAsync_WhenTheSsoHasNoSuchAccount_ReturnsNullAsync()
     {
         var provider = Build(Status(HttpStatusCode.NotFound));
 
-        /// <summary>Find By Subject Async, when The Service Key Is Rejected, throws.</summary>
         var found = await provider.FindBySubjectAsync("sub-unknown", CancellationToken.None);
 
         found.Should().BeNull();
     }
 
-    /// <summary>Verifies: Find By Subject Async - When The Sso Fails - Throws Rather Than Returning Null.</summary>
+    /// <summary>Finding by subject throws when the sign-on provider fails, rather than returning null.</summary>
     [Fact]
     public async Task FindBySubjectAsync_WhenTheSsoFails_ThrowsRatherThanReturningNullAsync()
     {
         // The case this class exists for. A 500 means the answer is unknown; returning
         // null would tell the caller the person does not exist, and the admin screens
         // would show a live customer as an unresolved row.
-        /// <summary>Find By Email Async, resolves Through The Lookup Then The Account.</summary>
         var provider = Build(Status(HttpStatusCode.InternalServerError));
 
         var act = () => provider.FindBySubjectAsync("sub-1", CancellationToken.None);
@@ -102,7 +99,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         await act.Should().ThrowAsync<HttpRequestException>();
     }
 
-    /// <summary>Verifies: Find By Subject Async - When The Service Key Is Rejected - Throws.</summary>
+    /// <summary>Finding by subject throws when the service key is rejected.</summary>
     [Fact]
     public async Task FindBySubjectAsync_WhenTheServiceKeyIsRejected_ThrowsAsync()
     {
@@ -115,7 +112,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         await act.Should().ThrowAsync<HttpRequestException>();
     }
 
-    /// <summary>Verifies: Find By Email Async - Resolves Through The Lookup Then The Account.</summary>
+    /// <summary>Finding by email resolves the subject through the lookup, then reads the account.</summary>
     [Fact]
     public async Task FindByEmailAsync_ResolvesThroughTheLookupThenTheAccountAsync()
     {
@@ -133,7 +130,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         sso.Requests.Should().HaveCount(2);
     }
 
-    /// <summary>Verifies: Find By Email Async - For An Unknown Address - Returns Null Without ASecond Call.</summary>
+    /// <summary>Finding by an unknown email returns null without a second call.</summary>
     [Fact]
     public async Task FindByEmailAsync_ForAnUnknownAddress_ReturnsNullWithoutASecondCallAsync()
     {
@@ -145,13 +142,12 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         sso.Requests.Should().ContainSingle();
     }
 
-    /// <summary>Verifies: Find By Email Async - Escapes The Address.</summary>
-    /// <summary>Get Emails By Subjects Async, returns What The Sso Knows.</summary>
+    /// <summary>Finding by email escapes the address in the request.</summary>
     [Fact]
     public async Task FindByEmailAsync_EscapesTheAddressAsync()
     {
         // Addresses contain characters a query string treats as structure. Unescaped,
-        // "a+b@example.com" reaches the SSO as "a b@example.com" and resolves to nobody.
+        // "a+b@example.com" reaches the sign-on provider as "a b@example.com" and resolves to nobody.
         var provider = Build(Status(HttpStatusCode.NotFound));
 
         await provider.FindByEmailAsync("a+b@example.com", CancellationToken.None);
@@ -160,7 +156,6 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
     }
 
     /// <summary>The batch reply, used by both bulk lookups below.</summary>
-    /// <summary>Get Accounts By Subjects Async, returns Whole Accounts In One Call.</summary>
     private const string TwoAccounts =
         """
         {"users":[
@@ -168,21 +163,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
           {"id":"sub-2","email":"grace@example.com","firstName":"Grace","lastName":"Hopper","twoFactorEnabled":false}]}
         """;
 
-    /// <summary>Verifies: Get Emails By Subjects Async - Returns What The Sso Knows.</summary>
-    [Fact]
-    public async Task GetEmailsBySubjectsAsync_ReturnsWhatTheSsoKnowsAsync()
-    {
-        var provider = Build(Json(HttpStatusCode.OK, TwoAccounts));
-
-        var emails = await provider.GetEmailsBySubjectsAsync(
-            ["sub-1", "sub-2", "sub-3"], CancellationToken.None);
-
-        emails.Should().HaveCount(2);
-        emails["sub-1"].Should().Be("ada@example.com");
-        emails.ContainsKey("sub-3").Should().BeFalse();
-    }
-
-    /// <summary>Verifies: Get Accounts By Subjects Async - Returns Whole Accounts In One Call.</summary>
+    /// <summary>Reading accounts by subjects returns whole accounts in one call.</summary>
     [Fact]
     public async Task GetAccountsBySubjectsAsync_ReturnsWholeAccountsInOneCallAsync()
     {
@@ -198,12 +179,11 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         accounts["sub-2"].TwoFactorEnabled.Should().BeFalse();
         accounts.ContainsKey("sub-3").Should().BeFalse();
 
-        // One request for the set, not one per subject — the whole reason this exists.
+        // One request for the set, not one per subject: the reason this lookup exists.
         sso.Requests.Should().ContainSingle();
     }
 
-    /// <summary>Verifies: Get Accounts By Subjects Async - When The Sso Fails - Throws.</summary>
-    /// <summary>List Async, returns The Page And The Unpaged Total.</summary>
+    /// <summary>Reading accounts by subjects throws when the sign-on provider fails.</summary>
     [Fact]
     public async Task GetAccountsBySubjectsAsync_WhenTheSsoFails_ThrowsAsync()
     {
@@ -216,19 +196,19 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         await act.Should().ThrowAsync<HttpRequestException>();
     }
 
-    /// <summary>Verifies: Get Emails By Subjects Async - For No Subjects - Makes No Request.</summary>
+    /// <summary>Reading accounts for no subjects makes no request.</summary>
     [Fact]
-    public async Task GetEmailsBySubjectsAsync_ForNoSubjects_MakesNoRequestAsync()
+    public async Task GetAccountsBySubjectsAsync_ForNoSubjects_MakesNoRequestAsync()
     {
         var provider = Build();
 
-        var emails = await provider.GetEmailsBySubjectsAsync([], CancellationToken.None);
+        var accounts = await provider.GetAccountsBySubjectsAsync([], CancellationToken.None);
 
-        emails.Should().BeEmpty();
+        accounts.Should().BeEmpty();
         sso.Requests.Should().BeEmpty();
     }
 
-    /// <summary>Verifies: List Async - Returns The Page And The Unpaged Total.</summary>
+    /// <summary>Listing returns the page and the unpaged total.</summary>
     [Fact]
     public async Task ListAsync_ReturnsThePageAndTheUnpagedTotalAsync()
     {
@@ -239,29 +219,31 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
               {"id":"sub-2","email":"grace@example.com","firstName":"Grace","lastName":"Hopper"}]}
             """));
 
-        var (items, total) = await provider.ListAsync("lace", page: 2, pageSize: 2, CancellationToken.None);
+        var page = await provider.ListAsync(new IdentityAccountListQuery("lace", Page: 2, PageSize: 2), CancellationToken.None);
 
-        total.Should().Be(57);
-        items.Should().HaveCount(2);
-        items[0].Subject.Should().Be("sub-1");
+        page.TotalCount.Should().Be(57);
+        page.PageNumber.Should().Be(2);
+        page.PageSize.Should().Be(2);
+        page.Items.Should().HaveCount(2);
+        page.Items[0].Subject.Should().Be("sub-1");
 
         var query = sso.Requests.Single().PathAndQuery;
         query.Should().Contain("page=2").And.Contain("pageSize=2").And.Contain("search=lace");
     }
 
-    /// <summary>Verifies: List Async - Without ASearch - Sends No Search Parameter.</summary>
+    /// <summary>Listing without a search sends no search parameter.</summary>
     [Fact]
     public async Task ListAsync_WithoutASearch_SendsNoSearchParameterAsync()
     {
         var provider = Build(Json(HttpStatusCode.OK,
             """{"total":0,"page":1,"pageSize":25,"users":[]}"""));
 
-        await provider.ListAsync(null, page: 1, pageSize: 25, CancellationToken.None);
+        await provider.ListAsync(new IdentityAccountListQuery(null, Page: 1, PageSize: 25), CancellationToken.None);
 
         sso.Requests.Single().PathAndQuery.Should().NotContain("search=");
     }
 
-    /// <summary>Verifies: List Async - When The Sso Fails - Throws Rather Than Returning An Empty Page.</summary>
+    /// <summary>Listing throws when the sign-on provider fails, rather than returning an empty page.</summary>
     [Fact]
     public async Task ListAsync_WhenTheSsoFails_ThrowsRatherThanReturningAnEmptyPageAsync()
     {
@@ -269,7 +251,7 @@ public sealed class SsoIdentityProviderTests : IAsyncLifetime
         // alarming and far less actionable thing to show than an error.
         var provider = Build(Status(HttpStatusCode.BadGateway));
 
-        var act = () => provider.ListAsync(null, 1, 25, CancellationToken.None);
+        var act = () => provider.ListAsync(new IdentityAccountListQuery(null, 1, 25), CancellationToken.None);
 
         await act.Should().ThrowAsync<HttpRequestException>();
     }

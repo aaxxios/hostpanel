@@ -1,6 +1,9 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
+using Innovayse.Hostpanel.Application.Domains.Common.Enums;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
+using Innovayse.Hostpanel.Domain.Domains;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,23 +11,23 @@ namespace Innovayse.Hostpanel.Application.Domains.Queries.CheckDomainAvailabilit
 
 /// <summary>
 /// Checks whether a domain name is available for registration.
-/// First checks the local database — if the domain is already registered through us it is not available.
+/// First checks the local database: if the domain is already registered through us it is not available.
 /// Falls back to the registrar provider API for external availability.
 /// </summary>
 public sealed class CheckDomainAvailabilityHandler
 {
-    /// <summary>The registrar provider consulted when the name is not already ours.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context consulted first.</summary>
     private readonly IHostpanelDbContext _context;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider consulted when the name is not already ours.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context consulted first.</param>
-    public CheckDomainAvailabilityHandler(IRegistrarProvider registrar, IHostpanelDbContext context)
+    public CheckDomainAvailabilityHandler(RegistrarProviderResolver registrars, IHostpanelDbContext context)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
     }
 
@@ -34,21 +37,26 @@ public sealed class CheckDomainAvailabilityHandler
     /// <param name="query">The check domain availability query.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// <see langword="true"/> if the domain is available; otherwise <see langword="false"/>. Never
-    /// refuses.
+    /// The trimmed name, whether it is available and the same outcome as a status. Never refuses.
     /// </returns>
-    public async Task<Result<bool>> HandleAsync(CheckDomainAvailabilityQuery query, CancellationToken ct)
+    public async Task<Result<DomainCheckResultDto>> HandleAsync(CheckDomainAvailabilityQuery query, CancellationToken ct)
     {
+        var domain = query.Domain.Trim();
+
         // If the domain already exists in our system, it's not available
         var existing = await _context.Domains
             .IncludeChildren()
-            .FirstOrDefaultAsync(x => x.Name == query.Domain, ct);
-        if (existing is not null)
+            .FirstOrDefaultAsync(x => x.Name == RegisteredDomain.NormaliseName(domain), ct);
+        var available = false;
+        if (existing is null)
         {
-            return Result.Success(false);
+            var registrar = await _registrars.ResolveForTldAsync(domain, ct);
+            available = await registrar.Provider.CheckAvailabilityAsync(domain, ct);
         }
 
-        var available = await _registrar.CheckAvailabilityAsync(query.Domain, ct);
-        return Result.Success(available);
+        return Result.Success(new DomainCheckResultDto(
+            domain,
+            available,
+            available ? DomainAvailabilityStatus.Available : DomainAvailabilityStatus.Taken));
     }
 }

@@ -4,9 +4,8 @@ using Innovayse.Hostpanel.Domain.Domains;
 namespace Innovayse.Hostpanel.Application.Domains.Extensions;
 
 /// <summary>
-/// Maps a <see cref="RegisteredDomain"/> to <see cref="DomainDto"/>. Every read of a full domain --
-/// the admin detail and the client's own list -- goes through this one mapping, so a field added to
-/// the DTO is added once rather than in places that quietly drift apart.
+/// Maps a <see cref="RegisteredDomain"/> to the staff <see cref="DomainDto"/> and to the client's own
+/// <see cref="MyDomainDto"/>; each read of a domain goes through one of these two mappings.
 /// </summary>
 public static class DomainMappingExtensions
 {
@@ -23,39 +22,76 @@ public static class DomainMappingExtensions
             domain.Name,
             domain.Tld,
             domain.Status,
-            domain.RegisteredAt,
-            domain.ExpiresAt,
-            domain.AutoRenew,
-            domain.WhoisPrivacy,
-            domain.IsLocked,
-            domain.RegistrarRef,
-            domain.EppCode,
-            domain.LinkedServiceId,
-            domain.FirstPaymentAmount,
-            domain.RecurringAmount,
-            domain.PaymentMethod,
-            domain.PromotionCode,
-            domain.SubscriptionId,
             domain.AdminNotes,
-            domain.OrderId,
-            domain.OrderType,
-            domain.DnsManagement,
-            domain.EmailForwarding,
-            domain.PriceCurrency,
-            domain.NextDueDate,
-            domain.Registrar,
-            domain.RegistrationPeriod,
-            domain.Nameservers
-                .Select(n => new NameserverDto(n.Id, n.Host))
-                .ToList(),
-            domain.DnsRecords
-                .Select(r => new DnsRecordDto(r.Id, r.Type, r.Host, r.Value, r.Ttl, r.Priority))
-                .ToList(),
-            domain.EmailForwardingRules
-                .Select(r => new EmailForwardingRuleDto(r.Id, r.Source, r.Destination, r.IsActive))
-                .ToList(),
+            new DomainTermDto(domain.RegisteredAt, domain.ExpiresAt, domain.NextDueDate, domain.RegistrationPeriod),
+            new DomainRegistrarDto(domain.Registrar, domain.RegistrarRef, domain.EppCode),
+            new DomainFeaturesDto(
+                domain.AutoRenew,
+                domain.WhoisPrivacy,
+                domain.IsLocked,
+                domain.DnsManagement,
+                domain.EmailForwarding),
+            new DomainBillingDto(
+                domain.FirstPaymentAmount,
+                domain.RecurringAmount,
+                domain.PriceCurrency,
+                domain.PaymentMethod,
+                domain.PromotionCode,
+                domain.SubscriptionId),
+            new DomainOriginDto(domain.OrderId, domain.OrderType, domain.LinkedServiceId),
+            domain.Nameservers.Select(ToNameserverDto).ToList(),
+            domain.DnsRecords.Select(ToDnsRecordDto).ToList(),
+            domain.EmailForwardingRules.Select(ToEmailForwardingRuleDto).ToList(),
             domain.Reminders
                 .Select(r => new DomainReminderDto(r.Id, r.ReminderType, r.SentTo, r.SentAt))
                 .ToList());
     }
+
+    /// <summary>Maps a domain to the client's own <see cref="MyDomainDto"/>.</summary>
+    /// <param name="domain">The domain; its nameservers, DNS records and forwarding rules must be loaded.</param>
+    /// <returns>The mapped DTO.</returns>
+    public static MyDomainDto ToMyDto(this RegisteredDomain domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new MyDomainDto(
+            domain.Id,
+            domain.Name,
+            domain.Status,
+            domain.RegisteredAt,
+            domain.ExpiresAt,
+            domain.NextDueDate,
+            domain.AutoRenew,
+            domain.WhoisPrivacy,
+            domain.IsLocked,
+            domain.FirstPaymentAmount,
+            domain.RecurringAmount,
+            domain.PriceCurrency,
+            domain.PaymentMethod,
+            domain.RegistrationPeriod,
+            new MyDomainManagementDto(
+                domain.DnsManagement,
+                domain.EmailForwarding,
+                domain.Nameservers.Select(ToNameserverDto).ToList(),
+                domain.DnsRecords.Select(ToDnsRecordDto).ToList(),
+                domain.EmailForwardingRules.Select(ToEmailForwardingRuleDto).ToList()));
+    }
+
+    /// <summary>Maps one nameserver to <see cref="NameserverDto"/>.</summary>
+    /// <param name="nameserver">The domain's nameserver entry.</param>
+    /// <returns>The mapped DTO.</returns>
+    private static NameserverDto ToNameserverDto(Nameserver nameserver) =>
+        new(nameserver.Id, nameserver.Host);
+
+    /// <summary>Maps one DNS record to <see cref="DnsRecordDto"/>.</summary>
+    /// <param name="record">The DNS record.</param>
+    /// <returns>The mapped DTO.</returns>
+    private static DnsRecordDto ToDnsRecordDto(DnsRecord record) =>
+        new(record.Id, record.Type, record.Host, record.Value, record.Ttl, record.Priority);
+
+    /// <summary>Maps one forwarding rule to <see cref="EmailForwardingRuleDto"/>.</summary>
+    /// <param name="rule">The forwarding rule.</param>
+    /// <returns>The mapped DTO.</returns>
+    private static EmailForwardingRuleDto ToEmailForwardingRuleDto(EmailForwardingRule rule) =>
+        new(rule.Id, rule.Source, rule.Destination, rule.IsActive);
 }

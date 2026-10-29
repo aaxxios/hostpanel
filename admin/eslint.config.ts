@@ -20,7 +20,6 @@ const INPUT_TAGS: ReadonlySet<string> = new Set([
   'UiTextarea',
   'UiSelect',
   'UiNumberInput',
-  'UiNativeSelect',
   'UiTextField',
 ])
 

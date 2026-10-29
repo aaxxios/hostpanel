@@ -16,6 +16,7 @@ import type { FieldDefinitionDto, IntegrationConfigPayload, IntegrationDetailDto
 import SecretSettingField from '@/components/settings/SecretSettingField.vue'
 import { IntegrationFieldType } from '@/types/integration'
 import { SettingToggle } from '@/types/setting'
+import { UiInputType } from '@/utils/ui/input'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiField from '@/components/ui/UiField.vue'
@@ -51,7 +52,7 @@ const emit = defineEmits<{
   test: []
 }>()
 
-/** Static metadata for this integration (logo and tile colour). */
+/** Static metadata for this integration (logo, tile colour and short description); absent for a plugin the admin has no metadata for. */
 const meta = INTEGRATION_META[props.integration.slug as IntegrationSlug]
 
 /**
@@ -199,7 +200,7 @@ const handleSave = (): void => {
         </UiStack>
         <UiStack gap="xs" class="min-w-0 flex-1">
           <UiHeading :level="2" variant="card">{{ integration.name }}</UiHeading>
-          <UiText tone="muted" size="sm" class="truncate">{{ integration.description }}</UiText>
+          <UiText v-if="meta" tone="muted" size="sm" class="truncate">{{ meta.shortDescription }}</UiText>
         </UiStack>
         <UiLabel variant="inline" class="shrink-0">
           <UiToggle v-model="isEnabled" data-testid="integration-enabled" />
@@ -272,7 +273,7 @@ const handleSave = (): void => {
                 v-else
                 :id="id"
                 v-model="localConfig[field.key]"
-                :type="field.type"
+                :type="UiInputType.Text"
                 class="font-mono"
                 :placeholder="t('integrations.integrationConfigForm.enterValue', { label: field.label })"
                 :data-testid="`integration-field-${field.key}`"

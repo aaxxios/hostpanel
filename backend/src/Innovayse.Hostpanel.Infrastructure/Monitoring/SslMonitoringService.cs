@@ -1,6 +1,3 @@
-using System.Net.Security;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Reports.Common;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -9,19 +6,28 @@ using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Domain.Services.Enums;
 using Innovayse.Hostpanel.Domain.Ssl;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Infrastructure.Security;
+using Innovayse.Hostpanel.Infrastructure.Security.Enums;
 using Microsoft.EntityFrameworkCore;
+
 namespace Innovayse.Hostpanel.Infrastructure.Monitoring;
+
 /// <summary>Checks SSL certificates and caches results in the database.</summary>
 public sealed class SslMonitoringService : ISslMonitoringService
 {
-    /// <summary>The db this class uses.</summary>
+    /// <summary>The database the domains are read from and the certificate checks are written to.</summary>
     private readonly AppDbContext _db;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes a new instance of the <see cref="SslMonitoringService"/> class.</summary>
-    /// <param name="db">The db this class uses.</param>
-    public SslMonitoringService(AppDbContext db)
+    /// <param name="db">The database the domains are read from and the certificate checks are written to.</param>
+    /// <param name="clock">The source of the current moment.</param>
+    public SslMonitoringService(AppDbContext db, IClock clock)
     {
         _db = db;
+        _clock = clock;
     }
 
     /// <summary>Display order of the expiry groups, soonest expiry first and "no SSL" last.</summary>
@@ -38,7 +44,7 @@ public sealed class SslMonitoringService : ISslMonitoringService
         }
 
         var checks = await query.OrderBy(x => x.DomainName).ToListAsync(ct);
-        return BuildReport(checks);
+        return BuildReport(checks, _clock.UtcNow);
     }
 
     /// <inheritdoc/>
@@ -73,7 +79,7 @@ public sealed class SslMonitoringService : ISslMonitoringService
         // `db` is a single AppDbContext and EF Core's change tracker is not thread-safe:
         // ten tasks calling Add and mutating tracked entities on it at once can corrupt
         // its state or throw "A second operation was started on this context instance".
-        // The semaphore bounded the outbound connections, never the writes — it let ten
+        // The semaphore bounded the outbound connections, never the writes: it let ten
         // of them run concurrently by design.
         var semaphore = new SemaphoreSlim(10, 10);
         var probes = allDomains.Select(async domain =>
@@ -81,23 +87,23 @@ public sealed class SslMonitoringService : ISslMonitoringService
             await semaphore.WaitAsync(ct);
             try
             {
-                var sslResult = await CheckSslAsync(domain.Name);
-                return (domain.Name, domain.IsActive, sslResult.hasSsl, sslResult.issuer, sslResult.expiresAt);
+                return new DomainSslProbe(domain.Name, domain.IsActive, await CheckSslAsync(domain.Name, ct));
             }
             finally { semaphore.Release(); }
         });
 
         var results = await Task.WhenAll(probes);
+        var checkedAt = _clock.UtcNow;
 
-        foreach (var (name, isActive, hasSsl, issuer, expiresAt) in results)
+        foreach (var (name, isActive, (hasSsl, issuer, expiresAt)) in results)
         {
             if (existing.TryGetValue(name, out var record))
             {
-                record.Update(hasSsl, issuer, expiresAt, isActive);
+                record.RecordCheck(hasSsl, issuer, expiresAt, isActive, checkedAt);
             }
             else
             {
-                _db.SslChecks.Add(SslCheck.Create(name, hasSsl, issuer, expiresAt, isActive));
+                _db.SslChecks.Add(SslCheck.Create(name, hasSsl, issuer, expiresAt, isActive, checkedAt));
             }
         }
 
@@ -106,53 +112,30 @@ public sealed class SslMonitoringService : ISslMonitoringService
         return await GetReportAsync(includeInactive, ct);
     }
 
-    /// <summary>Opens a TLS connection to the host and reads the certificate it presents.</summary>
-    /// <param name="hostname">Host to probe on port 443.</param>
-    /// <returns>Whether a certificate was presented, its issuer and its expiry; empty values when the probe fails.</returns>
-    private static async Task<(bool hasSsl, string? issuer, DateTimeOffset? expiresAt)> CheckSslAsync(string hostname)
+    /// <summary>Reads the certificate a domain presents on port 443.</summary>
+    /// <param name="hostname">The domain, which a client may have typed: only a public host is dialled.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Whether a certificate was presented, its issuer and its expiry; empty values when the host is refused or does not answer.</returns>
+    private static async Task<SslProbeResult> CheckSslAsync(string hostname, CancellationToken ct)
     {
-        try
+        var resolution = await PublicHostGuard.ResolveAsync(hostname, ct);
+        if (resolution.Verdict != PublicHostVerdict.Public)
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            using var tcp = new TcpClient();
-            await tcp.ConnectAsync(hostname, 443, cts.Token);
-
-            using var ssl = new SslStream(tcp.GetStream(), false, (_, _, _, _) => true);
-            await ssl.AuthenticateAsClientAsync(hostname);
-
-            if (ssl.RemoteCertificate is not X509Certificate2 cert)
-            {
-                return (false, null, null);
-            }
-
-            var expiry = new DateTimeOffset(cert.NotAfter, TimeSpan.Zero);
-            var issuerCn = cert.Issuer
-                .Split(',')
-                .Select(p => p.Trim())
-                .FirstOrDefault(p => p.StartsWith("O=", StringComparison.OrdinalIgnoreCase))
-                ?.Substring(2)
-                ?? cert.Issuer
-                    .Split(',')
-                    .Select(p => p.Trim())
-                    .FirstOrDefault(p => p.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
-                    ?.Substring(3)
-                ?? cert.Issuer;
-
-            return (true, issuerCn, expiry);
+            return new SslProbeResult(false, null, null);
         }
-        catch
-        {
-            return (false, null, null);
-        }
+
+        var certificate = await TlsCertificateReader.ReadAsync(hostname, resolution.Addresses, ct);
+        return certificate is null
+            ? new SslProbeResult(false, null, null)
+            : new SslProbeResult(true, certificate.Issuer, certificate.NotAfter);
     }
 
     /// <summary>Buckets the stored checks into the expiry groups.</summary>
     /// <param name="checks">The stored check results to group.</param>
+    /// <param name="now">The moment expiry and last-update ages are measured from.</param>
     /// <returns>The report, one group per expiry bucket in <c>GroupOrder</c>.</returns>
-    private static SslMonitoringDto BuildReport(IReadOnlyList<SslCheck> checks)
+    private static SslMonitoringDto BuildReport(IReadOnlyList<SslCheck> checks, DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
-
         string GetGroup(SslCheck c)
         {
             if (!c.HasSsl || c.ExpiresAt is null)
@@ -179,9 +162,9 @@ public sealed class SslMonitoringService : ISslMonitoringService
             return "Expires in over 180 Days";
         }
 
-        static string FormatLastUpdate(DateTimeOffset checkedAt)
+        string FormatLastUpdate(DateTimeOffset checkedAt)
         {
-            var diff = DateTimeOffset.UtcNow - checkedAt;
+            var diff = now - checkedAt;
             if (diff.TotalMinutes < 1)
             {
                 return "just now";

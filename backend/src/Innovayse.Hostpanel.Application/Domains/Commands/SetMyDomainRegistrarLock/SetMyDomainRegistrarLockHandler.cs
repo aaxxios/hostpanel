@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SetMyDomainRegistrarLock;
+
 /// <summary>
 /// Sets the registrar transfer-lock on one of the calling client's own domains, refusing every
 /// domain that is not theirs.

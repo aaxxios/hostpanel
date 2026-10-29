@@ -8,7 +8,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Demo;
 /// Disk usage reporting for the public demo. Reads the stored figures like the real service, but
 /// "update now" only re-reads them: no server is polled.
 /// </summary>
-internal sealed class DemoDiskUsageService : IDiskUsageService
+public sealed class DemoDiskUsageService : IDiskUsageService
 {
     /// <summary>The real service, used for its read side only.</summary>
     private readonly DiskUsageService _inner;

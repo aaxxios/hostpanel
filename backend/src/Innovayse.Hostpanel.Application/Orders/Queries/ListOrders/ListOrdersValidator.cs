@@ -5,9 +5,8 @@ using Microsoft.Extensions.Localization;
 namespace Innovayse.Hostpanel.Application.Orders.Queries.ListOrders;
 
 /// <summary>
-///     Validator for ListOrdersQuery. Page and page size are both clamped by the handler, and an
-///     unrecognised status string is silently ignored there too, so no rule is declared for any of
-///     them here — decided, not forgotten.
+///     Validator for ListOrdersQuery. Page and page size are both clamped by the handler, and the
+///     status is typed, so an unknown value is refused at binding; no rule is declared here.
 /// </summary>
 public sealed class ListOrdersValidator : LocalizedValidator<ListOrdersQuery>
 {

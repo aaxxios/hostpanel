@@ -15,11 +15,16 @@ public sealed class ConvertQuoteToInvoiceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The clock the issue moment is read from.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public ConvertQuoteToInvoiceHandler(IHostpanelDbContext context)
+    /// <param name="clock">The clock the issue moment is read from.</param>
+    public ConvertQuoteToInvoiceHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>Handles the command.</summary>
@@ -27,8 +32,8 @@ public sealed class ConvertQuoteToInvoiceHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success with the ID of the newly created draft invoice, or <c>QUOTE_NOT_FOUND</c> when the
-    /// quote does not exist. The quote's own stage invariant still throws
-    /// — see <see cref="Quote.Accept"/>.
+    /// quote does not exist. The quote's own stage invariant still throws:
+    /// see <see cref="Quote.Accept"/>.
     /// </returns>
     public async Task<Result<int>> HandleAsync(ConvertQuoteToInvoiceCommand cmd, CancellationToken ct)
     {
@@ -44,7 +49,7 @@ public sealed class ConvertQuoteToInvoiceHandler
 
         var itemData = quote.GetInvoiceItemData();
         // The quote's prices are in the quote's own currency, so the invoice bills in it too.
-        var invoice = Invoice.CreateDraft(quote.ClientId, quote.ExpiryDate, quote.Currency);
+        var invoice = Invoice.CreateDraft(quote.ClientId, quote.ExpiryDate, quote.Currency, _clock.UtcNow);
 
         foreach (var (description, unitPrice, quantity) in itemData)
         {

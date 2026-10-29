@@ -1,7 +1,9 @@
+using Innovayse.Hostpanel.Shared.Contracts.Interfaces;
+
 namespace Innovayse.Hostpanel.Application.Billing.Commands.ProcessRenewalsCron;
 
 /// <summary>
 /// Scheduled command to generate renewal invoices for services due for renewal.
-/// Dispatched daily at 05:00 UTC by <c>BillingScheduledJobsStartup</c>.
+/// Dispatched daily by <c>BillingScheduledJobsStartup</c> at the hour set in <c>ScheduledJobsOptions</c>.
 /// </summary>
-public record ProcessRenewalsCronCommand;
+public sealed record ProcessRenewalsCronCommand : IRecurringJob;

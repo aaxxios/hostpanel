@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe('gatewayLogStore', () => {
   it('fetchPage fills the entries and the total and clears loading', async () => {
-    const mock = stubFetch(json({ items: [entry], totalCount: 7, page: 1, pageSize: 25 }))
+    const mock = stubFetch(json({ items: [entry], pageNumber: 1, pageSize: 25, totalCount: 7, totalPages: 1 }))
     const store = useGatewayLogStore()
 
     await store.fetchPage(noFilters, 1, 25)
@@ -50,7 +50,7 @@ describe('gatewayLogStore', () => {
   })
 
   it('fetchPage sends the paging and the filters, and leaves empty ones out', async () => {
-    const mock = stubFetch(json({ items: [], totalCount: 0, page: 3, pageSize: 10 }))
+    const mock = stubFetch(json({ items: [], pageNumber: 3, pageSize: 10, totalCount: 0, totalPages: 0 }))
     const store = useGatewayLogStore()
 
     await store.fetchPage(
@@ -71,7 +71,7 @@ describe('gatewayLogStore', () => {
 
   it('fetchPage shows the API sentence on refusal and keeps the earlier page', async () => {
     const store = useGatewayLogStore()
-    stubFetch(json({ items: [entry], totalCount: 1, page: 1, pageSize: 25 }))
+    stubFetch(json({ items: [entry], pageNumber: 1, pageSize: 25, totalCount: 1, totalPages: 1 }))
     await store.fetchPage(noFilters, 1, 25)
 
     stubFetch(problem('The log is not available.', 403))

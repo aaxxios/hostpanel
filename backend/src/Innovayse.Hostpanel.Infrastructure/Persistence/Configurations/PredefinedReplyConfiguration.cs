@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core table configuration for <see cref="PredefinedReply"/>.</summary>
 public sealed class PredefinedReplyConfiguration : IEntityTypeConfiguration<PredefinedReply>
 {
@@ -16,5 +17,11 @@ public sealed class PredefinedReplyConfiguration : IEntityTypeConfiguration<Pred
         builder.Property(x => x.CategoryId).IsRequired();
 
         builder.HasIndex(x => x.CategoryId);
+
+        // A category that still holds replies cannot be deleted; the delete use case refuses it first.
+        builder.HasOne<PredefinedReplyCategory>()
+            .WithMany()
+            .HasForeignKey(x => x.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

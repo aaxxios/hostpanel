@@ -1,61 +1,18 @@
-using FluentAssertions;
-using Innovayse.Hostpanel.Infrastructure.Integrations.CPanel.Settings;
 using Innovayse.Hostpanel.Infrastructure.Integrations.CPanel;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.CPanel;
+
 /// <summary>
 /// Unit tests for <see cref="CPanelClient"/>'s WHM JSON API v1 envelope handling.
 /// </summary>
 /// <remarks>
 /// The client asks for <c>api.version=1</c>, whose refusals arrive as HTTP 200 with
-/// <c>{"metadata":{"result":0,"reason":"…"}}</c>. It used to look for the API v0
-/// <c>result.status</c> / <c>statusmsg</c> pair, which a v1 body never carries, so every WHM
-/// refusal returned as a success and all seven functions were unable to report failure.
+/// <c>{"metadata":{"result":0,"reason":"text"}}</c>. These tests pin that every one of the functions
+/// reports such a refusal as a failure, that secrets travel in the POST body and never in the
+/// URL, and that the panel's own reason reaches the log and not the exception.
 /// </remarks>
 public sealed class CPanelClientTests : IAsyncLifetime
 {
-    /// <summary>Settings pointing the client at a WHM host that does not exist.</summary>
-    private static CPanelOptions Settings => new()
-    {
-        ApiUrl = "https://whm.test:2087",
-        Username = "root",
-        ApiToken = "test-token",
-        ServerIp = "203.0.113.10",
-    };
-
-    /// <summary>The loopback server standing in for the WHM host; started per test class instance.</summary>
-    private StubHttpServer whm = null!;
-
-    /// <summary>Starts the stub WHM server before each test.</summary>
-    /// <returns>A task that completes when the server listens.</returns>
-    public async Task InitializeAsync()
-    {
-        whm = await StubHttpServer.StartAsync();
-    }
-
-    /// <summary>Stops the stub WHM server after each test.</summary>
-    /// <returns>A task that completes when the server is down.</returns>
-    public async Task DisposeAsync()
-    {
-        await whm.DisposeAsync();
-    }
-
-    /// <summary>
-    /// Builds a client aimed at the stub server, which answers <paramref name="responseJson"/>
-    /// over real HTTP. The request the client sent is read back from <see cref="whm"/>.
-    /// </summary>
-    /// <param name="responseJson">The JSON body WHM answers with.</param>
-    /// <returns>The client under test.</returns>
-    private CPanelClient BuildClient(string responseJson)
-    {
-        whm.Enqueue(responseJson);
-        var http = new HttpClient { BaseAddress = whm.BaseAddress };
-        return new CPanelClient(http, Options.Create(Settings));
-    }
-
     /// <summary>A real WHM v1 refusal: HTTP 200, result 0, reason in the metadata.</summary>
     private const string CreateAcctRefused =
         """
@@ -84,7 +41,41 @@ public sealed class CPanelClientTests : IAsyncLifetime
         }
         """;
 
+    /// <summary>The loopback server standing in for the WHM host; started per test class instance.</summary>
+    private StubHttpServer whm = null!;
+
+    /// <summary>Captures what the client logs, so a test can assert on the refusal reason.</summary>
+    private readonly CapturingLogger<CPanelClient> logger = new();
+
+    /// <summary>Starts the stub WHM server before each test.</summary>
+    /// <returns>A task that completes when the server listens.</returns>
+    public async Task InitializeAsync()
+    {
+        whm = await StubHttpServer.StartAsync();
+    }
+
+    /// <summary>Stops the stub WHM server after each test.</summary>
+    /// <returns>A task that completes when the server is down.</returns>
+    public async Task DisposeAsync()
+    {
+        await whm.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Builds a client aimed at the stub server, which answers <paramref name="responseJson"/>
+    /// over real HTTP. The request the client sent is read back from <see cref="whm"/>.
+    /// </summary>
+    /// <param name="responseJson">The JSON body WHM answers with.</param>
+    /// <returns>The client under test.</returns>
+    private CPanelClient BuildClient(string responseJson)
+    {
+        whm.Enqueue(responseJson);
+        var http = new HttpClient { BaseAddress = whm.BaseAddress };
+        return new CPanelClient(http, logger);
+    }
+
     /// <summary>Create account, throws, when whm metadata result is zero.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task CreateAccount_Throws_WhenWhmMetadataResultIsZeroAsync()
     {
@@ -94,11 +85,26 @@ public sealed class CPanelClientTests : IAsyncLifetime
             "example.com", "testuser", "pass123", "default", CancellationToken.None);
 
         (await act.Should().ThrowAsync<InvalidOperationException>())
-            .WithMessage("*createacct*")
-            .WithMessage("*already exists*");
+            .WithMessage("*createacct*");
+    }
+
+    /// <summary>The refusal reason is logged and kept out of the exception callers pass on.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task CreateAccount_LogsTheReasonButKeepsItOutOfTheException_WhenWhmRefusesAsync()
+    {
+        var client = BuildClient(CreateAcctRefused);
+
+        var act = async () => await client.CreateAccountAsync(
+            "example.com", "testuser", "pass123", "default", CancellationToken.None);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Message.Should().NotContain("already exists").And.NotContain("testuser");
+        logger.Messages.Should().ContainSingle().Which.Should().Contain("already exists");
     }
 
     /// <summary>Create account, does not throw, when whm metadata result is one.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task CreateAccount_DoesNotThrow_WhenWhmMetadataResultIsOneAsync()
     {
@@ -110,7 +116,38 @@ public sealed class CPanelClientTests : IAsyncLifetime
         await act.Should().NotThrowAsync();
     }
 
+    /// <summary>The password travels in a POST body, and the URL carries only the function name.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task CreateAccount_SendsThePasswordInAPostBody_NeverInTheUrlAsync()
+    {
+        var client = BuildClient(CreateAcctAccepted);
+
+        await client.CreateAccountAsync("example.com", "testuser", "pass123", "default", CancellationToken.None);
+
+        var call = whm.Requests.Should().ContainSingle().Which;
+        call.Method.Should().Be("POST");
+        call.PathAndQuery.Should().Be("/json-api/createacct");
+        call.Body.Should().Contain("password=pass123").And.Contain("api.version=1");
+    }
+
+    /// <summary>A password change keeps the new password out of the URL as well.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task ChangePassword_SendsTheNewPasswordInAPostBody_NeverInTheUrlAsync()
+    {
+        var client = BuildClient(
+            """{ "metadata": { "result": 1, "reason": "Ok", "version": 1 } }""");
+
+        await client.ChangePasswordAsync("testuser", "n3w-Secret", CancellationToken.None);
+
+        var call = whm.Requests.Should().ContainSingle().Which;
+        call.PathAndQuery.Should().NotContain("n3w-Secret");
+        call.Body.Should().Contain("password=n3w-Secret").And.Contain("user=testuser");
+    }
+
     /// <summary>Suspend account, throws, when whm refuses.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task SuspendAccount_Throws_WhenWhmRefusesAsync()
     {
@@ -119,11 +156,12 @@ public sealed class CPanelClientTests : IAsyncLifetime
 
         var act = async () => await client.SuspendAccountAsync("testuser", "non-payment", CancellationToken.None);
 
-        (await act.Should().ThrowAsync<InvalidOperationException>())
-            .WithMessage("*Access denied*");
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        logger.Messages.Should().ContainSingle().Which.Should().Contain("Access denied");
     }
 
     /// <summary>Call api, throws, when response carries no metadata envelope.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task CallApi_Throws_WhenResponseCarriesNoMetadataEnvelopeAsync()
     {
@@ -137,6 +175,7 @@ public sealed class CPanelClientTests : IAsyncLifetime
     }
 
     /// <summary>Remove account, sends the user parameter whm actually reads.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
     [Fact]
     public async Task RemoveAccount_SendsTheUserParameterWhmActuallyReadsAsync()
     {
@@ -146,8 +185,76 @@ public sealed class CPanelClientTests : IAsyncLifetime
         await client.RemoveAccountAsync("testuser", CancellationToken.None);
 
         // WHM's removeacct names the account "user". "username" is ignored and the account survives.
-        var query = whm.Requests.Should().ContainSingle().Which.PathAndQuery;
-        query.Should().Contain("user=testuser");
-        query.Should().NotContain("username=");
+        var body = whm.Requests.Should().ContainSingle().Which.Body;
+        body.Should().Contain("user=testuser");
+        body.Should().NotContain("username=");
+    }
+
+    /// <summary>An account summary carries the domain and the suspension flag.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task FindAccount_ReturnsTheDomainAndSuspensionFlag_WhenWhmListsTheAccountAsync()
+    {
+        var client = BuildClient(
+            """
+            { "metadata": { "result": 1, "version": 1 },
+              "data": { "acct": [ { "user": "testuser", "domain": "example.com", "suspended": 1 } ] } }
+            """);
+
+        var account = await client.FindAccountAsync("testuser", CancellationToken.None);
+
+        account.Should().Be(new WhmAccountSummary("testuser", "example.com", true));
+    }
+
+    /// <summary>A successful summary with no accounts means the account does not exist.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task FindAccount_ReturnsNull_WhenWhmListsNoAccountAsync()
+    {
+        var client = BuildClient(
+            """{ "metadata": { "result": 1, "version": 1 }, "data": { "acct": [] } }""");
+
+        var account = await client.FindAccountAsync("testuser", CancellationToken.None);
+
+        account.Should().BeNull();
+    }
+
+    /// <summary>A refused summary is a failure, never "no such account".</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task FindAccount_Throws_WhenWhmRefusesAsync()
+    {
+        var client = BuildClient(
+            """{ "metadata": { "result": 0, "reason": "Access denied", "version": 1 } }""");
+
+        var act = async () => await client.FindAccountAsync("testuser", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    /// <summary>A single sign-on answer without a url is a failure, not a missing-property crash.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task GetCPanelSsoUrl_Throws_WhenTheAnswerCarriesNoUrlAsync()
+    {
+        var client = BuildClient(
+            """{ "metadata": { "result": 1, "version": 1 }, "data": {} }""");
+
+        var act = async () => await client.GetCPanelSsoUrlAsync("testuser", CancellationToken.None);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage("*SSO URL was empty*");
+    }
+
+    /// <summary>A single sign-on answer with a url returns it.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task GetCPanelSsoUrl_ReturnsTheUrl_WhenWhmIssuesOneAsync()
+    {
+        var client = BuildClient(
+            """{ "metadata": { "result": 1, "version": 1 }, "data": { "url": "https://whm.test:2083/cpsess1/" } }""");
+
+        var url = await client.GetCPanelSsoUrlAsync("testuser", CancellationToken.None);
+
+        url.Should().Be("https://whm.test:2083/cpsess1/");
     }
 }

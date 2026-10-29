@@ -9,7 +9,7 @@ import { flushPromises } from '@vue/test-utils'
 import DashboardView from '@/views/DashboardView.vue'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
-import { json, problem } from '../helpers/fetch'
+import { json, problem, stubFetch } from '../helpers/fetch'
 
 /** Statistics as the dashboard endpoint returns them. */
 const stats = {
@@ -19,6 +19,7 @@ const stats = {
   overdueInvoices: 3,
   openTickets: 7,
   totalClients: 120,
+  currency: 'USD',
 }
 
 /** Two events of the activity feed. */
@@ -88,5 +89,18 @@ describe('DashboardView', () => {
 
     expect(wrapper.find('[data-testid="dashboard-activity"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="dashboard-quick-links"]').exists()).toBe(true)
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = (await mountRouted(DashboardView, '/', '/')).wrapper
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="dashboard-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

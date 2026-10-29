@@ -1,11 +1,11 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Settings;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 
@@ -15,7 +15,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Admin;
 /// wrong-shape value is refused <c>INVALID_SETTING_VALUE</c> with a per-key message, a caller with
 /// only the Client role is refused, and the route is closed to a caller with no credential.
 /// </summary>
-/// <remarks>Split out of the deleted <c>SettingsEndpointTests</c>.</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -48,6 +47,8 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
 
         update.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await SecretSettingTestSeeds.ReadAsync(factory, "integration:enom:api_key")).Should().Be("new-registrar-key");
+        var raw = await SecretSettingTestSeeds.ReadRawAsync(factory, "integration:enom:api_key");
+        raw.Should().NotBeNullOrEmpty().And.NotContain("new-registrar-key", "a secret is stored encrypted");
         var read = await client.GetFromJsonAsync<JsonElement>($"/api/admin/settings/{id}");
         read.GetRawText().Should().NotContain("new-registrar-key");
     }
@@ -240,6 +241,39 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
         await AdminTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.SETTING_NOT_FOUND);
     }
 
+    /// <summary>A social link refuses anything but an https address.</summary>
+    [Fact]
+    public async Task SocialLink_NotHttps_RefusesAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, PortalSettingKeys.SocialFacebook);
+
+        var response = await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = "javascript:alert(1)" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AdminTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.INVALID_SETTING_VALUE);
+    }
+
+    /// <summary>
+    /// Replacing a branding image removes the upload the old value pointed at, and keeps the new one.
+    /// </summary>
+    [Fact]
+    public async Task LogoReplaced_RemovesTheOldUploadAsync()
+    {
+        var client = await AdminTestSeeds.AdminClientAsync(factory);
+        var id = await AdminTestSeeds.FindSettingIdAsync(client, PortalSettingKeys.LogoMark);
+        var first = await UploadLogoMarkAsync(client);
+        var second = await UploadLogoMarkAsync(client);
+
+        (await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = first })).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await client.PutAsJsonAsync($"/api/admin/settings/{id}", new { value = second })).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+
+        File.Exists(DiskPathOf(first)).Should().BeFalse();
+        File.Exists(DiskPathOf(second)).Should().BeTrue();
+    }
+
     /// <summary>A caller with only the Client role is refused with 403.</summary>
     [Fact]
     public async Task IsClosedToTheClientRoleAsync()
@@ -259,5 +293,32 @@ public sealed class UpdateSettingTests(IntegrationTestFactory factory) : IClassF
             $"/api/admin/settings/{NoSuchSettingId}", new { value = "x" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>Uploads a one-pixel logo mark and returns the URL it was stored under.</summary>
+    /// <param name="client">An admin client.</param>
+    /// <returns>The stored file's root-relative URL.</returns>
+    private static async Task<string> UploadLogoMarkAsync(HttpClient client)
+    {
+        using var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        content.Add(file, "file", "mark.png");
+
+        var response = await client.PostAsync("/api/admin/settings/branding/logomark", content);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return body.GetProperty("url").GetString()!;
+    }
+
+    /// <summary>Maps a stored branding URL to the file on the host's disk.</summary>
+    /// <param name="url">The root-relative URL.</param>
+    /// <returns>The absolute file path.</returns>
+    private string DiskPathOf(string url)
+    {
+        var env = factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        return Path.Combine(webRoot, url.TrimStart('/'));
     }
 }

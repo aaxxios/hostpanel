@@ -40,14 +40,19 @@ const stubRuntime = (locale = 'en', routePath = '/hosting'): void => {
  *
  * @returns The meta tags that were set.
  */
-const metaSet = (): Record<string, unknown> => useSeoMeta.mock.calls[0]![0] as Record<string, unknown>
+const metaSet = (): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(useSeoMeta.mock.calls[0]![0] as Record<string, unknown>)
+      .map(([name, value]) => [name, typeof value === 'function' ? (value as () => unknown)() : value]),
+  )
 
 /**
  * Reads the first argument of the single `useHead` call.
  *
  * @returns The head input the composable set.
  */
-const headSet = (): { meta: unknown[] } => useHead.mock.calls[0]![0] as { meta: unknown[] }
+const headSet = (): { meta: unknown[], link: Array<{ rel: string, hreflang?: string, href: string }> } =>
+  (useHead.mock.calls[0]![0] as () => ReturnType<typeof headSet>)()
 
 describe('useSeo', () => {
   beforeEach(() => {
@@ -146,12 +151,25 @@ describe('useSeo', () => {
     expect(metaSet().ogLocale).toBe(expected)
   })
 
+  it('follows a getter, so tags written after the content arrives are current', () => {
+    stubRuntime('en', '/knowledgebase/5')
+    const title = ref('Before')
+
+    useSeo(() => ({ title: title.value, description: 'D', type: SeoPageType.Article }))
+    expect(metaSet()).toMatchObject({ title: 'Before', ogTitle: 'Before', twitterTitle: 'Before', ogType: SeoPageType.Article })
+
+    title.value = 'After'
+    const getters = useSeoMeta.mock.calls[0]![0] as Record<string, () => unknown>
+    expect(getters.title!()).toBe('After')
+    expect(getters.ogImageAlt!()).toBe('After')
+  })
+
   it('adds the canonical link and one alternate per language to the head', () => {
     stubRuntime('en', '/hosting')
 
     useSeo({})
 
-    const links = (useHead.mock.calls[0]![0] as { link: Array<{ rel: string, hreflang?: string, href: string }> }).link
+    const links = headSet().link
     expect(links[0]).toEqual({ rel: 'canonical', href: `${BASE}/hosting` })
     expect(links.filter((link) => link.rel === 'alternate').map((link) => link.hreflang)).toEqual(
       expect.arrayContaining(['en', 'ru', 'hy', 'x-default']),

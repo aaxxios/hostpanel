@@ -17,7 +17,7 @@ let backend: StubServer
 let route: RouteModule
 
 beforeEach(async () => {
-  backend = await startBackend(() => ({ body: [{ id: 3, name: 'Alpha Suite', isActive: true, productCount: 2 }] }))
+  backend = await startBackend(() => ({ body: [{ id: 3, name: 'Alpha Suite', productCount: 2 }] }))
   route = await import('~/server/api/portal/public/product-groups.get')
 })
 
@@ -29,9 +29,9 @@ describe('GET /api/portal/public/product-groups', () => {
   it('lists the groups as the backend sent them, forwarding the reader language', async () => {
     const result = await route.default(makeEvent({ headers: { 'x-language': 'hy' } }))
 
-    expect(backend.requests[0]?.url).toBe('/api/products/groups')
+    expect(backend.requests[0]?.url).toBe('/api/public/product-groups')
     expect(backend.requests[0]?.headers['x-language']).toBe('hy')
-    expect(result).toEqual([{ id: 3, name: 'Alpha Suite', isActive: true, productCount: 2 }])
+    expect(result).toEqual([{ id: 3, name: 'Alpha Suite', productCount: 2 }])
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

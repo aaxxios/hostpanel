@@ -6,7 +6,7 @@
  */
 
 /**
- * Product group the storefront's plan cards draw from — shared hosting.
+ * Product group the storefront's plan cards draw from: shared hosting.
  *
  * Without it the endpoint returns the whole catalogue, so the hosting page listed SSL
  * certificates, mailboxes and domain registration beside the hosting plans.

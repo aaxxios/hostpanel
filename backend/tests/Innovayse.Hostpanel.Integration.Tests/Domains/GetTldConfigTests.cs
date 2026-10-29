@@ -1,13 +1,11 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>GetTldConfig</c> use case —
+/// Integration tests for the admin <c>GetTldConfig</c> use case:
 /// <c>GET /api/admin/tld-configs/{id}</c>. The happy path (create then read) lives in
 /// <see cref="CreateTldConfigTests"/>; this file covers the id refusal.
 /// </summary>
@@ -35,5 +33,17 @@ public sealed class GetTldConfigTests(IntegrationTestFactory factory) : IClassFi
         var response = await client.GetAsync($"/api/admin/tld-configs/{DomainsTestSeeds.UnknownId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task Get_NonPositiveId_Returns400ValidationErrorAsync()
+    {
+        var admin = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/admin/tld-configs/0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.CodeOfAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

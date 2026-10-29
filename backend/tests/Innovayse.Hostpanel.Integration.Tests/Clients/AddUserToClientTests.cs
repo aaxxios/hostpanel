@@ -1,14 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Clients;
 
 /// <summary><c>POST /api/clients/{id}/users</c>: linking a non-owner user to a client account.</summary>
-/// <remarks>Split from the deleted <c>ClientsAdminEndpointTests</c> (A7 Task 5).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class AddUserToClientTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -72,5 +68,49 @@ public sealed class AddUserToClientTests(IntegrationTestFactory factory) : IClas
             $"/api/clients/{clientId}/users", new { memberUserId = ClientsTestSeeds.NoSuchUserId, permissions = 0 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>A staff account is never linked to a client: it is refused as unknown and no link is written.</summary>
+    [Fact]
+    public async Task AddRefusesAStaffAccount()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var (staffUserId, _) = await ClientsTestSeeds.CreateUnlinkedStaffSubjectAsync(factory, "add-user-staff");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync(
+            $"/api/clients/{clientId}/users", new { memberUserId = staffUserId, permissions = 0 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.IDENTITY_USER_NOT_FOUND);
+    }
+
+    /// <summary>A closed account's users are frozen: linking one answers 409 <c>CLIENT_RECORD_CLOSED</c>.</summary>
+    [Fact]
+    public async Task AddRefusesAClosedClient()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClosedClientAsync(factory);
+        var (userId, _) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "add-user-closed");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync(
+            $"/api/clients/{clientId}/users", new { memberUserId = userId, permissions = 0 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await ClientsTestSeeds.AssertCodeAsync(response, HostpanelErrorCodes.CLIENT_RECORD_CLOSED);
+    }
+
+    /// <summary>Linking a user leaves one activity line naming the client and the acting admin.</summary>
+    [Fact]
+    public async Task AddIsAuditedWithTheActingAdmin()
+    {
+        var (clientId, _) = await ClientsTestSeeds.SeedClientAsync(factory);
+        var (userId, _) = await ClientsTestSeeds.RegisterRealClientAsync(factory, "add-user-audit");
+        var admin = await ClientsTestSeeds.AdminClientAsync(factory);
+
+        (await admin.PostAsJsonAsync($"/api/clients/{clientId}/users", new { memberUserId = userId, permissions = 0 }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await ClientsTestSeeds.AssertAuditedByAdminAsync(factory, clientId, "Added User");
     }
 }

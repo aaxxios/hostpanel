@@ -14,7 +14,7 @@ vi.mock('chart.js', async () => (await import('../helpers/chartJsMock')).chartJs
 runReportCase({
   name: 'ServicesReportView',
   view: ServicesReportView,
-  routes: { 'GET /reports/services': () => json({ items: [], totalCount: 0 }) },
+  routes: { 'GET /reports/services': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) },
   expected: ['Services', '0 service(s) found', 'No services found.'],
 })
 
@@ -24,7 +24,7 @@ describe('ServicesReportView actions', () => {
   })
 
   it('offers only date ranges the endpoint filters by', async () => {
-    stubRouteTable({ 'GET /reports/services': () => json({ items: [], totalCount: 0 }) })
+    stubRouteTable({ 'GET /reports/services': () => json({ items: [], pageNumber: 1, pageSize: 50, totalCount: 0, totalPages: 0 }) })
     const wrapper = await mountView(ServicesReportView)
 
     for (const key of ['created', 'nextDue', 'terminated']) {

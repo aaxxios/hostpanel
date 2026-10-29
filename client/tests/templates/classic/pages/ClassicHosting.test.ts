@@ -40,10 +40,10 @@ vi.mock('~/composables/apis/useCurrencyApi', () => ({
 
 /** The plans the catalogue answers with. */
 const plans = [
-  { id: 1, pid: 1, name: 'Free', description: 'Start for nothing<br />\u2714 1 Website<br />\u2714 5 GB Bandwidth', pricing: { monthly: 0, annual: 0 } },
-  { id: 2, pid: 2, name: 'Starter', description: 'Small sites<br />\u2714 5 GB SSD<br />\u2714 10 Emails', isFeatured: true, pricing: { monthly: 5, annual: 50 } },
-  { id: 3, pid: 3, name: 'Business', description: 'Busy sites<br />\u2714 20 GB SSD', pricing: { monthly: 15, annual: null } },
-  { id: 4, pid: 4, name: 'Agency', description: 'Many clients<br />\u2714 Unlimited Websites', pricing: { monthly: 40, annual: 400 } },
+  { id: 1, name: 'Free', description: 'Start for nothing<br />\u2714 1 Website<br />\u2714 5 GB Bandwidth', pricing: { monthly: 0, annual: 0 } },
+  { id: 2, name: 'Starter', description: 'Small sites<br />\u2714 5 GB SSD<br />\u2714 10 Emails', isFeatured: true, pricing: { monthly: 5, annual: 50 } },
+  { id: 3, name: 'Business', description: 'Busy sites<br />\u2714 20 GB SSD', pricing: { monthly: 15, annual: null } },
+  { id: 4, name: 'Agency', description: 'Many clients<br />\u2714 Unlimited Websites', pricing: { monthly: 40, annual: 400 } },
 ]
 
 /**
@@ -218,10 +218,10 @@ describe('ClassicHosting', () => {
 
   it('lays the other plans out in a balanced grid, so four plans are 4 in a row and not 3 + 1', async () => {
     api.fetchProducts.mockResolvedValue([
-      { id: 2, pid: 2, name: 'Starter', description: 'a', pricing: { monthly: 5, annual: 50 } },
-      { id: 3, pid: 3, name: 'Business', description: 'b', pricing: { monthly: 15, annual: 150 } },
-      { id: 5, pid: 5, name: 'Pro', description: 'c', pricing: { monthly: 25, annual: 250 } },
-      { id: 6, pid: 6, name: 'Plus', description: 'd', pricing: { monthly: 35, annual: 350 } },
+      { id: 2, name: 'Starter', description: 'a', pricing: { monthly: 5, annual: 50 } },
+      { id: 3, name: 'Business', description: 'b', pricing: { monthly: 15, annual: 150 } },
+      { id: 5, name: 'Pro', description: 'c', pricing: { monthly: 25, annual: 250 } },
+      { id: 6, name: 'Plus', description: 'd', pricing: { monthly: 35, annual: 350 } },
     ])
     const wrapper = await mountHosting()
 

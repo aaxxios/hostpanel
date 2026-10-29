@@ -8,6 +8,7 @@
 
 import { buildQuery, useApi } from '@/composables/useApi'
 import type { ClientUserItem, UserSearchHit } from '@/types/clientuser'
+import type { PaginatedList } from '@/types/paginatedlist'
 import { ApiPath } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 
@@ -35,8 +36,8 @@ export const useClientUsersApi = () => {
    * @param pageSize - Maximum hits.
    * @returns The matching users, wrapped in the paged envelope.
    */
-  const search = (term: string, pageSize: number): Promise<{ items: UserSearchHit[] }> =>
-    request<{ items: UserSearchHit[] }>(`${ApiPath.AdminUsers}${buildQuery({ search: term, pageSize, page: 1 })}`)
+  const search = (term: string, pageSize: number): Promise<PaginatedList<UserSearchHit>> =>
+    request<PaginatedList<UserSearchHit>>(`${ApiPath.AdminUsers}${buildQuery({ search: term, pageSize, page: 1 })}`)
 
   /**
    * Links an existing user to the client.

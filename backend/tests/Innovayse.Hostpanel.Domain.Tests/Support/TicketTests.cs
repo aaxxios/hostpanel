@@ -1,21 +1,36 @@
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Support;
 using Innovayse.Hostpanel.Domain.Support.Enums;
+using Innovayse.Hostpanel.Domain.Support.Events;
 using Innovayse.Hostpanel.SharedKernel.Domain;
-using Xunit;
+
 namespace Innovayse.Hostpanel.Domain.Tests.Support;
 
 /// <summary>Unit tests for the <see cref="Ticket"/> aggregate's status invariants.</summary>
 public sealed class TicketTests
 {
+    /// <summary>The fixed moment every test acts at.</summary>
+    private static readonly DateTimeOffset Now = new(2026, 3, 10, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Create, AddReply and Close date the events they raise with the moment the caller gives.</summary>
+    [Fact]
+    public void Events_CarryTheMomentTheCallerGives()
+    {
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
+        ticket.AddReply("On it", "Agent", isStaffReply: true, occurredAt: Now.AddHours(1));
+        ticket.Close(Now.AddHours(2));
+
+        ticket.DomainEvents.OfType<TicketRepliedEvent>().Should().ContainSingle().Which.OccurredAt.Should().Be(Now.AddHours(1));
+        ticket.DomainEvents.OfType<TicketClosedEvent>().Should().ContainSingle().Which.OccurredAt.Should().Be(Now.AddHours(2));
+    }
+
     /// <summary>AddReply on a closed ticket throws <see cref="DomainRuleException"/> with <c>TICKET_REPLY_NOT_ALLOWED</c>.</summary>
     [Fact]
     public void AddReply_WhenClosed_ThrowsWithTicketReplyNotAllowed()
     {
-        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium);
-        ticket.Close();
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
+        ticket.Close(Now);
 
-        var act = () => ticket.AddReply("Still there?", "Agent", isStaffReply: true);
+        var act = () => ticket.AddReply("Still there?", "Agent", isStaffReply: true, occurredAt: Now);
 
         act.Should().Throw<DomainRuleException>().Which.Code.Should().Be(SupportErrors.TicketReplyNotAllowed);
     }
@@ -24,10 +39,10 @@ public sealed class TicketTests
     [Fact]
     public void Close_WhenAlreadyClosed_ThrowsWithTicketCloseNotAllowed()
     {
-        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium);
-        ticket.Close();
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
+        ticket.Close(Now);
 
-        var act = ticket.Close;
+        var act = () => ticket.Close(Now);
 
         act.Should().Throw<DomainRuleException>().Which.Code.Should().Be(SupportErrors.TicketCloseNotAllowed);
     }
@@ -36,9 +51,9 @@ public sealed class TicketTests
     [Fact]
     public void Backdate_SpacesTheReplyTimestampsOneGapApart()
     {
-        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium);
-        ticket.AddReply("First", "Agent", isStaffReply: true);
-        ticket.AddReply("Second", "Customer", isStaffReply: false);
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
+        ticket.AddReply("First", "Agent", isStaffReply: true, occurredAt: Now);
+        ticket.AddReply("Second", "Customer", isStaffReply: false, occurredAt: Now);
         var openedAt = new DateTimeOffset(2026, 3, 1, 9, 0, 0, TimeSpan.Zero);
 
         ticket.Backdate(openedAt, TimeSpan.FromHours(3));
@@ -51,10 +66,10 @@ public sealed class TicketTests
     [Fact]
     public void Backdate_PutsFeedbackAfterTheLastReply()
     {
-        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium);
-        ticket.AddReply("Fixed", "Agent", isStaffReply: true);
-        ticket.Close();
-        ticket.LeaveFeedback(9, null, "Customer");
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
+        ticket.AddReply("Fixed", "Agent", isStaffReply: true, occurredAt: Now);
+        ticket.Close(Now);
+        ticket.LeaveFeedback(9, null, "Customer", new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero));
         var openedAt = new DateTimeOffset(2026, 3, 1, 9, 0, 0, TimeSpan.Zero);
 
         ticket.Backdate(openedAt, TimeSpan.FromHours(2));
@@ -66,9 +81,9 @@ public sealed class TicketTests
     [Fact]
     public void Backdate_WhenGapIsNotPositive_Throws()
     {
-        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium);
+        var ticket = Ticket.Create(clientId: 1, subject: "Help", message: "Hi", departmentId: 1, priority: TicketPriority.Medium, occurredAt: Now);
 
-        var act = () => ticket.Backdate(DateTimeOffset.UtcNow, TimeSpan.Zero);
+        var act = () => ticket.Backdate(Now, TimeSpan.Zero);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }

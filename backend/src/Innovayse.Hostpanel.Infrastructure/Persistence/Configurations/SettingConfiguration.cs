@@ -1,8 +1,11 @@
+using Innovayse.Hostpanel.Application.Common;
 using Innovayse.Hostpanel.Domain.Settings;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="Setting"/> aggregate.</summary>
 public sealed class SettingConfiguration : IEntityTypeConfiguration<Setting>
 {
@@ -18,7 +21,7 @@ public sealed class SettingConfiguration : IEntityTypeConfiguration<Setting>
 
         builder.Property(x => x.Value)
             .IsRequired()
-            .HasMaxLength(2000);
+            .HasMaxLength(ProtectedColumnWidth.For(ProtectedValueLimits.SettingValue));
 
         builder.Property(x => x.Description)
             .HasMaxLength(500);

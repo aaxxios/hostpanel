@@ -1,8 +1,7 @@
+using Innovayse.Hostpanel.Application.Billing.Extensions;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Domain.Billing.Enums;
+using Innovayse.Hostpanel.Application.Reports.Common;
 using Innovayse.Hostpanel.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Innovayse.Hostpanel.Application.Reports.Queries.GetIncomeForecast;
 
@@ -22,15 +21,20 @@ public sealed class GetIncomeForecastHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The source of the current moment.</summary>
+    private readonly IClock _clock;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetIncomeForecastHandler(IHostpanelDbContext context)
+    /// <param name="clock">The source of the current moment.</param>
+    public GetIncomeForecastHandler(IHostpanelDbContext context, IClock clock)
     {
         _context = context;
+        _clock = clock;
     }
 
     /// <summary>
-    /// Projects the year's monthly paid-invoice income into the rolling windows the forecast
+    /// Projects the year's monthly income (payments less refunds, in the base currency) into the rolling windows the forecast
     /// screen shows.
     /// </summary>
     /// <param name="query">Year to forecast; may be omitted.</param>
@@ -41,18 +45,10 @@ public sealed class GetIncomeForecastHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var year = query.Year ?? DateTime.UtcNow.Year;
+        var year = query.Year ?? _clock.UtcNow.UtcDateTime.Year;
 
-        var monthlyTotals = await _context.Invoices
-            .AsNoTracking()
-            .Where(i => i.Status == InvoiceStatus.Paid && i.CreatedAt.Year == year)
-            .GroupBy(i => i.CreatedAt.Month)
-            .Select(g => new { Month = g.Key, Total = g.Sum(i => i.Total) })
-            .ToListAsync(ct);
-
-        var monthly = Enumerable.Range(1, 12)
-            .Select(m => monthlyTotals.FirstOrDefault(x => x.Month == m)?.Total ?? 0m)
-            .ToList();
+        var income = await _context.GetYearIncomeAsync(year, ct);
+        var monthly = income.Months;
 
         // Each window is trailing and clamped at January, so the early months sum fewer than
         // their nominal length rather than wrapping into the previous year.
@@ -63,7 +59,8 @@ public sealed class GetIncomeForecastHandler
             monthly.Skip(Math.Max(0, index - (QuarterWindow - 1))).Take(QuarterWindow).Sum(),
             monthly.Skip(Math.Max(0, index - (SemiAnnualWindow - 1))).Take(SemiAnnualWindow).Sum(),
             annual,
-            monthly.Take(index + 1).Sum()))];
+            monthly.Take(index + 1).Sum(),
+            income.Currency))];
 
         return Result<IReadOnlyList<IncomeForecastRowDto>>.Success(rows);
     }

@@ -3,11 +3,13 @@
  *
  * Every settings control on the System Settings page follows the same rule: show the operator's
  * unsaved edit when there is one, the stored value otherwise, and clear the edit only when the
- * stored value catches up — never on the save request.
+ * stored value catches up, never on the save request. The row also carries its own save state
+ * (in flight, and how the last save went), so a card shows the outcome next to the control that
+ * was saved.
  */
 import { computed, ref, watch } from 'vue'
 import type { ComputedRef, Ref, WritableComputedRef } from 'vue'
-import type { Setting } from '@/types/setting'
+import type { Setting, SettingSave, SettingSaveResult } from '@/types/setting'
 
 /** What {@link useSettingDraft} hands back for one settings row. */
 export interface SettingDraft {
@@ -17,17 +19,20 @@ export interface SettingDraft {
   value: WritableComputedRef<string>
   /** Whether there is an edit worth saving. */
   dirty: ComputedRef<boolean>
-  /** Hands the edit to the caller's save; a no-op when the row is missing or nothing changed. */
-  submit: (save: (id: number, value: string) => void) => void
+  /** True while this row's save is in flight. */
+  saving: Ref<boolean>
+  /** How this row's last save went; null before the first save and after the next edit. */
+  outcome: Ref<SettingSaveResult | null>
+  /** Hands the edit to the caller's save and records the outcome; a no-op when the row is missing, nothing changed or a save is in flight. */
+  submit: (save: SettingSave) => Promise<void>
 }
 
 /**
  * Creates the draft state of one settings row.
  *
- * Clearing the edit on the save request discarded the operator's pick before anyone knew whether it
- * had been written, so a failed save silently snapped the control back to the value already in use
- * with only an error banner to explain it. The edit is therefore dropped only when the stored value
- * equals it.
+ * The edit is dropped only when the stored value equals it. Clearing it on the save request would
+ * discard the operator's pick before anyone knew whether it had been written, so a failed save
+ * would snap the control back to the value already in use.
  *
  * @param settings - All system settings, as loaded from the backend.
  * @param key - The settings key this control edits.
@@ -40,6 +45,12 @@ export const useSettingDraft = (settings: Ref<Setting[]>, key: string, fallback 
 
   /** The operator's unsaved edit; null when there is none. */
   const draft = ref<string | null>(null)
+
+  /** True while this row's save is in flight. */
+  const saving = ref(false)
+
+  /** How the last save of this row went; null when it has not been saved since the last edit. */
+  const outcome = ref<SettingSaveResult | null>(null)
 
   /** What the control shows: the edit, else the stored value, else the fallback. */
   const value = computed<string>({
@@ -56,6 +67,7 @@ export const useSettingDraft = (settings: Ref<Setting[]>, key: string, fallback 
      */
     set: (next: string) => {
       draft.value = next
+      outcome.value = null
     },
   })
 
@@ -70,16 +82,20 @@ export const useSettingDraft = (settings: Ref<Setting[]>, key: string, fallback 
   })
 
   /**
-   * Hands the edit to the caller's save. No-op when the row does not exist or nothing changed.
+   * Hands the edit to the caller's save and keeps the outcome. No-op when the row does not exist,
+   * nothing changed, or this row is already being saved.
    *
-   * @param save - Emits the id and value to whoever persists them.
+   * @param save - Persists the id and value and answers how it went.
    */
-  const submit = (save: (id: number, value: string) => void): void => {
-    if (!setting.value || !dirty.value || draft.value === null) {
+  const submit = async (save: SettingSave): Promise<void> => {
+    if (!setting.value || !dirty.value || draft.value === null || saving.value) {
       return
     }
-    save(setting.value.id, draft.value)
+    outcome.value = null
+    saving.value = true
+    outcome.value = await save(setting.value.id, draft.value)
+    saving.value = false
   }
 
-  return { setting, value, dirty, submit }
+  return { setting, value, dirty, saving, outcome, submit }
 }

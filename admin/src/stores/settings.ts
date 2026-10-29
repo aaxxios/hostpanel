@@ -10,7 +10,8 @@ import { ref } from 'vue'
 import { useSettingsApi } from '@/composables/apis/useSettingsApi'
 import { useUploadApi } from '@/composables/apis/useUploadApi'
 import { runAction } from '@/lib/runAction'
-import type { EmailTemplate } from '@/types/emailtemplate'
+import type { EmailTemplate, EmailTemplateContent } from '@/types/emailtemplate'
+import type { MessageLanguage } from '@/locales/messages'
 import type { CreateProductPayload, Product, ProductGroup, UpdateProductPayload } from '@/types/product'
 import type { Setting } from '@/types/setting'
 import type { BrandingImageKind } from '@/types/upload'
@@ -74,16 +75,16 @@ export const useSettingsStore = defineStore('settings', () => {
   /**
    * Updates a single setting's value and refreshes the list.
    *
-   * The backend exposes update-by-id only — there is no create — so a key that
+   * The backend exposes update-by-id only and no create, so a key that
    * was never seeded cannot be added from here. The banner shows the API's own sentence: a
    * refused value names what the key does accept, which a fixed "failed to save" would hide.
    *
    * @param id - Setting ID.
    * @param value - New value to store.
-   * @returns True when persisted; false when refused (see `error`).
+   * @returns True when persisted; false when refused (see `actionError`).
    */
   const updateSetting = async (id: number, value: string): Promise<boolean> => {
-    const result = await runAction(error, () => api.updateSetting(id, value))
+    const result = await runAction(actionError, () => api.updateSetting(id, value))
     if (result.ok) {
       await fetchSettings()
     }
@@ -94,10 +95,10 @@ export const useSettingsStore = defineStore('settings', () => {
    * Removes a secret setting's stored value and refreshes the list.
    *
    * @param id - Setting ID.
-   * @returns True when cleared; false when refused (see `error`).
+   * @returns True when cleared; false when refused (see `actionError`).
    */
   const clearSetting = async (id: number): Promise<boolean> => {
-    const result = await runAction(error, () => api.clearSetting(id))
+    const result = await runAction(actionError, () => api.clearSetting(id))
     if (result.ok) {
       await fetchSettings()
     }
@@ -125,6 +126,32 @@ export const useSettingsStore = defineStore('settings', () => {
     load(api.listEmailTemplates, (rows) => {
       emailTemplates.value = rows
     })
+
+  /**
+   * Saves one language version of a template: rewrites the stored version, or adds it when the
+   * template has none in that language yet, then refreshes the list.
+   *
+   * @param slug - Template slug.
+   * @param language - The version's language.
+   * @param existingId - Id of the stored version, null when there is none.
+   * @param content - Subject, body and description.
+   * @returns True when saved; false when refused (see `actionError`).
+   */
+  const saveEmailTemplateVersion = async (
+    slug: string,
+    language: MessageLanguage,
+    existingId: number | null,
+    content: EmailTemplateContent,
+  ): Promise<boolean> => {
+    const result = await runAction(actionError, () =>
+      existingId === null
+        ? api.createEmailTemplate({ slug, language, ...content }).then(() => undefined)
+        : api.updateEmailTemplate(existingId, content))
+    if (result.ok) {
+      await fetchEmailTemplates()
+    }
+    return result.ok
+  }
 
   /**
    * Fetches all products from the backend (including inactive).
@@ -179,7 +206,7 @@ export const useSettingsStore = defineStore('settings', () => {
   return {
     settings, emailTemplates, products, productGroups,
     loading, error, actionError, uploadError,
-    fetchSettings, updateSetting, clearSetting, fetchEmailTemplates, fetchProducts, fetchProductGroups,
+    fetchSettings, updateSetting, clearSetting, fetchEmailTemplates, saveEmailTemplateVersion, fetchProducts, fetchProductGroups,
     createProduct, updateProduct, uploadBrandingFile,
   }
 })

@@ -18,21 +18,19 @@ const POST_LOGOUT_PARAM = 'post_logout_redirect_uri'
 
 /**
  * What a sign-in attempt ended in. The store reports an expected failure as a return
- * value rather than throwing — the page decides what to render from it.
+ * value rather than throwing: the page decides what to render from it.
  */
 export type SignInOutcome = SignInResult
 
 /**
  * Pinia store managing admin authentication state, in both deployment shapes.
  *
- * Under `AUTH_MODE=sso` authentication happens against single sign-on, but no longer in
- * this browser: the Hostpanel API performs the OIDC exchange and holds the tokens, and
- * this store only tracks the resulting session by calling /auth/me — roles are assigned
- * locally in Hostpanel and cannot be read off any SSO token anyway. The PKCE flow, the
- * callback view and the refresh loop that used to live beside this store are gone with
- * the tokens they existed to manage.
+ * Under `AUTH_MODE=sso` authentication happens against single sign-on, but not in this
+ * browser: the Hostpanel API performs the OIDC exchange and holds the tokens, and this
+ * store only tracks the resulting session by calling /auth/me. Roles are assigned locally
+ * in Hostpanel and cannot be read off any SSO token anyway.
  *
- * Under `AUTH_MODE=local` — the standalone, open-source path — there is no SSO to
+ * Under `AUTH_MODE=local` (the standalone, open-source path) there is no SSO to
  * redirect to. The store posts credentials to the API and drives the TOTP step when the
  * account has one. It holds no credential either way: the API writes the local-mode
  * token into an httpOnly cookie, so this store tracks a session it cannot read, exactly
@@ -55,17 +53,17 @@ export const useAuthStore = defineStore('auth', () => {
   /** How this deployment signs people in. Null until {@link loadMode} has answered. */
   const mode = ref<AuthMode | null>(null)
 
+  /**
+   * True once the server has said whether a session exists, signed in or not.
+   *
+   * {@link user} alone cannot tell "signed out" from "not asked yet", so without this flag the guard
+   * would ask again on every navigation of a signed-out visitor. Set by {@link fetchMe} on an
+   * answer; cleared when the session may have changed behind this store's back.
+   */
+  const sessionChecked = ref(false)
+
   /** True while nobody holds the Admin role, so first-run bootstrap is outstanding. */
   const setupRequired = ref(false)
-
-  /**
-   * True when claiming Admin also needs the setup token this installation printed to
-   * its log. Answered by the API, never inferred from {@link mode}: it is the server
-   * that decides whether the gate applies, and a screen that guessed would either hide
-   * a field the request is refused without or ask an SSO operator for a token that does
-   * not exist.
-   */
-  const setupTokenRequired = ref(false)
 
   /** True while a sign-in or bootstrap request is in flight. */
   const loading = ref(false)
@@ -79,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Continuation token for the TOTP step, held only in memory for the life of the
    * attempt. It deliberately never reaches the URL, session storage, or the token
-   * slot in {@link useApi} — it is not a credential for the API, only for the second
+   * slot in {@link useApi}: it is not a credential for the API, only for the second
    * half of this one sign-in.
    */
   const pendingToken = ref<string | null>(null)
@@ -107,10 +105,9 @@ export const useAuthStore = defineStore('auth', () => {
       ])
       mode.value = modeResult.mode
       setupRequired.value = setupResult.required
-      setupTokenRequired.value = setupResult.tokenRequired
     } catch (cause) {
       // Without the mode there is no correct control to draw, so this failure is
-      // surfaced rather than defaulted — guessing 'sso' here is what produced a
+      // surfaced rather than defaulted: guessing 'sso' here is what produced a
       // sign-in button with nothing behind it in the first place.
       error.value = errorSentence(cause)
     }
@@ -127,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
    * @param email - The operator's email address.
    * @param password - The operator's password.
    * @returns 'done' when a session now exists, 'totp' when an authenticator code is
-   * still needed, 'failed' when the API rejected the attempt — in which case
+   * still needed, 'failed' when the API rejected the attempt, in which case
    * {@link error} carries the API's own explanation.
    */
   const signInLocal = async (email: string, password: string): Promise<SignInOutcome> => {
@@ -153,7 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
       // call just read, so the very next request carries it.
       await fetchMe()
       // fetchMe clears the user on any failure, so this also catches a session the API
-      // will not accept back — signalling success on it would strand the operator.
+      // will not accept back: signalling success on it would strand the operator.
       if (!isAuthenticated.value) {
         error.value = translate('errors.signInLoop')
         return 'failed'
@@ -204,9 +201,8 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Creates the very first account on a standalone install.
    *
-   * Registration is the step the admin panel never had: on a genuinely fresh local-mode
-   * deployment there are no accounts at all, so there is nobody to sign in as and
-   * therefore nobody who can claim the Admin role. Nothing is validated here — password
+   * On a genuinely fresh local-mode deployment there are no accounts at all, so there is nobody to sign in as and
+   * therefore nobody who can claim the Admin role. Nothing is validated here: password
    * rules, duplicate addresses and malformed input are all the server's answer to give,
    * and it gives them in the operator's own language.
    *
@@ -236,17 +232,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Claims the Admin role for the signed-in account — the first-run bootstrap.
+   * Claims the Admin role for the signed-in account: the first-run bootstrap.
    *
    * Only succeeds while nobody holds Admin; a second caller gets a 409 whose body
-   * says so, and that body is what the operator is shown. Under local mode it also
-   * needs the setup token the installation printed to its log, which is what stops
-   * whoever registers first on a publicly reachable box from owning it.
+   * says so, and that body is what the operator is shown. It also needs the setup
+   * token the installation printed to its log, which is what stops whoever registers
+   * first on a publicly reachable box from owning it.
    *
-   * @param setupToken - The token from the server log, when {@link setupTokenRequired}.
+   * @param setupToken - The token from the server log.
    * @returns True when the role was granted, false otherwise with {@link error} set.
    */
-  const claimAdminRole = async (setupToken?: string): Promise<boolean> => {
+  const claimAdminRole = async (setupToken: string): Promise<boolean> => {
     loading.value = true
     error.value = null
     try {
@@ -264,14 +260,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Loads the current user from the API. There is no token to check first — whether a
-   * session exists is a question only the server can answer now, in either mode.
+   * Loads the current user from the API. There is no token to check first: whether a
+   * session exists is a question only the server can answer, in either mode.
    *
    * @returns Promise that resolves when the fetch completes; clears state on failure.
    */
   const fetchMe = async (): Promise<void> => {
     try {
       const data = await api.fetchMe()
+      // Signed in or signed out, this is the server's answer, so the guard need not ask again.
+      sessionChecked.value = true
       if (data === null) {
         // 401 is the expected answer of the session probe when signed out, not an error.
         user.value = null
@@ -281,9 +279,24 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = { email: data.email, roles: data.roles }
       emailVerified.value = data.emailVerified
     } catch {
+      // No answer (offline, a 5xx): the session state is still unknown, so the flag is left as it
+      // was and the next navigation asks again rather than treating the visitor as signed out for good.
       user.value = null
       emailVerified.value = null
     }
+  }
+
+  /**
+   * Asks the server whether a session exists, unless it has already answered since the page loaded
+   * or since the session last changed.
+   *
+   * @returns Promise that resolves once the session state is known, or the probe has failed.
+   */
+  const checkSession = async (): Promise<void> => {
+    if (sessionChecked.value) {
+      return
+    }
+    await fetchMe()
   }
 
   /**
@@ -303,6 +316,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (result.ok) {
       user.value = null
       emailVerified.value = null
+      sessionChecked.value = false
     }
     return result.ok
   }
@@ -331,6 +345,9 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     emailVerified.value = null
     pendingToken.value = null
+    // Signed out is now the known state: asking the server again would only earn a 401, or, when
+    // the sign-out request below fails, revive the session the operator just ended.
+    sessionChecked.value = true
 
     if (mode.value === AuthMode.Local) {
       // Failure is swallowed on purpose, and only here: the local state above is
@@ -342,7 +359,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // Tell the SSO where to send the browser afterwards. Without this the end-session endpoint
-    // has nowhere to go and answers 200 with an empty body, which is a blank white page — the
+    // has nowhere to go and answers 200 with an empty body, which is a blank white page: the
     // sign-out worked, but it looked like the app had died. The address must be one registered
     // for this client on the SSO side, which the origin plus the deployment's base path is.
     const endSessionUrl = await api.endSessionUrl()
@@ -358,9 +375,9 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     emailVerified,
+    sessionChecked,
     mode,
     setupRequired,
-    setupTokenRequired,
     loading,
     error,
     isAuthenticated,
@@ -376,5 +393,6 @@ export const useAuthStore = defineStore('auth', () => {
     verifyEmail,
     resendVerification,
     fetchMe,
+    checkSession,
   }
 })

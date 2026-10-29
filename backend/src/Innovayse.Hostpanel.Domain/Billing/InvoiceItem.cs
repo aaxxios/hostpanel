@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Billing;
+
 /// <summary>
 /// A single line item on an <see cref="Invoice"/>.
 /// Owned by the Invoice aggregate; stored in the <c>InvoiceItems</c> table.
@@ -18,8 +19,8 @@ public sealed class InvoiceItem : BaseEntity
     /// <remarks>
     /// <para>
     /// Nullable, and the null means two different things that must not be conflated. A line may
-    /// genuinely not be about a service -- a one-off billable item, a domain registration, an
-    /// admin-entered adjustment -- and a line may be about a service that nobody recorded,
+    /// genuinely not be about a service, a one-off billable item, a domain registration, an
+    /// admin-entered adjustment, and a line may be about a service that nobody recorded,
     /// because every row written before this column existed has no link and none can honestly be
     /// invented for it. The invoice item carries a description, a unit price and a quantity;
     /// matching that description text against a product name would be a guess rendered as fact,
@@ -60,10 +61,12 @@ public sealed class InvoiceItem : BaseEntity
 
     /// <summary>
     /// Gets when a runner claimed this line before an outward registrar call, or
-    /// <see langword="null"/> while nobody has. Set atomically (a conditional update that only wins
-    /// while both this and <see cref="RenewalAppliedAt"/> are null) so two runners can never both
-    /// renew the same paid period at the registrar. Cleared again only when the registrar cleanly
-    /// refused; after an unknown outcome it stays set and the line waits for a person.
+    /// <see langword="null"/> while nobody has. Set by <see cref="ClaimRenewal"/>; this and
+    /// <see cref="RenewalAppliedAt"/> are optimistic concurrency tokens, so the save of a claim only
+    /// wins while both still hold the values the runner read and two runners can never both renew
+    /// the same paid period at the registrar. Cleared again only by
+    /// <see cref="ReleaseRenewalClaim"/> when the registrar cleanly refused; after an unknown outcome
+    /// it stays set and the line waits for a person.
     /// </summary>
     public DateTimeOffset? RenewalAttemptAt { get; private set; }
 
@@ -82,7 +85,7 @@ public sealed class InvoiceItem : BaseEntity
     /// <summary>Gets the line total (<see cref="UnitPrice"/> × <see cref="Quantity"/>).</summary>
     public decimal Amount { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private InvoiceItem() { }
 
     /// <summary>
@@ -168,6 +171,36 @@ public sealed class InvoiceItem : BaseEntity
         }
 
         RenewalAppliedAt = at;
+    }
+
+    /// <summary>Claims this renewal line for one runner before an outward registrar call.</summary>
+    /// <param name="at">When the claim was taken (UTC).</param>
+    /// <exception cref="InvalidOperationException">The line is not a renewal, or is already applied or claimed.</exception>
+    public void ClaimRenewal(DateTimeOffset at)
+    {
+        if (!IsRenewal)
+        {
+            throw new InvalidOperationException("Only a renewal line can be claimed.");
+        }
+
+        if (RenewalAppliedAt is not null || RenewalAttemptAt is not null)
+        {
+            throw new InvalidOperationException("This renewal line is already applied or claimed.");
+        }
+
+        RenewalAttemptAt = at;
+    }
+
+    /// <summary>Releases this runner's claim after the registrar cleanly refused, so a later run may retry.</summary>
+    /// <exception cref="InvalidOperationException">The line is not claimed.</exception>
+    public void ReleaseRenewalClaim()
+    {
+        if (RenewalAttemptAt is null)
+        {
+            throw new InvalidOperationException("This renewal line is not claimed.");
+        }
+
+        RenewalAttemptAt = null;
     }
 
     /// <summary>

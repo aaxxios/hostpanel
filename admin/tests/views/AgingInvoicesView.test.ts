@@ -3,6 +3,7 @@
  * refuses.
  */
 import { vi } from 'vitest'
+import { ReportAgingBucket } from '@/types/reportaging'
 import AgingInvoicesView from '@/views/AgingInvoicesView.vue'
 import { json } from '../helpers/fetch'
 import { runReportCase } from '../helpers/reportViews'
@@ -14,10 +15,11 @@ runReportCase({
   view: AgingInvoicesView,
   routes: {
     'GET /reports/aging-invoices-summary': () => json({
-      periods: [{ period: '1-30 days', amountsByCurrency: { USD: 10 } }],
+      periods: [{ period: ReportAgingBucket.Days0To30, amountsByCurrency: { USD: 10 } }],
       totals: { USD: 10 },
       currencies: ['USD'],
     }),
   },
-  expected: ['Aging Invoices', '1-30 days', '$10.00'],
+  expected: ['Aging Invoices', '0 - 30', '$10.00'],
+  retryable: true,
 })

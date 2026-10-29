@@ -6,7 +6,7 @@
  *  - a `.vue` file never calls `useApi`, `apiFetch`, `$fetch`, `useFetch`, an api composable, the
  *    error-sentence helper, and holds no `catch`;
  *  - a store never uses `useApi` or `$fetch`;
- *  - no source file spells a client-area path (`'/client/...'`) as a string literal -- paths come
+ *  - no source file spells a client-area path (`'/client/<page>'`) as a string literal: paths come
  *    from `constants/clientRoutes.ts` (constants and the `client*Path` helpers).
  *
  * Every `.vue` file and every store of the client is checked (tests and e2e are not source).

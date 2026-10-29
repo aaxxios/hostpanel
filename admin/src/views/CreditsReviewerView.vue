@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Credits reviewer: every credit issued to clients between two dates, optionally for one client
- * and within an amount range.
+ * Credits reviewer: the credits issued to clients between two dates, optionally for one client and
+ * within an amount range. The totals come one per currency; the credits are paged, newest first,
+ * each in its own currency.
  */
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,12 +12,15 @@ import ReportPage from '@/components/reports/ReportPage.vue'
 import ReportTable from '@/components/reports/ReportTable.vue'
 import UiClientSelect from '@/components/ui/UiClientSelect.vue'
 import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
+import UiPagination from '@/components/ui/UiPagination.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
+import UiStack from '@/components/ui/UiStack.vue'
 import UiText from '@/components/ui/UiText.vue'
 import { useReport } from '@/composables/useReport'
 import { useReportClients } from '@/composables/useReportClients'
+import { REPORT_PAGE_SIZE } from '@/lib/limits'
+import { formatCurrencyCode } from '@/lib/money'
 import { reportPath } from '@/lib/reportsQuery'
-import { formatUsd } from '@/lib/money'
 import { currentYearRange } from '@/lib/reportsPeriod'
 import { ReportCellFormat } from '@/types/reportcolumn'
 import type { ReportColumn } from '@/types/reportcolumn'
@@ -39,6 +43,9 @@ const minAmount = ref(0)
 /** Largest credit to list; 0 means no upper limit. */
 const maxAmount = ref(0)
 
+/** Page of credits shown, starting at 1. */
+const page = ref(1)
+
 const { data, load } = useReport<ReportCredits>(() =>
   reportPath('/reports/credits-reviewer', {
     clientId: selectedClient.value,
@@ -46,25 +53,43 @@ const { data, load } = useReport<ReportCredits>(() =>
     to: dateRange.value?.[1],
     minAmount: minAmount.value > 0 ? minAmount.value : undefined,
     maxAmount: maxAmount.value > 0 ? maxAmount.value : undefined,
+    page: page.value,
+    pageSize: REPORT_PAGE_SIZE,
   }),
 )
 
-/** Table columns. */
+/** Runs the report for the chosen filters from its first page. */
+const generate = async (): Promise<void> => {
+  page.value = 1
+  await load()
+}
+
+/**
+ * Shows another page of credits.
+ *
+ * @param next - The page to show.
+ */
+const goToPage = async (next: number): Promise<void> => {
+  page.value = next
+  await load()
+}
+
+/** Table columns; every amount is written in its own currency. */
 const columns = computed<ReportColumn[]>(() => [
   { key: 'id', label: t('reports.creditsReviewer.creditId') },
   { key: 'clientId', label: t('reports.creditsReviewer.clientId') },
   { key: 'clientName', label: t('shared.clientName') },
-  { key: 'date', label: t('shared.date'), align: UiAlign.Center },
+  { key: 'date', label: t('shared.date'), align: UiAlign.Center, format: ReportCellFormat.Date },
   { key: 'description', label: t('shared.description') },
-  { key: 'amount', label: t('shared.amount'), align: UiAlign.Right, format: ReportCellFormat.Money },
-  { key: 'adminUser', label: t('reports.creditsReviewer.adminUser') },
+  { key: 'currency', label: t('shared.currency') },
+  { key: 'amount', label: t('shared.amount'), align: UiAlign.Right, format: ReportCellFormat.Money, currencyKey: 'currency' },
 ])
 </script>
 
 <template>
-  <ReportPage :title="t('reports.creditsReviewer.creditsReviewer')" :description="t('reports.creditsReviewer.thisReportAllowsYouTo')">
+  <ReportPage :retry="load" :title="t('reports.creditsReviewer.creditsReviewer')" :description="t('reports.creditsReviewer.thisReportAllowsYouTo')">
     <template #filters>
-      <ReportFilterBar @generate="load">
+      <ReportFilterBar @generate="generate">
         <template #fields>
           <ReportField :label="t('shared.client')" width="grow">
             <UiClientSelect v-model="selectedClient" :clients="clients" :placeholder="t('reports.creditsReviewer.allClients')" />
@@ -83,15 +108,29 @@ const columns = computed<ReportColumn[]>(() => [
     </template>
 
     <template v-if="data">
-      <UiText v-if="data.totalCount > 0" tone="secondary" size="md" data-testid="report-credits-summary">
-        {{ data.totalCount }} {{ t('reports.creditsReviewer.creditsFoundTotal') }} {{ formatUsd(data.totalAmount) }}
-      </UiText>
+      <UiStack gap="xs" data-testid="report-credits-summary">
+        <UiText v-for="total in data.totals" :key="total.currency" tone="secondary" size="md">
+          {{
+            t('reports.creditsReviewer.currencySummary', {
+              currency: total.currency,
+              count: total.totalCount,
+              amount: formatCurrencyCode(total.totalAmount, total.currency),
+            })
+          }}
+        </UiText>
+      </UiStack>
       <ReportTable
         :columns="columns"
-        :rows="data.rows"
+        :rows="data.rows.items"
         row-key="id"
         :empty-text="t('reports.creditsReviewer.noCreditsFoundForThis')"
-        :totals="{ amount: data.totalAmount }"
+      />
+      <UiPagination
+        :page="page"
+        :total="data.rows.totalCount"
+        :page-size="REPORT_PAGE_SIZE"
+        testid="report-credits-pagination"
+        @update:page="goToPage"
       />
     </template>
   </ReportPage>

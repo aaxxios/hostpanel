@@ -1,5 +1,6 @@
 using FluentValidation;
 using Innovayse.Hostpanel.Application.Clients.Commands.AcceptInvitation;
+using Innovayse.Hostpanel.Application.Common;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Application;
@@ -15,7 +16,7 @@ public static class DependencyInjection
     /// <returns>The container, for chaining.</returns>
     /// <remarks>
     /// Every <c>AbstractValidator&lt;T&gt;</c> in this assembly, which is where all of them
-    /// live -- there is not one in the API, the Domain or the Infrastructure project. Registered
+    /// live: there is not one in the API, the Domain or the Infrastructure project. Registered
     /// Scoped, which is this call's default and is load-bearing rather than incidental:
     /// <c>PlaceOrderValidator</c> takes <c>ICurrentUserService</c>, itself Scoped, so a Singleton
     /// registration here would be a captive dependency that answers every checkout with the first
@@ -29,6 +30,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddValidatorsFromAssemblyContaining<AcceptInvitationCommand>();
+
+        // Runs the passes of the recurring jobs under their lease; scoped because it holds the scoped lease port.
+        services.AddScoped<RecurringJobs>();
 
         return services;
     }

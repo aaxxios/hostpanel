@@ -15,7 +15,7 @@
  *
  * Tells the operator's company story, read from the `portal.about.text` settings in the visitor's
  * language. The page writes no story of its own: an install with none set sends the visitor to the
- * contact page, which is where the footer's "About us" link led before this page existed.
+ * contact page instead.
  */
 import type { LegalSection } from '~/types/legalsection'
 

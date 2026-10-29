@@ -1,160 +1,170 @@
 <script setup lang="ts">
 /**
- * Modal for adding a single billable item to a client.
- * Supports various invoice actions including recurring billing.
+ * Modal for adding one billable item to a client: a one time or recurring charge with its
+ * description, amount, currency and the day it is invoiced automatically (the invoice day of a one
+ * time item, the next due date of a recurring one). A recurring item also takes how often it repeats.
+ * The form sends exactly the API's create command; a refusal shows the API's sentence above the form
+ * and each field's message under its field. Every opening starts without the last refusal's messages.
  */
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClientBillableItemsStore } from '@/stores/clientBillableItems'
-import { INVOICE_ACTION_OPTIONS, RECURRENCE_PERIOD_OPTIONS } from '@/lib/constants'
-import { toDateInputValue } from '@/lib/format'
-import { BillableInvoiceAction, RecurrencePeriod } from '@/types/billableitem'
-import UiAlert from '@/components/ui/UiAlert.vue'
+import { useClientsStore } from '@/stores/clients'
+import { BILLABLE_ITEM_TYPE_OPTIONS, RECURRING_PERIOD_OPTIONS } from '@/lib/constants'
+import type { SelectOption } from '@/lib/constants'
+import { toIsoDay } from '@/lib/format'
+import { BILLABLE_ITEM_DESCRIPTION_MAX_LENGTH } from '@/lib/limits'
+import { BillableItemType, RecurringPeriod } from '@/types/billableitem'
+import type { CreateClientBillableItemPayload } from '@/types/billableitem'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDatePicker from '@/components/ui/UiDatePicker.vue'
-import { UiDatePickerDirection } from '@/utils/ui/datePicker'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiForm from '@/components/ui/UiForm.vue'
 import UiGrid from '@/components/ui/UiGrid.vue'
-import UiLabel from '@/components/ui/UiLabel.vue'
 import UiNumberInput from '@/components/ui/UiNumberInput.vue'
-import UiRadio from '@/components/ui/UiRadio.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiStack from '@/components/ui/UiStack.vue'
+import UiStatusMessage from '@/components/ui/UiStatusMessage.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { UiButtonVariant } from '@/utils/ui/button'
-import { UiAlignItems, UiJustify } from '@/utils/ui/layout'
-import { UiLabelVariant } from '@/utils/ui/text'
+import { UiDatePickerDirection } from '@/utils/ui/datePicker'
+import { UiDialogSize } from '@/utils/ui/dialog'
+import { UiAlignItems, UiDirection, UiGap, UiJustify } from '@/utils/ui/layout'
+import { UiTone } from '@/utils/ui/tone'
 
+/** Translator for the modal's labels. */
 const { t } = useI18n()
 
 /** Props for AddBillableItemModal. */
 const props = defineProps<{
-  /** Client ID for fetching services. */
+  /** Id of the client the item is billed to. */
   clientId: string
-  /** External saving state indicator. */
-  saving: boolean
 }>()
 
+/** Events of AddBillableItemModal. */
 const emit = defineEmits<{
-  /** Emitted after a successful save. */
+  /** Emitted after the API accepted the item. */
   saved: []
-  /** Emitted when the user closes the modal. */
+  /** Emitted when the operator closes the modal. */
   close: []
 }>()
-
-/** Invoice action value that turns on the recurrence fields. */
-const RECUR_ACTION = BillableInvoiceAction.Recur
 
 /** Billable items store, the only caller of the billable item endpoints. */
 const store = useClientBillableItemsStore()
 
-/** True while save is in progress. */
-const internalSaving = ref(false)
+/** Clients store: the open client's billing currency and the currencies the operator enabled. */
+const clientsStore = useClientsStore()
 
-/** Error message from the save operation (owned by the store). */
-const saveError = computed(() => store.saveError)
+/** True while the item is being sent. */
+const saving = ref(false)
 
-/** Available services for the dropdown. */
-const serviceOptions = ref<{ value: number; label: string }[]>([])
-
-/** Selected service ID. */
-const serviceId = ref<number>(0)
-
-/** Item description. */
+/** What the charge is for. */
 const description = ref('')
-
-/** Hours or quantity value. */
-const hoursQty = ref(0)
-
-/** Whether the hoursQty field represents hours. */
-const isHours = ref(true)
 
 /** Charge amount. */
 const amount = ref(0)
 
-/** Selected invoice action. */
-const invoiceAction = ref<string>(BillableInvoiceAction.DontInvoice)
+/** ISO 4217 code of the charge currency; empty until the currencies are known. */
+const currency = ref('')
 
-/** Due date in YYYY-MM-DD format. */
-const dueDate = ref(toDateInputValue(new Date().toISOString()))
+/** One time or recurring. */
+const type = ref<BillableItemType>(BillableItemType.OneTime)
 
-/** Invoice count (read-only for new items). */
-const invoiceCount = ref(0)
-
-/** Recurrence interval (every N). */
-const recurrenceInterval = ref(1)
-
-/** Recurrence period unit. */
-const recurrencePeriod = ref<string>(RecurrencePeriod.Months)
-
-/** Recurrence limit (number of times). */
-const recurrenceLimit = ref(0)
-
-/** Whether a recurrence action is selected. */
-const isRecurring = computed(() => invoiceAction.value === RECUR_ACTION)
+/** How often a recurring item repeats. */
+const recurringPeriod = ref<RecurringPeriod>(RecurringPeriod.Monthly)
 
 /**
- * Fetches client services for the product/service dropdown.
- *
- * @returns Promise that resolves when services are loaded.
+ * Day (ISO `YYYY-MM-DD`) the item is invoiced automatically: once for a one time item, next for a
+ * recurring one; null for none, which leaves the item to be invoiced by hand.
  */
-const fetchServices = async (): Promise<void> => {
-  serviceOptions.value = await store.fetchServiceOptions(props.clientId)
+const nextDueDate = ref<string | null>(toIsoDay(new Date()))
+
+/** True when the item recurs, so its period is shown and sent. */
+const isRecurring = computed<boolean>(() => type.value === BillableItemType.Recurring)
+
+/** Label of the due date field: the invoice day of a one time item, the next due date of a recurring one. */
+const dueDateLabel = computed<string>(() =>
+  isRecurring.value ? t('billing.addBillableItem.nextDueDate') : t('billing.addBillableItem.invoiceOn'),
+)
+
+/** The currencies the operator enabled, as select options. */
+const currencyOptions = computed<SelectOption[]>(() =>
+  clientsStore.currencies.map(option => ({ value: option.code, label: option.code })),
+)
+
+/** Billing currency of this client when the open client is this one and has one set, else null. */
+const clientCurrency = computed<string | null>(() => {
+  const client = clientsStore.current
+  if (client === null || String(client.id) !== props.clientId) {
+    return null
+  }
+  return client.preferences.currency ?? null
+})
+
+/**
+ * Builds the create command from the form: the due date for every item, the period only for a
+ * recurring one.
+ *
+ * @returns The body the API's create command expects.
+ */
+const toPayload = (): CreateClientBillableItemPayload => {
+  const payload: CreateClientBillableItemPayload = {
+    description: description.value,
+    amount: amount.value,
+    currency: currency.value,
+    type: type.value,
+    nextDueDate: nextDueDate.value ?? undefined,
+  }
+  if (!isRecurring.value) {
+    return payload
+  }
+  return { ...payload, recurringPeriod: recurringPeriod.value }
 }
 
 /**
- * Submits the billable item to the backend.
+ * Sends the item and tells the parent once the API accepted it.
  *
- * @returns Promise that resolves when the item is saved.
+ * @returns Promise that resolves when the request is over.
  */
 const handleSave = async (): Promise<void> => {
-  internalSaving.value = true
-  const saved = await store.addItem(props.clientId, {
-    serviceId: serviceId.value || null,
-    description: description.value,
-    hoursQty: hoursQty.value,
-    isHours: isHours.value,
-    amount: amount.value,
-    invoiceAction: invoiceAction.value,
-    dueDate: dueDate.value || null,
-    invoiceCount: invoiceCount.value,
-    recurrenceInterval: isRecurring.value ? recurrenceInterval.value : null,
-    recurrencePeriod: isRecurring.value ? recurrencePeriod.value : null,
-    recurrenceLimit: isRecurring.value ? (recurrenceLimit.value || null) : null,
-  })
-  internalSaving.value = false
+  saving.value = true
+  const saved = await store.addItem(props.clientId, toPayload())
+  saving.value = false
   if (saved) {
     emit('saved')
   }
 }
 
-onMounted(() => fetchServices())
+/**
+ * The modal is mounted each time it opens: drops the messages of an earlier refused add, loads the
+ * enabled currencies and starts on the client's billing currency, else the first one.
+ */
+onMounted(async () => {
+  store.clearSaveErrors()
+  await clientsStore.fetchCurrencies()
+  currency.value = clientCurrency.value ?? currencyOptions.value[0]?.value ?? ''
+})
 </script>
 
 <template>
-  <UiDialog :title="t('shared.addBillableItem')" size="lg" @close="emit('close')">
+  <UiDialog :title="t('shared.addBillableItem')" :size="UiDialogSize.Lg" @close="emit('close')">
     <UiStack>
-      <UiAlert v-if="saveError" variant="error" data-testid="clients-add-billable-item-error">
-        {{ saveError }}
-      </UiAlert>
+      <UiStatusMessage :message="store.saveError" :tone="UiTone.Danger" data-testid="clients-add-billable-item-error" />
 
       <UiForm stacked @submit="handleSave">
-        <UiField :label="t('shared.productService')">
-          <UiSelect
-            v-model="serviceId"
-            :options="[{ value: 0, label: t('shared.none') }, ...serviceOptions]"
-            :placeholder="t('clients.addBillableItem.selectAService')"
-          />
-        </UiField>
-
-        <UiField :label="t('shared.description')">
-          <template #default="{ id }">
+        <UiField
+          :label="t('shared.description')"
+          :error="store.fieldErrors.description"
+          error-testid="clients-add-billable-item-description-error"
+        >
+          <template #default="{ id, invalid }">
             <UiTextarea
               :id="id"
               v-model="description"
               rows="3"
+              :maxlength="BILLABLE_ITEM_DESCRIPTION_MAX_LENGTH"
+              :invalid="invalid"
               :placeholder="t('clients.addBillableItem.describeTheCharge')"
               data-testid="clients-add-billable-item-description"
             />
@@ -162,69 +172,67 @@ onMounted(() => fetchServices())
         </UiField>
 
         <UiGrid :columns="2">
-          <UiStack gap="sm">
-            <UiField :label="t('shared.hoursQty')">
-              <UiNumberInput v-model="hoursQty" :step="0.01" :min="0" placeholder="0" data-testid="clients-add-billable-item-hours-qty" />
-            </UiField>
-            <UiStack direction="row" :align="UiAlignItems.Center">
-              <UiLabel :variant="UiLabelVariant.Inline">
-                <UiRadio v-model="isHours" :value="true" name="hoursType" data-testid="clients-add-billable-item-hours" />
-                {{ t('shared.hours') }}
-              </UiLabel>
-              <UiLabel :variant="UiLabelVariant.Inline">
-                <UiRadio v-model="isHours" :value="false" name="hoursType" data-testid="clients-add-billable-item-qty" />
-                {{ t('shared.qty') }}
-              </UiLabel>
-            </UiStack>
-          </UiStack>
-          <UiField :label="t('shared.amount')">
+          <UiField
+            :label="t('shared.amount')"
+            :error="store.fieldErrors.amount"
+            error-testid="clients-add-billable-item-amount-error"
+          >
             <UiNumberInput v-model="amount" :step="0.01" :min="0" placeholder="0.00" data-testid="clients-add-billable-item-amount" />
           </UiField>
+          <UiField
+            :label="t('shared.currency')"
+            :error="store.fieldErrors.currency"
+            error-testid="clients-add-billable-item-currency-error"
+          >
+            <UiSelect
+              v-model="currency"
+              :options="currencyOptions"
+              :placeholder="t('shared.selectCurrency')"
+              data-testid="clients-add-billable-item-currency"
+            />
+          </UiField>
         </UiGrid>
-
-        <UiField :label="t('shared.invoiceAction')">
-          <UiStack gap="sm">
-            <UiLabel
-              v-for="opt in INVOICE_ACTION_OPTIONS"
-              :key="opt.value"
-              :variant="UiLabelVariant.Inline"
-            >
-              <UiRadio
-                v-model="invoiceAction"
-                :value="opt.value"
-                name="invoiceAction"
-                :data-testid="`clients-add-billable-item-action-${opt.value}`"
-              />
-              <template v-if="opt.value !== RECUR_ACTION">
-                {{ opt.label }}
-              </template>
-              <template v-else>
-                {{ t('clients.addBillableItem.recurEvery') }}
-                <UiNumberInput v-model="recurrenceInterval" :min="1" :disabled="!isRecurring" placeholder="1" data-testid="clients-add-billable-item-recur-interval" />
-                <UiSelect
-                  v-model="recurrencePeriod"
-                  :options="RECURRENCE_PERIOD_OPTIONS"
-                  :disabled="!isRecurring"
-                  :placeholder="t('clients.addBillableItem.recurEvery')"
-                />
-                {{ t('clients.addBillableItem.for') }}
-                <UiNumberInput v-model="recurrenceLimit" :min="0" :disabled="!isRecurring" placeholder="0" data-testid="clients-add-billable-item-recur-limit" />
-                {{ t('clients.addBillableItem.times') }}
-              </template>
-            </UiLabel>
-          </UiStack>
-        </UiField>
 
         <UiGrid :columns="2">
-          <UiField :label="t('shared.dueDate')">
-            <UiDatePicker v-model="dueDate" :direction="UiDatePickerDirection.Future" />
+          <UiField :label="t('shared.type')" :error="store.fieldErrors.type" error-testid="clients-add-billable-item-type-error">
+            <UiSelect
+              v-model="type"
+              :options="BILLABLE_ITEM_TYPE_OPTIONS"
+              :placeholder="t('shared.type')"
+              data-testid="clients-add-billable-item-type"
+            />
           </UiField>
-          <UiField :label="t('clients.addBillableItem.invoiceCount')">
-            <UiNumberInput v-model="invoiceCount" :min="0" :disabled="true" placeholder="0" data-testid="clients-add-billable-item-invoice-count" />
+          <UiField
+            :label="dueDateLabel"
+            :error="store.fieldErrors.nextDueDate"
+            error-testid="clients-add-billable-item-next-due-date-error"
+            data-testid="clients-add-billable-item-next-due-date-field"
+          >
+            <UiDatePicker
+              v-model="nextDueDate"
+              :direction="UiDatePickerDirection.Future"
+              :placeholder="t('shared.selectDate')"
+              data-testid="clients-add-billable-item-next-due-date"
+            />
           </UiField>
         </UiGrid>
 
-        <UiStack direction="row" :justify="UiJustify.End" :align="UiAlignItems.Center" gap="sm">
+        <UiField
+          v-if="isRecurring"
+          :label="t('billing.addBillableItem.recurringPeriod')"
+          :error="store.fieldErrors.recurringPeriod"
+          error-testid="clients-add-billable-item-recurring-period-error"
+          data-testid="clients-add-billable-item-recurrence"
+        >
+          <UiSelect
+            v-model="recurringPeriod"
+            :options="RECURRING_PERIOD_OPTIONS"
+            :placeholder="t('billing.addBillableItem.recurringPeriod')"
+            data-testid="clients-add-billable-item-recurring-period"
+          />
+        </UiField>
+
+        <UiStack :direction="UiDirection.Row" :justify="UiJustify.End" :align="UiAlignItems.Center" :gap="UiGap.Sm">
           <UiButton
             type="button"
             :variant="UiButtonVariant.Secondary"
@@ -236,10 +244,10 @@ onMounted(() => fetchServices())
           <UiButton
             type="submit"
             :variant="UiButtonVariant.Primary"
-            :disabled="internalSaving"
+            :disabled="saving"
             data-testid="clients-add-billable-item-save"
           >
-            {{ internalSaving ? t('shared.saving') : t('shared.save') }}
+            {{ saving ? t('shared.saving') : t('shared.save') }}
           </UiButton>
         </UiStack>
       </UiForm>

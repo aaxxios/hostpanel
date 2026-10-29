@@ -119,14 +119,31 @@ describe('useStorefrontForm', () => {
     stubRouteTable({ 'GET /admin/faqs': () => json([]) })
     await mountScreen(Harness, {}, '/w/9', '/w/:id')
 
-    expect(current().flow.saveError.value).toBe('Entry #9 was not found.')
+    expect(current().flow.loadError.value).toBe('Entry #9 was not found.')
+    expect(current().flow.saveError.value).toBeNull()
   })
 
   it('edit mode: a refused load shows the API sentence instead of not-found', async () => {
     stubRouteTable({ 'GET /admin/faqs': () => problem('Widgets are locked.', 423) })
     await mountScreen(Harness, {}, '/w/9', '/w/:id')
 
-    expect(current().flow.saveError.value).toBe('Widgets are locked.')
+    expect(current().flow.loadError.value).toBe('Widgets are locked.')
+  })
+
+  it('edit mode: reload fills the form after a refused load', async () => {
+    let calls = 0
+    stubRouteTable({
+      'GET /admin/faqs': () => {
+        calls += 1
+        return calls === 1 ? problem('Widgets are locked.', 423) : json([{ id: 9, sortOrder: 0, name: 'Stored' }])
+      },
+    })
+    await mountScreen(Harness, {}, '/w/9', '/w/:id')
+
+    await current().flow.reload()
+
+    expect(current().flow.loadError.value).toBeNull()
+    expect(current().form.name).toBe('Stored')
   })
 
   it('a refused save keeps the API sentence and stays on the page', async () => {

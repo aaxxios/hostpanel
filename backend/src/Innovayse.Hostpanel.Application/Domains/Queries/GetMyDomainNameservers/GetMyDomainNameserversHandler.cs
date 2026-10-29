@@ -5,6 +5,7 @@ using Wolverine;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Domains.Queries.GetMyDomainNameservers;
+
 /// <summary>
 /// Returns the nameservers of one of the calling client's own domains, refusing every id that is
 /// not theirs.

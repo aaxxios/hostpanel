@@ -23,7 +23,7 @@ public sealed class UpdateQuoteHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>QUOTE_NOT_FOUND</c> when the id names no quote. Item-level and stage
-    /// invariants still throw — see <see cref="Domain.Billing.Quote.UpdateItem"/> and
+    /// invariants still throw: see <see cref="Domain.Billing.Quote.UpdateItem"/> and
     /// <see cref="Domain.Billing.Quote.RemoveItem"/>.
     /// </returns>
     public async Task<Result> HandleAsync(UpdateQuoteCommand cmd, CancellationToken ct)

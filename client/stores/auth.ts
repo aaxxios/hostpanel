@@ -2,9 +2,9 @@
  * Pinia store for who is signed in.
  *
  * Auth strategy:
- * - `portal_session` — httpOnly cookie holding only an opaque session id, set server-side after
+ * - `portal_session`: httpOnly cookie holding only an opaque session id, set server-side after
  *   login; the tokens it names stay on the server (`server/utils/portal-session.ts`)
- * - `authed`         — plain cookie (value "1"), readable by JS and middleware on both sides
+ * - `authed`: plain cookie (value "1"), readable by JS and middleware on both sides
  *
  * A setup store rather than an options store because {@link isLoggedIn} has to read a cookie
  * ref, and `useCookie` must be called once inside the Nuxt context rather than per getter
@@ -19,6 +19,7 @@
 import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
 import { defineStore } from 'pinia'
 import { useAuthApi } from '~/composables/apis/useAuthApi'
+import { useCartStore } from '~/stores/cart'
 import { useClientStore } from '~/stores/client'
 import type { ClientUser } from '~/types/clientuser'
 import type { EmailVerifiedStatus } from '~/types/emailverifiedstatus'
@@ -56,16 +57,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Fetch and cache current user data from the server.
-   * Safe to call multiple times — skips if user is already loaded.
+   * Safe to call multiple times: skips if user is already loaded.
    *
-   * Delegates to {@link useClientStore} rather than calling `/client/me` itself. Both stores
-   * wanted the same record and each fetched it separately, so a client-area page load asked
-   * for the identity once here and again there — `apiFetch` is `$fetch`-based and dedupes
-   * nothing. A store calling another store is the sanctioned direction; a second store
-   * calling the same API composable was the smell. The dedupe lives one layer down, in the
-   * store that owns the record.
+   * Delegates to {@link useClientStore} rather than calling `/client/me` itself: both stores
+   * want the same record, and `apiFetch` is `$fetch`-based and dedupes nothing, so two
+   * callers would ask for the identity twice per page load. The dedupe lives one layer down,
+   * in the store that owns the record.
    *
-   * @returns Nothing; a failure leaves {@link user} null rather than throwing — the client
+   * @returns Nothing; a failure leaves {@link user} null rather than throwing: the client
    * store keeps the reason (or, for an identity with no client record, its own flag).
    */
   const fetchUser = async (): Promise<void> => {
@@ -82,13 +81,13 @@ export const useAuthStore = defineStore('auth', () => {
    *
    * @param email - Account email.
    * @param password - Account password.
-   * @returns The second-factor challenge when TOTP is on — no cookies are set and {@link user}
-   * is left alone in that case — otherwise the signed-in account.
+   * @returns The second-factor challenge when TOTP is on, no cookies are set and {@link user}
+   * is left alone in that case, otherwise the signed-in account.
    * @throws Whatever the API composable throws when the credentials are rejected.
    */
   const login = async (email: string, password: string): Promise<LoginResult> => {
     const data = await api.login(email, password)
-    // The `in` check is the whole discriminant -- `twoFactorRequired` is typed as the literal
+    // The `in` check is the whole discriminant: `twoFactorRequired` is typed as the literal
     // `true`, so its presence is what tells the two answers apart. Reading the property as well
     // (`&& data.twoFactorRequired`) made the condition a conjunction, which TypeScript cannot
     // use to narrow the *else* branch: `user.value = data` below was then assigning a
@@ -384,17 +383,39 @@ export const useAuthStore = defineStore('auth', () => {
     const authMode = config.public.authMode as string
 
     if (authMode === AuthMode.Sso) {
-      // SSO logout — clears cookies and redirects to SSO endsession
+      // SSO logout: clears cookies and redirects to SSO endsession
       await api.ssoLogout()
     } else {
-      // Local logout — clears cookies and invalidates refresh token
+      // Local logout: clears cookies and invalidates refresh token
       await api.logout()
     }
     user.value = null
     // Local mode leaves the browser on the same SPA instance, so the client store's cached
     // profile, services and invoices would otherwise outlive the session and greet whoever
-    // signs in next.
+    // signs in next. The cart is the same kind of leftover: its lines belong to the person who
+    // chose them.
     useClientStore().reset()
+    useCartStore().clear()
+  }
+
+  /**
+   * Ends this browser's session without leaving the page: clears the session cookies and every
+   * cached profile, list and flag. For a page that has to stay up after the server already ended
+   * the account's sessions (a confirmed address change, two-factor switched off) and for
+   * {@link signOut}.
+   *
+   * The reset is unconditional: a failed clear must still end the session on this side rather
+   * than leave a header that claims the visitor is still signed in.
+   *
+   * @returns Nothing.
+   */
+  const endLocalSession = async (): Promise<void> => {
+    try {
+      await api.logout()
+    } catch { /* the session ends on this side either way */ }
+    user.value = null
+    useClientStore().reset()
+    useCartStore().clear()
   }
 
   /**
@@ -407,7 +428,7 @@ export const useAuthStore = defineStore('auth', () => {
    * "Sign in" signs the same person straight back in without asking. The end
    * session endpoint has to be reached as a top-level navigation.
    *
-   * Local cookies are cleared first and the reset is unconditional — a failed
+   * Local cookies are cleared first and the reset is unconditional: a failed
    * clear must still end the session on this side rather than leave a header
    * that claims the visitor is still signed in.
    *
@@ -416,11 +437,7 @@ export const useAuthStore = defineStore('auth', () => {
   const signOut = async (): Promise<void> => {
     const config = useRuntimeConfig()
 
-    try {
-      await api.logout()
-    } catch { /* the session ends on this side either way */ }
-    user.value = null
-    useClientStore().reset()
+    await endLocalSession()
 
     if ((config.public.authMode as string) !== AuthMode.Sso) {
       await navigateTo(CLIENT_LOGIN_PATH)
@@ -445,7 +462,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Register a new client account, keeping a refusal as state instead of throwing.
-   * Does not log the user in -- the page sends them to sign in after.
+   * Does not log the user in: the page sends them to sign in after.
    *
    * @param payload - The registration fields.
    * @returns How the request ended; on `Failed`, {@link registerError} holds the sentence and
@@ -540,6 +557,7 @@ export const useAuthStore = defineStore('auth', () => {
     confirmTwoFactor,
     cancelTwoFactor,
     logout,
+    endLocalSession,
     signOut,
     registerError,
     registering,

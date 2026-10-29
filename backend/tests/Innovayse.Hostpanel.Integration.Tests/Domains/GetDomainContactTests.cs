@@ -1,19 +1,17 @@
 using System.Net;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Queries.GetDomainContact;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
+using Innovayse.Hostpanel.Shared.Constants;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Domains;
 
 /// <summary>
-/// Integration tests for the admin <c>GetDomainContact</c> use case —
+/// Integration tests for the admin <c>GetDomainContact</c> use case:
 /// <c>GET /api/domains/{id}/contact</c>. The client-facing equivalent is <c>GetMyDomainContact</c>.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -73,5 +71,17 @@ public sealed class GetDomainContactTests(IntegrationTestFactory factory) : ICla
         var response = await client.GetAsync($"/api/domains/{DomainsTestSeeds.UnknownId}/contact");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive id is refused by the validator with 400 <c>VALIDATION_ERROR</c> before the handler runs.</summary>
+    [Fact]
+    public async Task GetContact_WithNonPositiveId_Returns400ValidationErrorAsync()
+    {
+        var admin = await DomainsTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.GetAsync("/api/domains/0/contact");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DomainsTestSeeds.ReadErrorCodeAsync(response)).Should().Be(SharedErrorCodes.ValidationError);
     }
 }

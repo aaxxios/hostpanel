@@ -13,8 +13,9 @@ using Wolverine;
 
 namespace Innovayse.Hostpanel.API.Controllers;
 
-/// <summary>Admin and reseller endpoints for a client's ledger of financial transactions.</summary>
+/// <summary>Admin endpoints for a client's ledger of financial transactions.</summary>
 [Route("api/transactions")]
+[ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status429TooManyRequests)]
 public sealed class TransactionsController : BaseApiController
 {
     /// <summary>Wolverine bus every action dispatches through.</summary>
@@ -30,10 +31,17 @@ public sealed class TransactionsController : BaseApiController
     /// <summary>Returns a paginated list of all transactions.</summary>
     /// <param name="query">The page and page size to list by.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page and summary totals; 401 without a session; 403 for a client caller.</returns>
+    /// <returns>
+    /// 200 with the transactions; 400 when a value is refused; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(TransactionsResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListAsync([FromQuery] ListTransactionsQuery query, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<TransactionsResultDto>>(query, ct);
@@ -44,10 +52,17 @@ public sealed class TransactionsController : BaseApiController
     /// <param name="clientId">The client's primary key; wins over any client id in the query.</param>
     /// <param name="query">The page and page size to list by.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the page and summary totals; 401 without a session; 403 for a client caller.</returns>
+    /// <returns>
+    /// 200 with the client's transactions; 400 when a value is refused;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
+    /// </returns>
     [HttpGet("client/{clientId:int}")]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(TransactionsResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListByClientAsync(
         int clientId, [FromQuery] ListTransactionsQuery query, CancellationToken ct)
     {
@@ -60,12 +75,17 @@ public sealed class TransactionsController : BaseApiController
     /// <param name="id">Transaction primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 200 with the transaction; 404 when the id names no transaction; 401; 403 for a client caller.
+    /// 200 with the transaction; 400 when a value is refused; 404 when the id names no transaction;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpGet("{id:int}")]
-    [Authorize(Policy = Policies.ResellerOrAdmin)]
+    [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(TransactionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<TransactionDto>>(new GetTransactionByIdQuery(id), ct);
@@ -76,13 +96,18 @@ public sealed class TransactionsController : BaseApiController
     /// <param name="command">The transaction to create.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201 with the new transaction ID; 404 when a credit adjustment names a client that does not
-    /// exist; 401; 403 for a caller who is not an admin.
+    /// 201 with the new transaction's id; 400 when a value is refused; 422 when no money moves; 404 when the client does not exist;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPost]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateTransactionCommand command, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result<int>>(command, ct);
@@ -94,12 +119,18 @@ public sealed class TransactionsController : BaseApiController
     /// <param name="command">The fields to write.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when written; 404 when the id names no transaction; 401; 403 for a caller who is not an admin.
+    /// 204 on success; 400 when a value is refused; 422 when no money moves; 404 when the id names no transaction;
+    /// 401 when the caller is not signed in; 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpPut("{id:int}")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> UpdateAsync(
         int id, [FromBody] UpdateTransactionCommand command, CancellationToken ct)
     {
@@ -111,13 +142,18 @@ public sealed class TransactionsController : BaseApiController
     /// <param name="id">Transaction primary key.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 204 when deleted; 404 when the id names no transaction, or its credit reversal names a
-    /// client that no longer exists; 401; 403 for a caller who is not an admin.
+    /// 204 on success; 400 when a value is refused or the credit the transaction added is already
+    /// spent; 404 when the id names no transaction or its client; 401 when the caller is not signed in;
+    /// 403 when the caller's role is not allowed;
+    /// 429 when the rate limit is hit.
     /// </returns>
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {
         var outcome = await _bus.InvokeAsync<Result>(new DeleteTransactionCommand(id), ct);

@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 /**
- * aurora domain results — one full-width row per checked extension.
+ * aurora domain results: one full-width row per checked extension.
  *
  * Presentation only: adding to the cart is emitted upward, because a template
  * never writes to a store.

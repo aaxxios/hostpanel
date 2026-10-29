@@ -1,6 +1,6 @@
 /**
  * Helper for screen tests: drives the kit's themed select (a button that opens a listbox) the way
- * a reader does — open it, then press the option.
+ * a reader does: open it, then press the option.
  */
 
 import type { DOMWrapper, VueWrapper } from '@vue/test-utils'

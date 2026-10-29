@@ -1,5 +1,5 @@
 /**
- * Tests of DiskUsageView: it mounts, shows its title and data, and shows the refusal sentence when the API
+ * Tests of DiskUsageView: it mounts, shows its title and data, and shows the refusal sentence with Retry when the API
  * refuses, and runs its own actions.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -25,6 +25,7 @@ runReportCase({
     }),
   },
   expected: ['Disk Space & Bandwidth Usage Summary', 'srv-1', 'beta.test', '95%'],
+  retryable: true,
 })
 
 /** A disk usage report with one server and no accounts. */

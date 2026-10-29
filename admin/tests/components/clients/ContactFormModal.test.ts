@@ -21,18 +21,8 @@ const contact = (): Contact =>
     email: 'ada@example.com',
     phone: null,
     type: 'Billing',
-    street: null,
-    address2: null,
-    city: null,
-    state: null,
-    postCode: null,
-    country: null,
-    notifyGeneral: true,
-    notifyInvoice: false,
-    notifySupport: true,
-    notifyProduct: true,
-    notifyDomain: true,
-    notifyAffiliate: true,
+    address: { street: null, address2: null, city: null, state: null, postCode: null, country: null },
+    notifications: { general: true, invoice: false, support: true, product: true, domain: true, affiliate: true },
   }) as unknown as Contact
 
 /**
@@ -68,7 +58,8 @@ describe('ContactFormModal', () => {
     const payload = wrapper.emitted('save')?.[0]?.[0] as Record<string, unknown>
     expect(payload.firstName).toBe('Grace')
     expect(payload.phone).toBeNull()
-    expect(payload.notifyGeneral).toBe(true)
+    expect(payload.notifications).toEqual({ general: true, invoice: true, support: true, product: true, domain: true, affiliate: true })
+    expect(payload.address).toEqual({ street: null, address2: null, city: null, state: null, postCode: null, country: null })
   })
 
   it('fills the form from the contact and offers delete in edit mode', async () => {

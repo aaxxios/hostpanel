@@ -3,7 +3,8 @@
  * the spelling the locale files use.
  */
 import { describe, expect, it } from 'vitest'
-import { PRICING_CYCLES, PRICING_CYCLE_I18N_KEY, PRICING_CYCLE_ISO_DURATION, MONTHS_PER_YEAR } from '~/constants/pricingCycle'
+import { BILLING_CYCLE_I18N_KEY, PRICING_CYCLES, PRICING_CYCLE_I18N_KEY, PRICING_CYCLE_ISO_DURATION, MONTHS_PER_YEAR } from '~/constants/pricingCycle'
+import { BillingCycle } from '~/types/billingcycle'
 import { PricingCycle } from '~/types/pricingcycle'
 
 describe('pricing cycle constants', () => {
@@ -16,6 +17,14 @@ describe('pricing cycle constants', () => {
     expect(PRICING_CYCLE_I18N_KEY[PricingCycle.Annual]).toBe('annually')
     for (const cycle of Object.values(PricingCycle)) {
       expect(PRICING_CYCLE_I18N_KEY[cycle]).toBeTruthy()
+    }
+  })
+
+  it('maps every billing cycle of a service to its locale key', () => {
+    expect(BILLING_CYCLE_I18N_KEY[BillingCycle.Monthly]).toBe('monthly')
+    expect(BILLING_CYCLE_I18N_KEY[BillingCycle.Annual]).toBe('annually')
+    for (const cycle of Object.values(BillingCycle)) {
+      expect(BILLING_CYCLE_I18N_KEY[cycle]).toBeTruthy()
     }
   })
 

@@ -1,7 +1,7 @@
 /**
  * The typefaces an operator can pick, with the Tailwind utility that previews each option.
  *
- * Mirrors `client/utils/brandFonts.ts` and `PortalSettingKeys.FontNames` on the backend —
+ * Mirrors `client/utils/brandFonts.ts` and `PortalSettingKeys.FontNames` on the backend:
  * the values are what the API accepts for `portal.brand.font_heading` / `font_body`. The
  * faces are the same `@fontsource` packages the storefront ships, imported in `main.css` so
  * an option previews in its own face without a request to a font CDN. The stacks themselves

@@ -35,7 +35,5 @@ export enum SessionCookie {
   /** The page to open after the sign-in round trip completes. */
   PostLoginRedirect = 'post_login_redirect',
   /** Legacy readable cookie that once carried the signed-in account to the widget; only ever cleared now. */
-  PendingAccount = 'inno_pending_account',
-  /** The JSON session of a signed-in customer, read by `requireClientSession`. */
-  ClientSession = 'client_session'
+  PendingAccount = 'inno_pending_account'
 }

@@ -1,9 +1,11 @@
 using Innovayse.Hostpanel.Application.Billing.Common;
 using Innovayse.Hostpanel.Application.Billing.Extensions;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Wolverine;
 
 namespace Innovayse.Hostpanel.Application.Billing.Queries.GetInvoice;
 
@@ -13,11 +15,16 @@ public sealed class GetInvoiceHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>The message bus, for the Clients module's client briefs; Billing never reads the client tables.</summary>
+    private readonly IMessageBus _bus;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public GetInvoiceHandler(IHostpanelDbContext context)
+    /// <param name="bus">The message bus, for the Clients module's client briefs; Billing never reads the client tables.</param>
+    public GetInvoiceHandler(IHostpanelDbContext context, IMessageBus bus)
     {
         _context = context;
+        _bus = bus;
     }
 
     /// <summary>Handles the query.</summary>
@@ -41,12 +48,10 @@ public sealed class GetInvoiceHandler
             return Result<InvoiceDto>.FailureCode(HostpanelErrorCodes.INVOICE_NOT_FOUND);
         }
 
-        var clientName = await _context.Clients
-            .AsNoTracking()
-            .Where(c => c.Id == invoice.ClientId)
-            .Select(c => c.FirstName + " " + c.LastName)
-            .FirstOrDefaultAsync(ct);
+        // FK_Invoices_Clients_ClientId restricts deleting a client that has invoices, so a missing
+        // client is a broken database, not an answer to render.
+        var client = await _bus.GetRequiredClientBriefAsync(invoice.ClientId, withEmail: false, ct);
 
-        return Result<InvoiceDto>.Success(InvoiceMapper.MapToDto(invoice, clientName));
+        return Result<InvoiceDto>.Success(InvoiceMapper.MapToDto(invoice, client.FullName));
     }
 }

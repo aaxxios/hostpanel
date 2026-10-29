@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 
@@ -11,7 +8,7 @@ namespace Innovayse.Hostpanel.Integration.Tests.Auth;
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class GetSetupRequiredTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>An anonymous caller reads both flags, and a token is only wanted while setup is outstanding.</summary>
+    /// <summary>An anonymous caller reads whether setup is outstanding, and the answer carries nothing else.</summary>
     [Fact]
     public async Task GetSetupRequiredAnswersAnonymously()
     {
@@ -19,8 +16,7 @@ public sealed class GetSetupRequiredTests(IntegrationTestFactory factory) : ICla
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var required = body.GetProperty("required").GetBoolean();
-        var tokenRequired = body.GetProperty("tokenRequired").GetBoolean();
-        tokenRequired.Should().Be(required, "the suite runs the local mode, where setup is token-gated");
+        body.GetProperty("required").ValueKind.Should().BeOneOf(JsonValueKind.True, JsonValueKind.False);
+        body.TryGetProperty("tokenRequired", out _).Should().BeFalse("setup is token-gated in every mode, so no flag says so");
     }
 }

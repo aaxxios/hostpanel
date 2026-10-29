@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Domain.Notifications.Enums;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Notifications;
 
@@ -18,7 +16,7 @@ public sealed class GetMyEmailLogTests(IntegrationTestFactory factory) : IClassF
     [Fact]
     public async Task GetReturnsTheCallersEmail()
     {
-        var (http, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (http, _, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         var id = await NotificationsTestSeeds.SeedLogAsync(factory, email, "Mine, read");
 
         var response = await http.GetAsync($"/api/me/emails/{id}");
@@ -28,11 +26,29 @@ public sealed class GetMyEmailLogTests(IntegrationTestFactory factory) : IClassF
         entry.GetProperty("subject").GetString().Should().Be("Mine, read");
     }
 
+    /// <summary>A failed send is read as failed, with no failure reason, which is for staff only.</summary>
+    [Fact]
+    public async Task GetOmitsTheDeliveryError()
+    {
+        var (http, _, _, email) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var id = await NotificationsTestSeeds.SeedLogAsync(factory, email, "Mine, failed", EmailSendFailure.AuthenticationRejected);
+
+        var response = await http.GetAsync($"/api/me/emails/{id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain(nameof(EmailSendFailure.AuthenticationRejected));
+        var entry = System.Text.Json.JsonDocument.Parse(body).RootElement;
+        entry.GetProperty("success").GetBoolean().Should().BeFalse();
+        entry.TryGetProperty("error", out _).Should().BeFalse();
+        entry.TryGetProperty("failure", out _).Should().BeFalse();
+    }
+
     /// <summary>An email addressed to somebody else answers 404 with <c>EMAIL_LOG_NOT_FOUND</c>.</summary>
     [Fact]
     public async Task GetRefusesSomebodyElsesEmail()
     {
-        var (http, _, _) = await NotificationsTestSeeds.RegisterClientAsync(factory);
+        var (http, _, _, _) = await NotificationsTestSeeds.RegisterClientAsync(factory);
         var othersId = await NotificationsTestSeeds.SeedLogAsync(
             factory, $"other-{Guid.NewGuid():N}@example.test", "Theirs, read");
 

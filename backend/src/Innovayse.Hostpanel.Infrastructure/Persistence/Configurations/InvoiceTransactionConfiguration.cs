@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Innovayse.Hostpanel.Infrastructure.Persistence.Configurations;
+
 /// <summary>EF Core configuration for the <see cref="InvoiceTransaction"/> entity.</summary>
 public sealed class InvoiceTransactionConfiguration : IEntityTypeConfiguration<InvoiceTransaction>
 {

@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Application.Admin.Common;
 /// <param name="Language">Preferred UI language code, or null for default.</param>
 /// <param name="LastLoginAt">UTC timestamp of last login, or null if never.</param>
 /// <param name="CreatedAt">UTC timestamp of account creation.</param>
-public record UserListItemDto(
+public sealed record UserListItemDto(
     string Id,
     int? ClientId,
     string FirstName,

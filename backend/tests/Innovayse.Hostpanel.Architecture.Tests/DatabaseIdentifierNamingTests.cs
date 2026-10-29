@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
-using FluentAssertions;
+using Innovayse.Hostpanel.Architecture.Tests.Enums;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Innovayse.Hostpanel.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Architecture.Tests;
 
@@ -60,18 +60,18 @@ public sealed partial class DatabaseIdentifierNamingTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql("Host=localhost;Database=model-only")
             .Options;
-        using var context = new AppDbContext(options);
+        using var context = new AppDbContext(options, new ModelOnlyEncryptionService());
         return context.GetService<IDesignTimeModel>().Model;
     }
 
     /// <summary>Lists every identifier the model writes into the database, with what it names.</summary>
     /// <param name="model">The model to read.</param>
     /// <returns>The kind and name of each identifier.</returns>
-    private static IEnumerable<(string Kind, string Name)> Identifiers(IModel model)
+    private static IEnumerable<DatabaseIdentifier> Identifiers(IModel model)
     {
         foreach (var sequence in model.GetSequences())
         {
-            yield return ("sequence", sequence.Name);
+            yield return new(DatabaseIdentifierKind.Sequence, sequence.Name);
         }
 
         foreach (var entity in model.GetEntityTypes())
@@ -82,7 +82,7 @@ public sealed partial class DatabaseIdentifierNamingTests
                 continue;
             }
 
-            yield return ("table", table);
+            yield return new(DatabaseIdentifierKind.Table, table);
             var store = StoreObjectIdentifier.Table(table, entity.GetSchema());
 
             foreach (var property in entity.GetProperties())
@@ -90,7 +90,7 @@ public sealed partial class DatabaseIdentifierNamingTests
                 var column = property.GetColumnName(store);
                 if (column is not null && !SystemColumns.Contains(column))
                 {
-                    yield return ("column", $"{table}.{column}");
+                    yield return new(DatabaseIdentifierKind.Column, $"{table}.{column}");
                 }
             }
 
@@ -99,7 +99,7 @@ public sealed partial class DatabaseIdentifierNamingTests
                 var name = key.GetName(store);
                 if (name is not null)
                 {
-                    yield return ("key", name);
+                    yield return new(DatabaseIdentifierKind.Key, name);
                 }
             }
 
@@ -115,7 +115,7 @@ public sealed partial class DatabaseIdentifierNamingTests
                 var name = foreignKey.GetConstraintName(store, StoreObjectIdentifier.Table(principalTable, principal.GetSchema()));
                 if (name is not null)
                 {
-                    yield return ("foreign key", name);
+                    yield return new(DatabaseIdentifierKind.ForeignKey, name);
                 }
             }
 
@@ -124,7 +124,7 @@ public sealed partial class DatabaseIdentifierNamingTests
                 var name = index.GetDatabaseName(store);
                 if (name is not null)
                 {
-                    yield return ("index", name);
+                    yield return new(DatabaseIdentifierKind.Index, name);
                 }
             }
 
@@ -132,7 +132,7 @@ public sealed partial class DatabaseIdentifierNamingTests
             {
                 if (check.Name is not null)
                 {
-                    yield return ("check constraint", check.Name);
+                    yield return new(DatabaseIdentifierKind.CheckConstraint, check.Name);
                 }
             }
         }

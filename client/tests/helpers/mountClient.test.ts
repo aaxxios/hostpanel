@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest'
 import { mountClient, nuxtComponentName } from '~/tests/helpers/mountClient'
 import ServiceCard from '~/components/client/services/ServiceCard.vue'
+import SetupDomainStep from '~/components/client/services/setup/SetupDomainStep.vue'
+import { makeClientService } from '~/tests/helpers/clientServiceFixture'
 
 describe('nuxtComponentName', () => {
   it.each([
@@ -19,12 +21,15 @@ describe('nuxtComponentName', () => {
 })
 
 describe('mountClient', () => {
-  it('resolves nested client components by their auto-import name', () => {
-    const wrapper = mountClient(ServiceCard, {
-      props: { service: { id: 1, name: 'Plan', username: 'u', status: 'Active', disklimit: '10', diskusage: '1' }, currency: {} },
-    })
+  it('resolves client components by their auto-import name', () => {
+    const wrapper = mountClient(ServiceCard, { props: { service: makeClientService(), currency: {} } })
 
-    expect(wrapper.find('[data-testid="usage-bar"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="status-badge"]').exists()).toBe(true)
+  })
+
+  it('resolves client components nested in sub-folders by their auto-import name', () => {
+    const wrapper = mountClient(SetupDomainStep, { props: { domain: '', domainError: '', hasPurchasedDomain: false } })
+
+    expect(wrapper.text()).toContain('client.setup.domainTitle')
   })
 })

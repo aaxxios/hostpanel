@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AccountContact } from '~/types/accountcontact'
 import { ContactType } from '~/types/contacttype'
+import { makeClientUser } from '~/tests/helpers/clientUser'
 import { contactFromProfile, contactFromRegistrant, emptyContact, toContactChoices } from '~/utils/domainContacts'
 
 /**
@@ -20,18 +21,8 @@ const contactWith = (overrides: Partial<AccountContact>): AccountContact => ({
   email: '',
   phone: null,
   type: ContactType.General,
-  street: null,
-  address2: null,
-  city: null,
-  state: null,
-  postCode: null,
-  country: null,
-  notifyGeneral: true,
-  notifyInvoice: true,
-  notifySupport: true,
-  notifyProduct: true,
-  notifyDomain: false,
-  notifyAffiliate: false,
+  address: { street: null, address2: null, city: null, state: null, postCode: null, country: null },
+  notifications: { general: true, invoice: true, support: true, product: true, domain: false, affiliate: false },
   ...overrides
 })
 
@@ -46,11 +37,10 @@ describe('emptyContact', () => {
 
 describe('contactFromProfile', () => {
   it('renames the profile fields to the WHOIS fields', () => {
-    const contact = contactFromProfile({
-      firstname: 'Ada', lastname: 'Lovelace', companyname: 'Engines', email: 'ada@example.com',
-      address1: '1 Main St', address2: 'Flat 2', city: 'London', state: 'LDN',
-      postcode: 'N1', country: 'GB', phonenumber: '+44 1'
-    })
+    const contact = contactFromProfile(makeClientUser({
+      firstName: 'Ada', lastName: 'Lovelace', companyName: 'Engines', email: 'ada@example.com', phone: '+44 1',
+      address: { street: '1 Main St', address2: 'Flat 2', city: 'London', state: 'LDN', postCode: 'N1', country: 'GB' }
+    }))
 
     expect(contact).toEqual({
       firstName: 'Ada', lastName: 'Lovelace', organization: 'Engines', email: 'ada@example.com',
@@ -59,8 +49,10 @@ describe('contactFromProfile', () => {
     })
   })
 
-  it('reads missing fields as empty', () => {
-    expect(contactFromProfile({ firstname: 'Ada' })).toEqual({ ...emptyContact(), firstName: 'Ada' })
+  it('reads null fields and a missing address as empty', () => {
+    const profile = makeClientUser({ firstName: 'Ada', lastName: '', email: '' })
+
+    expect(contactFromProfile(profile)).toEqual({ ...emptyContact(), firstName: 'Ada' })
   })
 })
 
@@ -81,7 +73,7 @@ describe('toContactChoices', () => {
   it('labels a choice with the full name and pre-fills every WHOIS field the contact carries', () => {
     const [choice] = toContactChoices([contactWith({
       id: 7, firstName: 'Ada', lastName: 'Lovelace', companyName: 'Engines', email: 'ada@example.com', phone: '+44 1',
-      street: '1 Main St', city: 'London', postCode: 'N1', country: 'GB'
+      address: { street: '1 Main St', address2: null, city: 'London', state: null, postCode: 'N1', country: 'GB' }
     })])
 
     expect(choice).toEqual({

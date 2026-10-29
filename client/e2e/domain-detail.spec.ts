@@ -9,8 +9,14 @@
 import { expect, test } from './support/test'
 import { DOMAIN, DOMAIN_NAMESERVERS, DOMAIN_ORDER, EPP_CODE, GATEWAY_METHODS, NEW_NAMESERVERS, REGISTRANT_CONTACT, WHOIS_RECORD } from './support/fixtures.mjs'
 import { required, resetStub, scriptStub, signIn, stubRequests, waitForHydration } from './support/helpers'
+import { HttpMethod } from '../types/httpmethod'
 
-/** The stub's path for one action on the domain under test. */
+/**
+ * The stub's path for one action on the domain under test.
+ *
+ * @param action Last path segment, naming the action.
+ * @returns The backend path the stub records.
+ */
 const domainPath = (action: string): string => `/api/me/domains/${DOMAIN.id}/${action}`
 
 test.beforeEach(async ({ context, request, baseURL }) => {
@@ -75,7 +81,7 @@ test('unlocking the domain raises the overview warning and ID protection can be 
 })
 
 test('a refused lock change leaves the switch where it was and says why', async ({ page, request }) => {
-  await scriptStub(request, { method: 'PUT', path: domainPath('lock'), status: 400, code: 'LOCK_REFUSED', detail: 'E2E: the registrar refused the change.' })
+  await scriptStub(request, { method: HttpMethod.Put, path: domainPath('lock'), status: 400, code: 'LOCK_REFUSED', detail: 'E2E: the registrar refused the change.' })
 
   await page.goto(`/client/domains/${DOMAIN.id}`)
   await waitForHydration(page)

@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Domain.Billing;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -12,7 +10,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/transactions</c> against Postgres: recording a manual transaction on a client's
 /// ledger, and the round-trip through a subsequent read.
 /// </summary>
-/// <remarks>Split from the deleted <c>TransactionsEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class CreateTransactionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
@@ -66,5 +63,54 @@ public sealed class CreateTransactionTests(IntegrationTestFactory factory) : ICl
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A transaction for a client that does not exist answers 404 with <c>CLIENT_NOT_FOUND</c> and writes nothing.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownClient()
+    {
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync("/api/transactions", new
+        {
+            clientId = BillingTestSeeds.NoSuchId,
+            date = DateTimeOffset.UtcNow,
+            description = "Manual top-up",
+            transactionId = $"txn-{Guid.NewGuid():N}",
+            invoiceId = (int?)null,
+            paymentMethod = PaymentMethodNames.Manual,
+            amountIn = 25.00m,
+            amountOut = 0m,
+            fees = 0m,
+            addToCredit = false,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.CLIENT_NOT_FOUND);
+    }
+
+    /// <summary>A transaction that settles an invoice that does not exist answers 404 with <c>INVOICE_NOT_FOUND</c>.</summary>
+    [Fact]
+    public async Task CreateRefusesAnUnknownInvoice()
+    {
+        var clientId = await BillingTestSeeds.SeedClientAsync(factory);
+        var admin = await BillingTestSeeds.AdminClientAsync(factory);
+
+        var response = await admin.PostAsJsonAsync("/api/transactions", new
+        {
+            clientId = clientId,
+            date = DateTimeOffset.UtcNow,
+            description = "Manual top-up",
+            transactionId = $"txn-{Guid.NewGuid():N}",
+            invoiceId = BillingTestSeeds.NoSuchId,
+            paymentMethod = PaymentMethodNames.Manual,
+            amountIn = 25.00m,
+            amountOut = 0m,
+            fees = 0m,
+            addToCredit = false,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await BillingTestSeeds.CodeOfAsync(response)).Should().Be(HostpanelErrorCodes.INVOICE_NOT_FOUND);
     }
 }

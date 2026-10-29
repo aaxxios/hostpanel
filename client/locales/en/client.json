@@ -150,7 +150,6 @@
       "browseHosting": "Browse Hosting Plans",
       "nextDue": "Next Due",
       "amount": "Amount",
-      "diskUsage": "Disk Usage",
       "backTo": "Back to Services",
       "notFound": "Service not found.",
       "serviceDetails": "Service Details",
@@ -164,13 +163,20 @@
       "server": "Server",
       "ipAddress": "IP Address",
       "username": "Username",
+      "diskUsage": "Disk Usage",
       "disk": "Disk",
       "bandwidth": "Bandwidth",
+      "suspendedReason": "Suspension Reason",
+      "usageOf": "{used} MB / {limit} MB",
+      "suspensionSources": {
+        "manual": "Suspended by our staff.",
+        "overdue": "Suspended because an invoice is overdue.",
+        "domainExpired": "Suspended because the domain has expired.",
+        "other": "Suspended for another reason."
+      },
       "billingCycle": "Billing Cycle",
       "firstPayment": "First Payment",
       "status": "Status",
-      "suspendedReason": "Suspension Reason",
-      "configOptions": "Configuration",
       "tabOverview": "Overview",
       "tabChangePassword": "Change Password",
       "tabSsh": "SSH Keys",
@@ -297,8 +303,8 @@
       "cancellationPending": "There is an outstanding cancellation request for this service",
       "completeSetup": "Complete Setup",
       "setupRequiredNotice": "This service requires setup. Please complete it to activate your hosting.",
-      "setupRequired": "Setup Required",
-      "usageOf": "{used}MB / {limit}MB"
+      "noticesHeading": "Service notices",
+      "setupRequired": "Setup Required"
     },
     "setup": {
       "loading": "Preparing Setup Wizard...",
@@ -578,8 +584,8 @@
     "payment": {
       "title": "Payment Methods",
       "empty": "No payment methods saved",
-      "emptyDesc": "You have no saved payment methods on file.",
-      "addNew": "Add Payment Method",
+      "emptyDesc": "You have no saved cards. To pay, open an unpaid invoice and choose Pay by card: you finish the payment on the payment provider's secure page.",
+      "viewInvoices": "View invoices",
       "remove": "Remove",
       "removeConfirm": "Remove payment method?",
       "removeConfirmDesc": "This action cannot be undone.",
@@ -734,7 +740,14 @@
       "prefDomain": "Domain Emails",
       "prefDomainDesc": "Registration/Transfer Confirmation & Renewal Notices",
       "prefAffiliate": "Affiliate Emails",
-      "prefAffiliateDesc": "Receive Affiliate Notifications"
+      "prefAffiliateDesc": "Receive Affiliate Notifications",
+      "saved": "Your profile has been saved.",
+      "validation": {
+        "firstNameRequired": "Enter your first name.",
+        "lastNameRequired": "Enter your last name.",
+        "emailRequired": "Enter your email address.",
+        "emailInvalid": "Enter a valid email address, for example name{'@'}example.com."
+      }
     },
     "twoFactor": {
       "title": "Two-Factor Authentication",
@@ -750,10 +763,12 @@
       "setupSecretLabel": "Manual secret key",
       "confirmEnable": "Activate 2FA",
       "disableTitle": "Turn off two-factor authentication",
-      "disableDesc": "Enter a current code from your authenticator app to switch it off.",
+      "disableDesc": "Enter your current password and a current code from your authenticator app to switch it off. Every signed-in session ends, this one included, and you sign in again.",
       "confirmDisable": "Turn off",
       "codeLabel": "Authentication Code",
-      "qrAlt": "QR code"
+      "qrAlt": "QR code",
+      "currentPassword": "Current password",
+      "currentPasswordPlaceholder": "Your current password"
     },
     "confirmEmail": {
       "invalidLink": "Invalid confirmation link.",
@@ -792,6 +807,22 @@
       "Expired": "Expired",
       "Grace": "Grace Period",
       "Redemption": "Redemption"
+    },
+    "emailChange": {
+      "cardTitle": "Sign-in email",
+      "open": "Change",
+      "title": "Change sign-in email",
+      "desc": "We send a confirmation link to the new address. Your account keeps its current address until you open that link.",
+      "newEmail": "New email address",
+      "currentPassword": "Current password",
+      "passwordRequired": "Enter your current password.",
+      "submit": "Send confirmation link",
+      "sentTitle": "Check your new inbox",
+      "sentBody": "We sent a confirmation link to {email}. Your sign-in address changes once you open it.",
+      "confirming": "Confirming your new email...",
+      "confirmed": "Your sign-in email has changed.",
+      "signInAgain": "Every session was signed out. Sign in again with your new address.",
+      "backToAccount": "Back to account"
     }
   }
 }

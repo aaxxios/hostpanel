@@ -1,17 +1,13 @@
 using System.Net;
 using System.Net.Http.Headers;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Application.Common.Interfaces;
-using Innovayse.Hostpanel.Application.Migration.Common;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 
 /// <summary>
 /// <c>POST /api/admin/migrations/{id}/test-connection</c>, dispatching
-/// <c>TestMigrationConnectionQuery</c>: tests the connection from this panel to the legacy
+/// <c>TestMigrationConnectionCommand</c>: tests the connection from this panel to the legacy
 /// system's migration plugin.
 /// </summary>
 /// <remarks>
@@ -22,22 +18,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class TestMigrationConnectionTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>A fake source that always answers a ping, standing in for a reachable plugin.</summary>
-    private sealed class AlwaysReachableSource : IMigrationSource
-    {
-        /// <inheritdoc/>
-        public Task PingAsync(string sourceUrl, string accessKey, CancellationToken ct = default) =>
-            Task.CompletedTask;
-
-        /// <inheritdoc/>
-        public Task<MigrationSourceTotals> GetTotalsAsync(string sourceUrl, string accessKey, CancellationToken ct = default) =>
-            Task.FromResult(new MigrationSourceTotals(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-
-        /// <inheritdoc/>
-        public Task<MigrationRecordPage<TRecord>> GetRecordPageAsync<TRecord>(
-            string sourceUrl, string accessKey, string dataSet, int page, int perPage, CancellationToken ct = default) =>
-            Task.FromResult(new MigrationRecordPage<TRecord>([], 0));
-    }
 
     /// <summary>
     /// A connection test against a reachable source succeeds and records the ping, run on an
@@ -92,5 +72,17 @@ public sealed class TestMigrationConnectionTests(IntegrationTestFactory factory)
         var response = await factory.CreateClient().PostAsync("/api/admin/migrations/1/test-connection", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive job id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task TestConnectionRefusesANonPositiveId()
+    {
+        var client = await MigrationTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.PostAsync("/api/admin/migrations/0/test-connection", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await MigrationTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

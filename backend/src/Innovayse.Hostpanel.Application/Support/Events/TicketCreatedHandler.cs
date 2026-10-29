@@ -1,5 +1,6 @@
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Notifications.Commands.SendEmail;
+using Innovayse.Hostpanel.Application.Notifications.Common.TemplateModels;
 using Innovayse.Hostpanel.Domain.Support.Events;
 using Microsoft.EntityFrameworkCore;
 using Wolverine;
@@ -55,8 +56,8 @@ public sealed class TicketCreatedHandler
             return;
         }
 
-        var data = new { ticket = new { id = evt.TicketId, subject } };
+        var data = new TicketCreatedTemplateModel(new TicketTemplateData(evt.TicketId, subject));
 
-        await _bus.InvokeAsync(new SendEmailCommand(departmentEmail, "ticket-created", data), ct);
+        await _bus.InvokeAsync(new SendEmailCommand(departmentEmail, null, "ticket-created", data), ct);
     }
 }

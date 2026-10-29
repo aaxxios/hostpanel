@@ -1,15 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using FluentAssertions;
+using Innovayse.Hostpanel.Domain.Slides;
 using Innovayse.Hostpanel.Domain.Slides.Enums;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Slides;
 
 /// <summary>
-/// Integration tests for the <c>ListActiveSlides</c> use case — <c>GET /api/slides</c>, the public
+/// Integration tests for the <c>ListActiveSlides</c> use case: <c>GET /api/slides</c>, the public
 /// storefront feed. Anonymous: the storefront needs it before anyone has signed in.
 /// </summary>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
@@ -39,7 +39,7 @@ public sealed class ListActiveSlidesTests(IntegrationTestFactory factory) : ICla
             "/api/admin/slides", SlidesTestSeeds.CreateBody(isActive: true, audience: SlideAudience.Authenticated));
         var authOnlyId = await authOnly.Content.ReadFromJsonAsync<int>();
 
-        var response = await factory.CreateClient().GetAsync("/api/slides?audience=Guest");
+        var response = await factory.CreateClient().GetAsync("/api/slides");
         var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
 
         list!.Should().Contain(s => s.GetProperty("id").GetInt32() == visibleId);
@@ -97,6 +97,74 @@ public sealed class ListActiveSlidesTests(IntegrationTestFactory factory) : ICla
         var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
 
         var slide = list!.Single(s => s.GetProperty("id").GetInt32() == id);
-        slide.GetProperty("title").GetString().Should().Be("Armenian title");
+        slide.GetProperty("content").GetProperty("title").GetString().Should().Be("Armenian title");
+    }
+
+    /// <summary>A query-string audience is ignored: an anonymous caller never receives an Authenticated slide.</summary>
+    [Fact]
+    public async Task ListActive_AnonymousAskingForAuthenticated_StillGetsNone()
+    {
+        var admin = await SlidesTestSeeds.AdminClientAsync(factory);
+        var created = await admin.PostAsJsonAsync(
+            "/api/admin/slides", SlidesTestSeeds.CreateBody(isActive: true, audience: SlideAudience.Authenticated));
+        var id = await created.Content.ReadFromJsonAsync<int>();
+
+        var response = await factory.CreateClient().GetAsync("/api/slides?audience=Authenticated");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        list!.Should().NotContain(s => s.GetProperty("id").GetInt32() == id);
+    }
+
+    /// <summary>A signed-in caller receives Authenticated slides and not the guest-only ones.</summary>
+    [Fact]
+    public async Task ListActive_SignedInCaller_GetsAuthenticatedAndNotGuestSlides()
+    {
+        var admin = await SlidesTestSeeds.AdminClientAsync(factory);
+        var authenticated = await admin.PostAsJsonAsync(
+            "/api/admin/slides", SlidesTestSeeds.CreateBody(isActive: true, audience: SlideAudience.Authenticated));
+        var authenticatedId = await authenticated.Content.ReadFromJsonAsync<int>();
+        var guest = await admin.PostAsJsonAsync(
+            "/api/admin/slides", SlidesTestSeeds.CreateBody(isActive: true, audience: SlideAudience.Guest));
+        var guestId = await guest.Content.ReadFromJsonAsync<int>();
+
+        var response = await admin.GetAsync("/api/slides");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        list!.Should().Contain(s => s.GetProperty("id").GetInt32() == authenticatedId);
+        list.Should().NotContain(s => s.GetProperty("id").GetInt32() == guestId);
+    }
+
+    /// <summary>A slide with no translation at all is left out of the public feed.</summary>
+    [Fact]
+    public async Task ListActive_SlideWithoutTranslation_IsSkipped()
+    {
+        int id;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var slide = Slide.Create(
+                new SlideSettings("mdi-server", "#123456", "/img/slide.png", null, null, null, 0, true, SlideAudience.All, null, null),
+                DateTimeOffset.UtcNow);
+            context.Slides.Add(slide);
+            await context.SaveChangesAsync(CancellationToken.None);
+            id = slide.Id;
+        }
+
+        var response = await factory.CreateClient().GetAsync("/api/slides");
+        var list = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+
+        list!.Should().NotContain(s => s.GetProperty("id").GetInt32() == id);
+    }
+
+    /// <summary>A successful public list is marked cacheable for a short time.</summary>
+    [Fact]
+    public async Task ListActive_AnonymousAnswer_CarriesShortPublicCacheHeaders()
+    {
+        var response = await factory.CreateClient().GetAsync("/api/slides");
+
+        response.Headers.CacheControl!.Public.Should().BeTrue();
+        response.Headers.CacheControl.MaxAge.Should().Be(TimeSpan.FromSeconds(60));
+        response.Headers.Vary.Should().Contain("X-Language");
     }
 }

@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { makeEvent, refusal, startBackend } from '~/tests/helpers/bffHarness'
 import type { RouteModule } from '~/tests/helpers/bffHarness'
 import type { StubServer } from '~/tests/helpers/stubServer'
+import { GatewayPaymentState } from '~/types/gatewaypaymentstate'
 
 /** The stub playing the C# API. */
 let backend: StubServer
@@ -26,7 +27,7 @@ afterEach(async () => {
 })
 
 describe('POST /api/portal/order/:id/gateway-payment/complete', () => {
-  it.each(['paid', 'pending', 'declined'])('relays the bank outcome %s', async (state) => {
+  it.each([GatewayPaymentState.Paid, GatewayPaymentState.Pending, GatewayPaymentState.Declined])('relays the bank outcome %s', async (state) => {
     backend.respondWith(() => ({ body: { state } }))
 
     const result = await route.default(makeEvent({ params: { id: '42' } }))

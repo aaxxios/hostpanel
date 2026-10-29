@@ -185,7 +185,7 @@
                 leave-from-class="opacity-100 max-h-40"
                 leave-to-class="opacity-0 max-h-0"
               >
-                <UiStack v-if="selectedMethod === PAYMENT_MODULE_STRIPE" gap="none" class="mt-6 overflow-hidden" data-testid="checkout-card-form">
+                <UiStack v-if="selectedMethod === PaymentModule.Stripe" gap="none" class="mt-6 overflow-hidden" data-testid="checkout-card-form">
                   <CheckoutStripeCardForm ref="stripeCardFormRef" />
                 </UiStack>
               </Transition>
@@ -309,7 +309,7 @@ import {
   Lock, ShieldCheck, Info, Receipt, HelpCircle
 } from 'lucide-vue-next'
 import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'
-import { PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
 import { UiHeadingLevel } from '~/utils/ui/enums'
 import { useCheckoutPage } from '~/composables/useCheckoutPage'
 

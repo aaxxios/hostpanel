@@ -1,18 +1,14 @@
 using System.Net;
-using FluentAssertions;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Reports;
 
 /// <summary>
 /// <c>GET /api/reports/invoices/export</c> against Postgres: the invoices report as a CSV file.
 /// </summary>
-/// <remarks>Split from the deleted <c>ReportingRemainderEndpointTests</c> (A7 Task 4).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class ExportInvoicesReportTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
-    /// <summary>The Invoices CSV export answers with the exact pre-conversion headers, content type and filename.</summary>
+    /// <summary>The Invoices CSV export answers with the expected headers, content type and filename.</summary>
     [Fact]
     public async Task ReturnsTheExpectedCsvShape()
     {
@@ -28,8 +24,9 @@ public sealed class ExportInvoicesReportTests(IntegrationTestFactory factory) : 
         response.Content.Headers.ContentDisposition!.FileName.Should().Be("invoices-report.csv");
         var csv = await response.Content.ReadAsStringAsync();
         csv.Should().StartWith(
-            "ID,Client ID,Client Name,Status,Created Date,Due Date,Date Paid,SubTotal,Credit,Tax,Tax Rate,Total,Payment Method,Notes");
+            "ID,Client ID,Client Name,Status,Created Date,Due Date,Date Paid,Currency,SubTotal,Credit,Tax,Tax Rate,Total,Payment Method,Notes");
         csv.Should().Contain(marker);
+        csv.Split("\r\n").Single(l => l.Contains(marker, StringComparison.Ordinal)).Should().Contain(",USD,");
     }
 
     /// <summary>The route is not for anonymous callers.</summary>
@@ -41,7 +38,7 @@ public sealed class ExportInvoicesReportTests(IntegrationTestFactory factory) : 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>A client-role caller, not a reseller or admin, is refused with 403.</summary>
+    /// <summary>A client-role caller, not an admin, is refused with 403.</summary>
     [Fact]
     public async Task RefusesTheClientRole()
     {

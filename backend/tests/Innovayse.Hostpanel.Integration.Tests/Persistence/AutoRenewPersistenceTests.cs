@@ -1,10 +1,8 @@
-using FluentAssertions;
+using Innovayse.Hostpanel.Domain.Products.Enums;
 using Innovayse.Hostpanel.Domain.Services;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Persistence;
 
@@ -21,7 +19,7 @@ public sealed class AutoRenewPersistenceTests(IntegrationTestFactory factory)
     [Fact]
     public async Task ExplicitFalse_IsStoredAsFalseAsync()
     {
-        var id = await InsertAsync(service => service.SetAutoRenew(false));
+        var id = await InsertAsync(service => service.ConfigureAutomation(false, false, null, false, null));
 
         (await ReloadAsync(id)).Should().BeFalse("the database default must not overwrite an explicit false");
     }
@@ -42,7 +40,9 @@ public sealed class AutoRenewPersistenceTests(IntegrationTestFactory factory)
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var service = ClientService.Create(clientId: 1, productId: 1, billingCycle: "monthly");
+        var clientId = await DomainsTestSeeds.SeedClientAsync(context);
+        var productId = await DomainsTestSeeds.SeedHostingProductAsync(context);
+        var service = ClientService.Create(clientId, productId, billingCycle: BillingCycle.Monthly, now: DateTimeOffset.UtcNow);
         configure(service);
         context.Set<ClientService>().Add(service);
         await context.SaveChangesAsync();

@@ -53,7 +53,7 @@ const withoutLocalePrefix = (pathname: string): string => {
 }
 
 /**
- * Whether a path is one of the pages that need no session (sign-in, register, ...).
+ * Whether a path is one of the pages that need no session (sign-in, register and the like).
  *
  * A localized address (`/ru/client/login`) is the same page as its unprefixed twin; judging the
  * prefixed form as private sent every Russian or Armenian visitor of the sign-in page back to the
@@ -69,7 +69,7 @@ export const isPublicClientPath = (path: string): boolean => {
 
 /**
  * Whether a path belongs to the signed-in area: under `/client` and not one of the public pages
- * there (sign-in, register, ...). Everything else -- the marketing pages, the catalogue, the cart --
+ * there (sign-in, register and the like). Everything else (the marketing pages, the catalogue, the cart)
  * is open to a visitor with no session, so an expired one must not move them off it.
  *
  * @param path - The path or full path to test; a query string or hash and a language prefix are ignored.

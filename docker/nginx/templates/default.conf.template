@@ -20,6 +20,9 @@ map $http_x_forwarded_proto $panel_forwarded_proto {
     default $http_x_forwarded_proto;
 }
 
+# X-Forwarded-For is replaced with the connecting address, never appended to: a value the visitor
+# sent must not reach the client or the API, which trust the first entry from a known proxy.
+
 # Main site — client + API
 server {
     listen 80;
@@ -29,44 +32,41 @@ server {
 
     # API requests
     location /api/ {
+        include snippets/security-headers.conf;
         proxy_pass         http://api_backend/api/;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-For $remote_addr;
         proxy_set_header   X-Forwarded-Proto $panel_forwarded_proto;
     }
 
-    # Operator-uploaded branding: the logo, the favicon and the icon set generated from
-    # them. Served here on BOTH origins on purpose. The setting rows store root-relative
-    # URLs so a domain change never strands them, which only holds if the same path means
-    # the same file wherever it is read -- the storefront renders it, and the admin panel
-    # previews it straight after the upload.
-    location /uploads/ {
-        proxy_pass         http://api_backend/uploads/;
+    include snippets/uploads-location.conf;
+
+    # Liveness probe; the API serves it at the root, outside /api/.
+    location = /health {
+        include snippets/security-headers.conf;
+        proxy_pass         http://api_backend/health;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
-
-        # These are files an admin uploaded. They are re-encoded to PNG by the API before
-        # they are ever written, but nosniff is the second lock: it stops a browser
-        # deciding for itself that a stored file is something executable.
-        add_header X-Content-Type-Options nosniff always;
-    }
-
-    # Scalar API docs
-    location /scalar/ {
-        proxy_pass         http://api_backend/scalar/;
-        proxy_http_version 1.1;
-        proxy_set_header   Host $host;
+        proxy_set_header   X-Forwarded-Proto $panel_forwarded_proto;
     }
 
     # Everything else — Nuxt SSR
     location / {
+        include snippets/security-headers.conf;
+        # The portal's own scripts, styles and fonts come from this origin. Nuxt inlines its payload and
+        # Vue writes style attributes, hence 'unsafe-inline'. The payment provider's script, frames and
+        # API are named; so are the optional tag manager and analytics. Frames and images are
+        # operator content (maps, videos, logos), so any https origin may supply them; a form may post to
+        # a payment page on any https origin. EDGE_CLIENT_CSP_SOURCES adds origins a deployment needs
+        # (a chat server, other analytics) to the script, connect, frame and image sources.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com ${EDGE_CLIENT_CSP_SOURCES}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https: ${EDGE_CLIENT_CSP_SOURCES}; connect-src 'self' https://api.stripe.com https://m.stripe.network https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com ${EDGE_CLIENT_CSP_SOURCES}; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'" always;
         proxy_pass         http://client_frontend;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-For $remote_addr;
         proxy_set_header   X-Forwarded-Proto $panel_forwarded_proto;
         proxy_set_header   Upgrade $http_upgrade;
         proxy_set_header   Connection "upgrade";
@@ -80,28 +80,16 @@ server {
 
     client_max_body_size ${EDGE_ADMIN_MAX_BODY_SIZE};
 
-    # Operator-uploaded branding: the logo, the favicon and the icon set generated from
-    # them. Served here on BOTH origins on purpose. The setting rows store root-relative
-    # URLs so a domain change never strands them, which only holds if the same path means
-    # the same file wherever it is read -- the storefront renders it, and the admin panel
-    # previews it straight after the upload.
-    location /uploads/ {
-        proxy_pass         http://api_backend/uploads/;
-        proxy_http_version 1.1;
-        proxy_set_header   Host $host;
+    include snippets/uploads-location.conf;
 
-        # These are files an admin uploaded. They are re-encoded to PNG by the API before
-        # they are ever written, but nosniff is the second lock: it stops a browser
-        # deciding for itself that a stored file is something executable.
-        add_header X-Content-Type-Options nosniff always;
-    }
-
+    # The admin image sends its own security headers and policy (docker/nginx/admin.conf); adding them
+    # here as well would send every one twice.
     location / {
         proxy_pass         http://admin_frontend;
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
-        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-For $remote_addr;
         proxy_set_header   X-Forwarded-Proto $panel_forwarded_proto;
     }
 }

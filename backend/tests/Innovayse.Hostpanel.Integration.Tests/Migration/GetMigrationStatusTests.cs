@@ -1,9 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
+using Innovayse.Hostpanel.Shared.Constants;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Migration;
 
@@ -53,5 +51,17 @@ public sealed class GetMigrationStatusTests(IntegrationTestFactory factory) : IC
         var response = await factory.CreateClient().GetAsync("/api/admin/migrations/1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A non-positive job id is refused by the validator with 400 <c>VALIDATION_ERROR</c>.</summary>
+    [Fact]
+    public async Task StatusRefusesANonPositiveId()
+    {
+        var client = await MigrationTestSeeds.AdminClientAsync(factory);
+
+        var response = await client.GetAsync("/api/admin/migrations/0");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await MigrationTestSeeds.AssertCodeAsync(response, SharedErrorCodes.ValidationError);
     }
 }

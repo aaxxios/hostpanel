@@ -1,6 +1,6 @@
 /**
- * Tests for `GET /api/portal/client/announcements`: it pages the published announcements from the
- * backend and reshapes each into the portal's list item.
+ * Tests for `GET /api/portal/client/announcements`: it asks the backend for a page of the published
+ * announcements and passes that page through as sent.
  *
  * @module tests/server/api/portal/client/announcements.get.test
  */
@@ -26,21 +26,22 @@ afterEach(async () => {
 })
 
 describe('GET /api/portal/client/announcements', () => {
-  it('requests page 1 of 50 by default and maps each announcement to id, title, date and body', async () => {
-    backend.respondWith(() => ({
-      body: { items: [{ id: 3, title: 'Maintenance', publishedAt: '2026-01-02T10:00:00Z', content: 'Tonight.' }, { id: 4, title: 'Draft' }] },
-    }))
+  it('requests page 1 of 50 by default and passes the backend page through as sent', async () => {
+    /** The backend's page of published announcements. */
+    const page = {
+      items: [{ id: 3, title: 'Maintenance', content: 'Tonight.', publishedAt: '2026-01-02T10:00:00Z' }],
+      pageNumber: 1,
+      pageSize: 50,
+      totalCount: 1,
+      totalPages: 1,
+    }
+    backend.respondWith(() => ({ body: page }))
 
     const result = await route.default(makeEvent({ cookies: await signedIn('jwt'), headers: { 'x-language': 'ru' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/announcements/published?page=1&pageSize=50')
     expect(backend.requests[0]?.headers['x-language']).toBe('ru')
-    expect(result).toEqual({
-      items: [
-        { id: 3, title: 'Maintenance', date: '2026-01-02T10:00:00Z', body: 'Tonight.' },
-        { id: 4, title: 'Draft', date: '', body: '' },
-      ],
-    })
+    expect(result).toEqual(page)
   })
 
   it('forwards the requested page and page size', async () => {
@@ -49,12 +50,6 @@ describe('GET /api/portal/client/announcements', () => {
     await route.default(makeEvent({ query: { page: '2', pageSize: '10' } }))
 
     expect(backend.requests[0]?.url).toBe('/api/announcements/published?page=2&pageSize=10')
-  })
-
-  it('answers an empty list when the backend sends no items', async () => {
-    backend.respondWith(() => ({ body: {} }))
-
-    expect(await route.default(makeEvent())).toEqual({ items: [] })
   })
 
   it('passes the backend refusal through with its code and sentence', async () => {

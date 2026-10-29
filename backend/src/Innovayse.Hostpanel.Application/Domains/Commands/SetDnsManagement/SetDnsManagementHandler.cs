@@ -3,8 +3,10 @@ using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Application.Domains.Common;
 using Innovayse.Hostpanel.Application.Domains.Extensions;
+using Innovayse.Hostpanel.Application.Domains.Registrar;
 using Innovayse.Hostpanel.Shared.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Innovayse.Hostpanel.Application.Domains.Commands.SetDnsManagement;
 
@@ -13,24 +15,27 @@ namespace Innovayse.Hostpanel.Application.Domains.Commands.SetDnsManagement;
 /// </summary>
 public sealed class SetDnsManagementHandler
 {
-    /// <summary>The registrar provider the flag is synced to.</summary>
-    private readonly IRegistrarProvider _registrar;
+    /// <summary>Resolves the registrar that holds the domain's TLD.</summary>
+    private readonly RegistrarProviderResolver _registrars;
 
     /// <summary>The data context the domain aggregate is loaded, mutated and saved through.</summary>
     private readonly IHostpanelDbContext _context;
 
-    /// <summary>Unit of work the aggregate is saved through.</summary>
-    private readonly IUnitOfWork _uow;
+    /// <summary>Logger that records the registrar's refusal code for operators.</summary>
+    private readonly ILogger<SetDnsManagementHandler> _logger;
 
     /// <summary>Initializes the handler.</summary>
-    /// <param name="registrar">The registrar provider the flag is synced to.</param>
+    /// <param name="registrars">Resolves the registrar that holds the domain's TLD.</param>
     /// <param name="context">The data context the domain aggregate is loaded, mutated and saved through.</param>
-    /// <param name="uow">Unit of work the aggregate is saved through.</param>
-    public SetDnsManagementHandler(IRegistrarProvider registrar, IHostpanelDbContext context, IUnitOfWork uow)
+    /// <param name="logger">Logger that records the registrar's refusal code for operators.</param>
+    public SetDnsManagementHandler(
+        RegistrarProviderResolver registrars,
+        IHostpanelDbContext context,
+        ILogger<SetDnsManagementHandler> logger)
     {
-        _registrar = registrar;
+        _registrars = registrars;
         _context = context;
-        _uow = uow;
+        _logger = logger;
     }
 
     /// <summary>
@@ -52,16 +57,19 @@ public sealed class SetDnsManagementHandler
             return Result.FailureCode(HostpanelErrorCodes.DOMAIN_NOT_FOUND);
         }
 
-        var result = await _registrar.SetDnsManagementAsync(domain.Name, cmd.Enabled, ct);
+        var registrar = await _registrars.ResolveAsync(domain, ct);
+        var result = await registrar.SetDnsManagementAsync(
+            new DomainFeatureToggle(domain.Name, cmd.Enabled), ct);
         if (!result.Success)
         {
-            return Result.Failure(
-                $"Registrar failed to update DNS management for '{domain.Name}': {result.ErrorMessage}",
-                HostpanelErrorCodes.DNS_MANAGEMENT_UPSTREAM_FAILED);
+            _logger.LogWarning(
+                "Registrar failed to update DNS management for '{DomainName}': {Reason}",
+                domain.Name, result.ErrorCode);
+            return Result.FailureCode(result.ToFailureCode(HostpanelErrorCodes.DNS_MANAGEMENT_UPSTREAM_FAILED));
         }
 
         domain.SetDnsManagement(cmd.Enabled);
-        await _uow.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

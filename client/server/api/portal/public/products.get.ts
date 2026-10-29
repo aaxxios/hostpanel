@@ -2,82 +2,59 @@
  * GET /api/portal/public/products
  * Returns products from the C# backend.
  *
- * Query params: pid, gid, gids.
+ * Query params: pid, gid, gids, currency. Every one is validated by `readCatalogQuery` before it
+ * reaches the cache key or the backend address, so the key has a fixed shape and a visitor cannot
+ * grow it with free text. The backend does the filtering (`productId`, `groupId`, `groupIds`); this
+ * route only renames the filters to the catalogue's own parameter names.
  *
- * There is deliberately no `lang`. This route used to forward one, and the public site read
- * `translated_name`, `translated_shortdescription`, `translated_description`,
- * `group_translations` and `group_features` off the result. `ProductDto` carries none of them
- * and `ProductsController` has no locale parameter, so the response was identical in all three
- * languages and every one of those reads fell through to its untranslated fallback. Localised
- * product copy is a backend change — a `ProductTranslation` entity beside the existing
- * `SlideTranslation` — and until it exists this parameter can only mislead its caller.
+ * There is deliberately no `lang`: `CatalogProductDto` carries no translated fields and
+ * `ProductsController` has no locale parameter, so the response is the same in every language.
+ * Localised product copy is a backend change, a `ProductTranslation` entity beside the existing
+ * `SlideTranslation`, and until it exists such a parameter could only mislead its caller.
  *
  * @module server/api/portal/public/products.get
  */
 
 import type { H3Event } from 'h3'
+import { catalogCacheKey, readCatalogQuery } from '~/server/utils/catalogQuery'
 import { hasSessionCookie } from '~/server/utils/portal-session'
+import type { PortalProduct } from '~/types/portalproduct'
 
 /**
- * The actual product fetch — pulled out so a signed-in caller can bypass the shared cache
+ * The actual product fetch: pulled out so a signed-in caller can bypass the shared cache
  * below entirely (see the wrapper's note).
  *
  * @param event - The request event.
- * @returns The catalogue, filtered to `pid` when given, priced in the caller's own currency.
+ * @returns The catalogue, filtered as asked, priced in the caller's own currency.
  */
-const loadProducts = async (event: H3Event) => {
-  const query = getQuery(event)
+const loadProducts = async (event: H3Event): Promise<PortalProduct[]> => {
+  const { pid, gid, gids, currency } = readCatalogQuery(event)
   const params = new URLSearchParams()
 
-  if (query.pid) {
-    params.set('pid', String(query.pid))
+  if (pid !== undefined) {
+    params.set('productId', String(pid))
   }
-  if (query.gids) {
-    params.set('gids', String(query.gids))
+  if (gid !== undefined) {
+    params.set('groupId', String(gid))
   }
-
-  // `gid` is the legacy name callers use; ProductsController's parameter is
-  // `groupId`. Forwarding `gid` verbatim meant the backend never saw a filter and
-  // silently returned the whole catalogue, so the hosting page listed SSL
-  // certificates, mailboxes and domain registration beside the hosting plans.
-  // Both names go out: `groupId` is the one that binds, `gid` stays for any
-  // consumer still reading it.
-  if (query.gid) {
-    params.set('gid', String(query.gid))
-    params.set('groupId', String(query.gid))
+  for (const groupId of gids ?? []) {
+    params.append('groupIds', String(groupId))
   }
 
   // Anonymous callers may ask for prices in a specific enabled currency (the storefront's
-  // currency picker) — forwarded straight through, same as `tld-pricing.get.ts` does.
-  // `ProductsController`/`GetProductsHandler` ignore it for a signed-in caller.
-  if (query.currency) {
-    params.set('currency', String(query.currency))
+  // currency picker): forwarded straight through, same as `tld-pricing.get.ts` does.
+  // `ListCatalogProductsHandler` ignores it for a signed-in caller.
+  if (currency !== undefined) {
+    params.set('currency', currency)
   }
 
   const qs = params.toString()
-  const all = await internalApiCall<Record<string, unknown>[]>(event, `/products${qs ? `?${qs}` : ''}`)
 
-  // `pid` selects one product, and nothing on the backend honours it:
-  // ProductsController takes `groupId` and `activeOnly`, there is no route for a
-  // single product, and an unknown query parameter is ignored rather than
-  // rejected. So `?pid=1` came back as the whole catalogue and /configure/[id]
-  // rendered its first entry — every plan's "Choose plan" button led to the same
-  // wrong product, at the wrong price. Filtering here keeps the fix in the layer
-  // that invented the parameter.
-  const pid = Number(query.pid)
-  const products = query.pid && Number.isFinite(pid)
-    ? all.filter(p => Number(p.id) === pid)
-    : all
-
-  // `pricing` and `prices` are forwarded exactly as `ProductDto` sends them — `pricing` is
-  // already the amount in the caller's own currency (their client record's, the base currency
-  // for a guest with no `currency` request, or the requested enabled currency otherwise), and
-  // relabelling it here used to hardcode `USD`/`$` regardless of what currency it actually was.
-  // See the note on `types/portalproduct.ts`.
-  return products.map(p => ({
-    ...p,
-    pid: p.id
-  }))
+  // Every product is forwarded exactly as `CatalogProductDto` sends it: `pricing` is already the
+  // amount in the caller's own currency (their client record's, the base currency for a guest
+  // with no `currency` request, or the requested enabled currency otherwise). See the note on
+  // `types/portalproduct.ts`.
+  return await internalApiCall<PortalProduct[]>(event, `/public/products${qs ? `?${qs}` : ''}`)
 }
 
 /** The shared-cache path, reached only by guests: one entry per (filters, currency) pair. */
@@ -85,22 +62,18 @@ const cachedLoadProducts = defineCachedEventHandler(loadProducts, {
   name: 'backend-products',
   maxAge: 3600,
   swr: true,
-  // The key carries no locale — a page's language was never the right thing to price by, and
+  // The key carries no locale: a page's language is not the right thing to price by, and
   // this cached path is only ever reached anonymously (see the wrapper below). It DOES carry
-  // `currency` now: an anonymous caller can request pricing in any enabled currency, and a
+  // `currency`: an anonymous caller can request pricing in any enabled currency, and a
   // response priced in USD must never be served back to a request that asked for AMD (or vice
-  // versa) — the entries below are one cache per (filters, currency) pair.
-  getKey: (event) => {
-    const query = getQuery(event)
-    const filters = query.pid ? `p${query.pid}` : (query.gids || query.gid || 'all')
-    const currency = query.currency ? String(query.currency).toUpperCase() : 'base'
-    return `products:${filters}:${currency}`
-  }
+  // versa): the entries below are one cache per (filters, currency) pair. Built from the
+  // validated query only: integers, a bounded sorted list and a three-letter code.
+  getKey: (event) => catalogCacheKey(readCatalogQuery(event))
 })
 
 /**
  * A signed-in caller's products are priced in *their* currency, not the base currency the
- * cached path above answers with — sharing that cache across every signed-in client would
+ * cached path above answers with: sharing that cache across every signed-in client would
  * hand one client's prices to another the next time the key matched. So a request carrying an
  * auth cookie skips the cache and calls the backend directly; only a guest's request, always
  * priced in the base currency, is safe to share.

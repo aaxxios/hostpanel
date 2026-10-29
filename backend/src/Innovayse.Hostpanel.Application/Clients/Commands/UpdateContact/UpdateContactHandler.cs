@@ -1,3 +1,5 @@
+using Innovayse.Hostpanel.Application.Audit.Common;
+using Innovayse.Hostpanel.Application.Clients.Extensions;
 using Innovayse.Hostpanel.Application.Common.Errors;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 using Innovayse.Hostpanel.Shared.Models;
@@ -11,20 +13,27 @@ public sealed class UpdateContactHandler
     /// <summary>The module's data context.</summary>
     private readonly IHostpanelDbContext _context;
 
+    /// <summary>Records the activity log line for this action, saved with the change it describes.</summary>
+    private readonly IActivityLogger _activity;
+
     /// <summary>Initializes the handler.</summary>
     /// <param name="context">The module's data context.</param>
-    public UpdateContactHandler(IHostpanelDbContext context)
+    /// <param name="activity">Records the activity log line for this action, saved with the change it describes.</param>
+    public UpdateContactHandler(IHostpanelDbContext context, IActivityLogger activity)
     {
         _context = context;
+        _activity = activity;
     }
 
     /// <summary>Updates a contact on the specified client and saves.</summary>
     /// <param name="cmd">The update contact command.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Success, or <c>CLIENT_NOT_FOUND</c> when the id names no client, or
-    /// <c>MY_CONTACT_NOT_FOUND</c> when the client has no contact with that id -- whether it is
-    /// another account's or does not exist at all. One answer for both, deliberately.
+    /// Success, or <c>CLIENT_NOT_FOUND</c> when the id names no client. The aggregate refuses with
+    /// <c>CLIENT_CONTACT_NOT_FOUND</c> when the client has no contact with that id, whether it is
+    /// another account's or does not exist at all, one answer for both, with
+    /// <c>CONTACT_EMAIL_IN_USE</c> when another contact of the client has the address, and with
+    /// <c>CLIENT_RECORD_CLOSED</c> when the account is closed.
     /// </returns>
     public async Task<Result> HandleAsync(UpdateContactCommand cmd, CancellationToken ct)
     {
@@ -38,22 +47,10 @@ public sealed class UpdateContactHandler
             return Result.FailureCode(HostpanelErrorCodes.CLIENT_NOT_FOUND);
         }
 
-        // Checked here rather than left to the aggregate: Client.UpdateContact raises a bare
-        // InvalidOperationException naming the id, and a contact that is somebody else's and one
-        // that does not exist must be a single answer.
-        if (client.Contacts.All(contact => contact.Id != cmd.ContactId))
-        {
-            return Result.FailureCode(HostpanelErrorCodes.MY_CONTACT_NOT_FOUND);
-        }
+        client.UpdateContact(cmd.ContactId, cmd.ToDetails());
 
-        client.UpdateContact(
-            cmd.ContactId,
-            cmd.FirstName, cmd.LastName, cmd.CompanyName,
-            cmd.Email, cmd.Phone, cmd.Type,
-            cmd.Street, cmd.Address2, cmd.City, cmd.State, cmd.PostCode, cmd.Country,
-            cmd.NotifyGeneral, cmd.NotifyInvoice, cmd.NotifySupport,
-            cmd.NotifyProduct, cmd.NotifyDomain, cmd.NotifyAffiliate);
-
+        await _activity.RecordAsync(
+            new ActivityLogEntry(client.Id, $"Modified Contact - Client ID: {client.Id} - Contact ID: {cmd.ContactId}"), ct);
         await _context.SaveChangesAsync(ct);
         return Result.Success();
     }

@@ -7,6 +7,14 @@
 # Run: docker compose -f docker-compose.hub.yml up -d   (values come from docker/.env, copied from .env.example)
 name: hostpanel
 
+# The stack's own network gets a fixed subnet: the API believes X-Forwarded-For only from it, where the edge
+# proxy and the client container sit (RateLimit__KnownNetworks__0 below). docker/README.md, Trusted proxies.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${STACK_NETWORK_SUBNET:?STACK_NETWORK_SUBNET must be set}
+
 volumes:
   pgdata:
     name: hostpanel_pgdata
@@ -14,6 +22,8 @@ volumes:
     name: hostpanel_redisdata
   hostpanel_branding:
     name: hostpanel_hostpanel_branding
+  hostpanel_plugins:
+    name: hostpanel_hostpanel_plugins
   # Issued certificates and the ACME account: losing them re-issues and can hit rate limits.
   caddydata:
     name: hostpanel_caddydata
@@ -74,6 +84,9 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_HTTP_PORTS: ${API_PORT}
       AllowedHosts: ${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set}
+      # One trusted hop, the edge proxy or the client container, both on the stack network.
+      RateLimit__TrustedProxyCount: ${RATE_LIMIT_TRUSTED_PROXY_COUNT:?RATE_LIMIT_TRUSTED_PROXY_COUNT must be set}
+      RateLimit__KnownNetworks__0: ${STACK_NETWORK_SUBNET:?STACK_NETWORK_SUBNET must be set}
 
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
@@ -88,8 +101,8 @@ services:
 
       Smtp__Host: ${SMTP_HOST}
       Smtp__Port: ${SMTP_PORT}
-      Smtp__Username: ${SMTP_USERNAME}
-      Smtp__Password: ${SMTP_PASSWORD}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__Encryption: ${SMTP_ENCRYPTION}
       Smtp__From__Address: ${SMTP_FROM}
       Smtp__From__Name: ${SMTP_FROM_NAME}
@@ -98,8 +111,8 @@ services:
       DefaultDepartments__BillingEmail: ${DEPARTMENT_BILLING_EMAIL:?DEPARTMENT_BILLING_EMAIL must be set}
       DefaultDepartments__SalesEmail: ${DEPARTMENT_SALES_EMAIL:?DEPARTMENT_SALES_EMAIL must be set}
       DefaultDepartments__GeneralEmail: ${DEPARTMENT_GENERAL_EMAIL:?DEPARTMENT_GENERAL_EMAIL must be set}
-      Telegram__BotToken: ${TELEGRAM_BOT_TOKEN}
-      Telegram__ChatId: ${TELEGRAM_CHAT_ID}
+      Telegram__BotToken: ${TELEGRAM_BOT_TOKEN:-}
+      Telegram__ChatId: ${TELEGRAM_CHAT_ID:-}
 
       Jwt__Secret: ${JWT_SECRET:?JWT_SECRET is required}
       Jwt__Issuer: ${JWT_ISSUER}
@@ -109,18 +122,18 @@ services:
       EncryptionKey: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       Auth__Mode: ${AUTH_MODE}
       Auth__AppName: ${AUTH_APP_NAME:?AUTH_APP_NAME must be set}
-      Auth__Authority: ${SSO_URL}
-      Auth__PublicAuthority: ${SSO_PUBLIC_URL}
-      Auth__ClientId: ${SSO_CLIENT_ID}
-      Auth__ClientSecret: ${CLIENT_HOSTPANEL_SECRET}
-      BackchannelLogout__Key: ${HOSTPANEL_BACKCHANNEL_LOGOUT_KEY}
+      Auth__Authority: ${SSO_URL:-}
+      Auth__PublicAuthority: ${SSO_PUBLIC_URL:-}
+      Auth__ClientId: ${SSO_CLIENT_ID:-}
+      Auth__ClientSecret: ${CLIENT_HOSTPANEL_SECRET:-}
+      BackchannelLogout__Key: ${HOSTPANEL_BACKCHANNEL_LOGOUT_KEY:-}
 
-      Sso__Authority: ${SSO_URL}
-      Sso__ClientId: ${SSO_CLIENT_ID}
-      Sso__ServiceKey: ${SSO_SERVICE_KEY}
+      Sso__Authority: ${SSO_URL:-}
+      Sso__ClientId: ${SSO_CLIENT_ID:-}
+      Sso__ServiceKey: ${SSO_SERVICE_KEY:-}
 
       Cors__AllowedOrigins__0: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
-      Cors__AllowedOrigins__1: https://${ADMIN_DOMAIN}
+      Cors__AllowedOrigins__1: ${EDGE_SCHEME:?EDGE_SCHEME must be set}${ADMIN_DOMAIN}
       # Where mailed staff links (email verification) land; a bare top-level key, not a section.
       AdminBaseUrl: ${ADMIN_BASE_URL:?ADMIN_BASE_URL must be set}
       # Where mailed client links (verification, password reset, invoices) land; a bare top-level key.
@@ -132,6 +145,20 @@ services:
     volumes:
       # Operator-uploaded branding lives in the web root; without a volume every deploy erases it.
       - hostpanel_branding:/app/wwwroot/uploads/branding
+      # Plugins uploaded in the admin panel (Plugins:InstallPath, plugins-installed beside the app).
+      - hostpanel_plugins:/app/plugins-installed
+    healthcheck:
+      # `localhost`, not 127.0.0.1: AllowedHosts lists names, so the host filter answers 400 to a literal
+      # loopback IP. A GET to /dev/null, not --spider: that sends HEAD, which the GET-only /health refuses.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:${API_PORT}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       hostpanel-db:
         condition: service_healthy
@@ -149,64 +176,100 @@ services:
       NITRO_PORT: ${CLIENT_PORT:?CLIENT_PORT must be set}
       NUXT_API_URL: http://hostpanel-api:${API_PORT}
       NUXT_PUBLIC_BASE_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
-      NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL}
-      NUXT_SSO_URL: ${SSO_URL}
-      NUXT_PUBLIC_SSO_PUBLIC_URL: ${SSO_PUBLIC_URL}
+      # nuxt-site-config's canonical origin (sitemap, og:url), read at runtime.
+      NUXT_PUBLIC_SITE_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}
+      NUXT_PUBLIC_MAIN_URL: ${MAIN_APP_URL:-}
+      NUXT_SSO_URL: ${SSO_URL:-}
+      NUXT_PUBLIC_SSO_PUBLIC_URL: ${SSO_PUBLIC_URL:-}
       NUXT_SSO_CALLBACK_URL: ${CLIENT_BASE_URL:?CLIENT_BASE_URL must be set}/api/portal/auth/sso/callback
-      NUXT_MAIN_API_URL: ${NUXT_MAIN_API_URL}
       # Where the signed-in sessions are kept (the tokens never reach the browser): the API's Redis.
       NUXT_SESSION_REDIS: ${REDIS_CONNECTION}
+      # Key the stored sessions are encrypted with (the server refuses to start without it).
+      NUXT_SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:?SESSION_ENCRYPTION_KEY must be set}
+      # How many proxies sit in front of the client portal: the visitor address it forwards is the Nth entry from the right of X-Forwarded-For (.env.example, CLIENT_TRUSTED_PROXY_COUNT).
+      NUXT_TRUSTED_PROXY_COUNT: ${CLIENT_TRUSTED_PROXY_COUNT:-1}
       NUXT_PUBLIC_AUTH_MODE: ${AUTH_MODE}
-      NUXT_PUBLIC_PORTAL_TEMPLATE: ${NUXT_PUBLIC_PORTAL_TEMPLATE}
-      NUXT_PUBLIC_PORTAL_APPS_ENABLED: ${NUXT_PUBLIC_PORTAL_APPS_ENABLED}
-      NUXT_PUBLIC_PORTAL_CONTACT_EMAIL: ${NUXT_PUBLIC_PORTAL_CONTACT_EMAIL}
-      NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER: ${NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER}
-      NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN}
-      NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK}
-      NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL}
-      NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS: ${NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS}
-      NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL: ${NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL}
-      NUXT_PUBLIC_PORTAL_STATS_CLIENTS: ${NUXT_PUBLIC_PORTAL_STATS_CLIENTS}
-      NUXT_PUBLIC_PORTAL_STATS_UPTIME: ${NUXT_PUBLIC_PORTAL_STATS_UPTIME}
-      NUXT_PUBLIC_PORTAL_STATS_REGIONS: ${NUXT_PUBLIC_PORTAL_STATS_REGIONS}
-      NUXT_PUBLIC_PORTAL_HERO_BADGE: ${NUXT_PUBLIC_PORTAL_HERO_BADGE}
-      NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME}
-      NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE}
-      NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT}
-      NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE: ${NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE}
-      NUXT_PUBLIC_PORTAL_LOGO: ${NUXT_PUBLIC_PORTAL_LOGO}
-      NUXT_PUBLIC_PORTAL_LOGO_DARK: ${NUXT_PUBLIC_PORTAL_LOGO_DARK}
-      NUXT_PUBLIC_PORTAL_LOGO_MARK: ${NUXT_PUBLIC_PORTAL_LOGO_MARK}
-      NUXT_PUBLIC_PORTAL_FAVICON: ${NUXT_PUBLIC_PORTAL_FAVICON}
-      NUXT_PUBLIC_PORTAL_BRAND_PRIMARY: ${NUXT_PUBLIC_PORTAL_BRAND_PRIMARY}
-      NUXT_PUBLIC_PORTAL_BRAND_ACCENT: ${NUXT_PUBLIC_PORTAL_BRAND_ACCENT}
-      NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING}
-      NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY}
-      NUXT_PUBLIC_PORTAL_GTM_ID: ${NUXT_PUBLIC_PORTAL_GTM_ID}
-      NUXT_PUBLIC_PORTAL_CHAT_BASE_URL: ${NUXT_PUBLIC_PORTAL_CHAT_BASE_URL}
-      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN}
-      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU}
-      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY}
-      NUXT_PUBLIC_TASKS_URL: ${NUXT_PUBLIC_TASKS_URL}
-      NUXT_PUBLIC_ERP_URL: ${NUXT_PUBLIC_ERP_URL}
-      NUXT_PUBLIC_SHEETS_URL: ${NUXT_PUBLIC_SHEETS_URL}
-      NUXT_PUBLIC_EMAIL_URL: ${NUXT_PUBLIC_EMAIL_URL}
-      NUXT_PUBLIC_DRIVE_URL: ${NUXT_PUBLIC_DRIVE_URL}
-      NUXT_PUBLIC_BILLING_PORTAL_URL: ${BILLING_PORTAL_URL}
-      NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      NUXT_PUBLIC_PORTAL_TEMPLATE: ${NUXT_PUBLIC_PORTAL_TEMPLATE:-}
+      NUXT_PUBLIC_PORTAL_APPS_ENABLED: ${NUXT_PUBLIC_PORTAL_APPS_ENABLED:-}
+      NUXT_PUBLIC_PORTAL_CONTACT_EMAIL: ${NUXT_PUBLIC_PORTAL_CONTACT_EMAIL:-}
+      NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER: ${NUXT_PUBLIC_PORTAL_SOCIAL_TWITTER:-}
+      NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN: ${NUXT_PUBLIC_PORTAL_SOCIAL_LINKEDIN:-}
+      NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK: ${NUXT_PUBLIC_PORTAL_SOCIAL_FACEBOOK:-}
+      NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL: ${NUXT_PUBLIC_PORTAL_HOSTING_DEMO_URL:-}
+      NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS: ${NUXT_PUBLIC_PORTAL_CONTACT_ADDRESS:-}
+      NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL: ${NUXT_PUBLIC_PORTAL_CONTACT_MAP_URL:-}
+      NUXT_PUBLIC_PORTAL_STATS_CLIENTS: ${NUXT_PUBLIC_PORTAL_STATS_CLIENTS:-}
+      NUXT_PUBLIC_PORTAL_STATS_UPTIME: ${NUXT_PUBLIC_PORTAL_STATS_UPTIME:-}
+      NUXT_PUBLIC_PORTAL_STATS_REGIONS: ${NUXT_PUBLIC_PORTAL_STATS_REGIONS:-}
+      NUXT_PUBLIC_PORTAL_HERO_BADGE: ${NUXT_PUBLIC_PORTAL_HERO_BADGE:-}
+      NUXT_PUBLIC_PORTAL_SITE_NAME: ${NUXT_PUBLIC_PORTAL_SITE_NAME:-}
+      NUXT_PUBLIC_PORTAL_SITE_TAGLINE: ${NUXT_PUBLIC_PORTAL_SITE_TAGLINE:-}
+      NUXT_PUBLIC_PORTAL_THEME_DEFAULT: ${NUXT_PUBLIC_PORTAL_THEME_DEFAULT:-}
+      NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE: ${NUXT_PUBLIC_PORTAL_THEME_USER_TOGGLE:-}
+      NUXT_PUBLIC_PORTAL_LOGO: ${NUXT_PUBLIC_PORTAL_LOGO:-}
+      NUXT_PUBLIC_PORTAL_LOGO_DARK: ${NUXT_PUBLIC_PORTAL_LOGO_DARK:-}
+      NUXT_PUBLIC_PORTAL_LOGO_MARK: ${NUXT_PUBLIC_PORTAL_LOGO_MARK:-}
+      NUXT_PUBLIC_PORTAL_FAVICON: ${NUXT_PUBLIC_PORTAL_FAVICON:-}
+      NUXT_PUBLIC_PORTAL_BRAND_PRIMARY: ${NUXT_PUBLIC_PORTAL_BRAND_PRIMARY:-}
+      NUXT_PUBLIC_PORTAL_BRAND_ACCENT: ${NUXT_PUBLIC_PORTAL_BRAND_ACCENT:-}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_HEADING:-}
+      NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY: ${NUXT_PUBLIC_PORTAL_BRAND_FONT_BODY:-}
+      NUXT_PUBLIC_PORTAL_GTM_ID: ${NUXT_PUBLIC_PORTAL_GTM_ID:-}
+      NUXT_PUBLIC_PORTAL_CHAT_BASE_URL: ${NUXT_PUBLIC_PORTAL_CHAT_BASE_URL:-}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN:-}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_RU:-}
+      NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY: ${NUXT_PUBLIC_PORTAL_CHAT_WEBSITE_TOKEN_HY:-}
+      NUXT_PUBLIC_TASKS_URL: ${NUXT_PUBLIC_TASKS_URL:-}
+      NUXT_PUBLIC_ERP_URL: ${NUXT_PUBLIC_ERP_URL:-}
+      NUXT_PUBLIC_SHEETS_URL: ${NUXT_PUBLIC_SHEETS_URL:-}
+      NUXT_PUBLIC_EMAIL_URL: ${NUXT_PUBLIC_EMAIL_URL:-}
+      NUXT_PUBLIC_DRIVE_URL: ${NUXT_PUBLIC_DRIVE_URL:-}
+      NUXT_PUBLIC_BILLING_PORTAL_URL: ${BILLING_PORTAL_URL:-}
+      NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
 
-      NUXT_SSO_CLIENT_ID: ${SSO_CLIENT_ID}
-      NUXT_SSO_CLIENT_SECRET: ${CLIENT_HOSTPANEL_SECRET}
+      NUXT_SSO_CLIENT_ID: ${SSO_CLIENT_ID:-}
+      NUXT_SSO_CLIENT_SECRET: ${CLIENT_HOSTPANEL_SECRET:-}
       NUXT_AUTH_MODE: ${AUTH_MODE}
+    healthcheck:
+      # robots.txt is a route of the Nuxt server itself: it probes the process without rendering a page.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:${CLIENT_PORT:?CLIENT_PORT must be set}/robots.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
-      - hostpanel-api
+      hostpanel-api:
+        condition: service_healthy
     restart: unless-stopped
 
   hostpanel-admin:
     container_name: hostpanel-admin
     image: ${DOCKERHUB_NAMESPACE:?DOCKERHUB_NAMESPACE must be set}/hostpanel:admin-${IMAGE_TAG:?IMAGE_TAG must be set}
+    environment:
+      # Read at container start: nginx entrypoint writes config.js and <base href> from it.
+      ADMIN_BASE_URL_PATH: ${ADMIN_BASE_URL_PATH:?ADMIN_BASE_URL_PATH must be set}
+      # The storefront's public origin: the admin resolves the storefront's relative image paths against it.
+      CLIENT_BASE_URL: ${CLIENT_BASE_URL:-}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/config.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # The image runs nginx as an unprivileged user on port 80: a container may bind it once this is 0.
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
-      - hostpanel-api
+      hostpanel-api:
+        condition: service_healthy
     restart: unless-stopped
 
   hostpanel-caddy:
@@ -223,12 +286,31 @@ services:
       EDGE_ADMIN_MAX_BODY_SIZE: ${EDGE_ADMIN_MAX_BODY_SIZE:?EDGE_ADMIN_MAX_BODY_SIZE must be set}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
       EDGE_SCHEME: ${EDGE_SCHEME:?EDGE_SCHEME is required}
+      # Origins the client portal's Content-Security-Policy adds (a chat server, other analytics); empty adds none.
+      EDGE_CLIENT_CSP_SOURCES: ${EDGE_CLIENT_CSP_SOURCES:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data
       - caddyconfig:/config
+    healthcheck:
+      # Caddy's local admin endpoint answers once the configuration is loaded.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    # The image runs caddy as root and binds 80 and 443: everything but that capability is dropped.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     depends_on:
-      - hostpanel-api
-      - hostpanel-client
-      - hostpanel-admin
+      hostpanel-api:
+        condition: service_healthy
+      hostpanel-client:
+        condition: service_healthy
+      hostpanel-admin:
+        condition: service_healthy
     restart: unless-stopped

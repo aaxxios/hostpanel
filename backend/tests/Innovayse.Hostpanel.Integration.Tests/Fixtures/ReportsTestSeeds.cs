@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Clients;
 using Innovayse.Hostpanel.Infrastructure.Persistence;
@@ -10,9 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Innovayse.Hostpanel.Integration.Tests.Fixtures;
 
 /// <summary>
-/// Seeding and authentication helpers shared by every Reports use-case test file, extracted from
-/// the endpoint-grouped files this A7 Task 4 batch split apart so the seeding logic exists exactly
-/// once rather than once per use case.
+/// Seeding and authentication helpers shared by every Reports use-case test file, so the seeding
+/// logic exists exactly once rather than once per use case.
 /// </summary>
 public static class ReportsTestSeeds
 {
@@ -31,8 +29,8 @@ public static class ReportsTestSeeds
     }
 
     /// <summary>
-    /// Registers a new client user over HTTP and logs them in — the "wrong role" caller every
-    /// Reports use case refuses with 403, since the module's routes are reseller/admin only.
+    /// Registers a new client user over HTTP and logs them in: the "wrong role" caller every
+    /// Reports use case refuses with 403, since the module's routes are admin only.
     /// </summary>
     /// <param name="factory">The factory to register and mint a token from.</param>
     /// <param name="label">Distinguishes the seeded email between callers in the same test.</param>
@@ -66,7 +64,7 @@ public static class ReportsTestSeeds
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var client = Client.Create(Guid.NewGuid().ToString(), marker, "Reporting", $"{marker}@reports.test");
+        var client = Client.Create(Guid.NewGuid().ToString(), marker, "Reporting", $"{marker}@reports.test", DateTimeOffset.UtcNow);
         if (city is not null || country is not null)
         {
             client.UpdateAddress(client.Street, client.Address2, city ?? client.City, client.State, client.PostCode, country ?? client.Country);
@@ -88,10 +86,10 @@ public static class ReportsTestSeeds
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(7), "USD");
+        var invoice = Invoice.Create(clientId, DateTimeOffset.UtcNow.AddDays(7), "USD", DateTimeOffset.UtcNow);
         invoice.AddItem("Hosting", itemAmount, 1);
         invoice.UpdateOptions(invoice.InvoiceDate, invoice.DueDate, null, taxRate);
-        invoice.MarkPaid($"tx-{Guid.NewGuid():N}");
+        invoice.RecordPaidHistory($"tx-{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
         return invoice.Id;

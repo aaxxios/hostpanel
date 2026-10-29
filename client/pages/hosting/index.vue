@@ -37,8 +37,7 @@ const { slot } = useTemplate()
 /** The template's hosting component (classic or aurora), resolved by the registry. */
 const hosting = slot(TemplateSlot.Hosting)
 
-// SEO — this page shipped without any, so it had no title, canonical or
-// hreflang. The seo.hosting copy already existed in all three locales.
+// SEO: title, canonical and hreflang from the seo.hosting copy in all three locales.
 useSeo({
   title: t('seo.hosting.title', { site: siteName.value }),
   description: t('seo.hosting.description', { site: siteName.value }),

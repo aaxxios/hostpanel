@@ -1,6 +1,6 @@
 /**
  * A currency as the storefront sees it, as `GET /api/currencies` (`PublicCurrencyDto`) sends
- * it: enough to offer and format it, and deliberately no exchange rate — the storefront is
+ * it: enough to offer and format it, and deliberately no exchange rate: the storefront is
  * shown stored prices, never converted ones.
  */
 export interface BillingCurrency {
@@ -14,6 +14,6 @@ export interface BillingCurrency {
   suffix: string
   /** Decimal places an amount in this currency is shown to. */
   decimals: number
-  /** Whether this is the base currency — the one a checkout offers by default. */
+  /** Whether this is the base currency: the one a checkout offers by default. */
   isBase: boolean
 }

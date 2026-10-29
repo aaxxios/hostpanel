@@ -6,13 +6,7 @@
 
     <UiStack v-else gap="md">
       <UiCard>
-        <UiCardHeader :title="$t('client.payment.title')">
-          <!-- Only offered when a billing-portal instance exists to add the card on. -->
-          <UiButton v-if="canAddPaymentMethod" size="sm" variant="subtle" data-testid="account-payment-add" @click="openAddForm">
-            <Plus :size="12" :stroke-width="2" class="mr-1" />
-            {{ $t('client.payment.addNew') }}
-          </UiButton>
-        </UiCardHeader>
+        <UiCardHeader :title="$t('client.payment.title')" />
 
         <!-- A failed read is checked before the empty state, which it is otherwise
              indistinguishable from: the list is empty either way. -->
@@ -26,8 +20,8 @@
           :title="$t('client.payment.empty')"
           :description="$t('client.payment.emptyDesc')"
         >
-          <UiButton v-if="canAddPaymentMethod" data-testid="payment-methods-add" size="sm" variant="subtle" @click="openAddForm">
-            {{ $t('client.payment.addNew') }}
+          <UiButton :to="localePath(CLIENT_INVOICES_PATH)" variant="subtle" size="sm" data-testid="account-payment-invoices">
+            {{ $t('client.payment.viewInvoices') }}
           </UiButton>
         </UiEmptyState>
 
@@ -67,20 +61,24 @@
 /**
  * PaymentMethodsTab - the "Payment Methods" tab: the saved methods, set-default and remove.
  *
- * Adding a card is handed off to the billing portal's own page, because tokenised gateways
- * cannot take a card through this API; the action is therefore offered only when a portal URL
- * is configured. Every refusal is the store's sentence.
+ * The API has no way to add a card here, so the tab offers no add action: a customer without a
+ * saved card is told to pay an invoice through the hosted gateway and is linked to the invoices.
+ * Every refusal is the store's sentence.
  *
  * @module components/account/PaymentMethodsTab
  */
 
-import { CreditCard, Plus } from 'lucide-vue-next'
+import { CreditCard } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
+import { CLIENT_INVOICES_PATH } from '~/constants/clientRoutes'
 import { useAccountStore } from '~/stores/account'
 import { ActionOutcome } from '~/types/actionoutcome'
 
 /** Translator for the success sentences. */
 const { t } = useI18n()
+
+/** Prefixes a path with the active locale. */
+const localePath = useLocalePath()
 
 /** The account store that holds and changes the saved methods. */
 const account = useAccountStore()
@@ -95,31 +93,6 @@ const success = ref('')
 
 /** Id of the method the removal confirmation is about, or null when it is closed. */
 const pendingRemovalId = ref<string | null>(null)
-
-/**
- * Base URL of the billing-portal instance this deployment fronts, or an empty string.
- *
- * Empty is a legitimate configuration -- a deployment that runs no billing portal, or one where
- * `BILLING_PORTAL_URL` has not been set yet -- so every link built from it must be guarded.
- */
-const billingPortalUrl = useRuntimeConfig().public.billingPortalUrl
-
-/**
- * Whether the "add a card" action can actually do anything.
- *
- * With no `billingPortalUrl` the button would open a path on this app's own origin, i.e. a 404
- * in a new tab, so the action is not offered at all rather than offered and broken.
- */
-const canAddPaymentMethod = computed<boolean>(() => Boolean(billingPortalUrl))
-
-/** Opens the billing portal's native credit-card page in a new tab. */
-const openAddForm = (): void => {
-  // Callers are gated on canAddPaymentMethod; this is the second line of defence.
-  if (!canAddPaymentMethod.value) {
-    return
-  }
-  window.open(`${billingPortalUrl}/clientarea.php?action=creditcard`, '_blank')
-}
 
 /**
  * Makes a method the default and reads the list again when it worked.

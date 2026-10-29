@@ -2,7 +2,7 @@ namespace Innovayse.Providers.Inecobank;
 
 /// <summary>
 /// Field keys for the Inecobank plugin's admin-configured settings, matching the <c>key</c>
-/// values declared in <c>plugin.json</c> (which stays literal — it is data read by the plugin
+/// values declared in <c>plugin.json</c> (which stays literal: it is data read by the plugin
 /// loader, not compiled C#). Every C# call site that reads one of these fields should use the
 /// constant here instead of re-typing the string.
 /// </summary>

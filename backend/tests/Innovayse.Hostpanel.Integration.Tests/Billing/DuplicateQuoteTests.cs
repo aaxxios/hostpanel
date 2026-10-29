@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
 using Innovayse.Hostpanel.Application.Common.Errors;
-using Innovayse.Hostpanel.Integration.Tests.Fixtures;
-using Xunit;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 
@@ -11,7 +8,6 @@ namespace Innovayse.Hostpanel.Integration.Tests.Billing;
 /// <c>POST /api/billing/quotes/{id}/duplicate</c> against Postgres: duplicating a quote as a new
 /// draft, and the <c>QUOTE_NOT_FOUND</c> refusal for an id that names no quote.
 /// </summary>
-/// <remarks>Split from the deleted <c>QuotesEndpointTests</c> (A7 Task 3).</remarks>
 /// <param name="factory">The shared API + PostgreSQL host.</param>
 public sealed class DuplicateQuoteTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

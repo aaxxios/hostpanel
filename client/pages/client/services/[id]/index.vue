@@ -7,7 +7,17 @@
       <UiSkeleton shape="block" class="h-80" />
     </UiStack>
 
-    <UiEmptyState v-else-if="error || !service" :icon="AlertCircle" :title="$t('client.services.notFound')" />
+    <UiEmptyState v-else-if="notFound" :icon="AlertCircle" :title="$t('client.services.notFound')" data-testid="service-not-found" />
+
+    <!-- Any other failed read: the API's sentence and a way to read again. -->
+    <UiAlert v-else-if="error || !service" variant="error" data-testid="service-load-error">
+      {{ error }}
+      <template #action>
+        <UiButton variant="outline" size="sm" class="shrink-0" data-testid="service-retry" @click="refreshService()">
+          {{ $t('common.retry') }}
+        </UiButton>
+      </template>
+    </UiAlert>
 
     <template v-else>
       <ClientServicesServiceHeader :service="service" :sso-loading="ssoLoading" @cpanel="loginToCpanel" />
@@ -28,18 +38,19 @@
         <template #end>
           <UiStack v-if="activeTab === ServiceTab.Overview" data-testid="service-overview">
             <UiAlert
-              v-if="service.status === ServiceStatus.Suspended && service.suspensionreason"
+              v-if="service.status === ServiceStatus.Suspended && service.suspensionSource"
               variant="error"
               :icon-size="16"
+              :live="false"
               :title="$t('client.services.suspendedReason')"
+              data-testid="service-suspension-reason"
             >
-              {{ service.suspensionreason }}
+              {{ $t(SUSPENSION_SOURCE_KEYS[service.suspensionSource]) }}
             </UiAlert>
             <ClientServicesServiceDetailsCard :service="service" :currency="clientCurrency" />
             <ClientServicesServiceServerCard :service="service" :hosting-info="hostingInfo" />
-            <ClientServicesServiceConfigOptions v-if="configOptions.length" :options="configOptions" />
             <ClientServicesServiceQuickActions
-              :has-server="Boolean(service.serverhostname)"
+              :has-server="Boolean(service.server)"
               :sso-loading="ssoLoading"
               @cpanel="loginToCpanel"
               @invoices="loadInvoices"
@@ -60,7 +71,7 @@
 <script setup lang="ts">
 /**
  * Service detail: header and notices, a side menu and the panel it selects (overview with
- * details, server, configuration and invoices; change password; request cancellation). Every
+ * the suspension reason, details, server and usage, and invoices; change password; request cancellation). Every
  * in-flight flag and refusal sentence belongs to the service management store; the panels read
  * them there. A service that has no control-panel account yet is sent to its setup wizard.
  */
@@ -72,6 +83,7 @@ import { useClientStore } from '~/stores/client'
 import { useServiceManagementStore } from '~/stores/servicemanagement'
 import { ServiceStatus } from '~/types/servicestatus'
 import { ServiceTab } from '~/types/servicetab'
+import { SuspensionSource } from '~/types/suspensionsource'
 
 definePageMeta({ layout: 'client', middleware: 'client-auth' })
 
@@ -90,14 +102,17 @@ mgmt.reset()
 const { ssoLoading, ssoError } = storeToRefs(mgmt)
 
 // The service, its hosting info and its cancellation status are read through the service store.
-/** Loading flag of the data this page reads. */
-const { pending } = await useAsyncData(`client-service-${serviceId}`, () => mgmt.loadService(serviceId))
+/** Loading flag of the service read, and the action that reads it again. */
+const { pending, refresh: refreshService } = await useAsyncData(`client-service-${serviceId}`, () => mgmt.loadService(serviceId))
 
 /** The service being shown; null until loaded or after a failed read. */
 const service = computed(() => mgmt.service)
 
 /** The sentence for a failed read. */
 const error = computed(() => mgmt.serviceError)
+
+/** Whether the read was refused because the client has no such service. */
+const notFound = computed(() => mgmt.serviceNotFound)
 
 await useAsyncData('client-user', () => store.fetchUser())
 
@@ -108,11 +123,16 @@ const hostingInfo = computed(() => mgmt.hostingInfo)
 
 await useAsyncData(`client-service-cancellation-${serviceId}`, () => mgmt.loadCancellationStatus(serviceId))
 
+/** The sentence that names each suspension reason. */
+const SUSPENSION_SOURCE_KEYS: Record<SuspensionSource, string> = {
+  [SuspensionSource.Manual]: 'client.services.suspensionSources.manual',
+  [SuspensionSource.Overdue]: 'client.services.suspensionSources.overdue',
+  [SuspensionSource.DomainExpired]: 'client.services.suspensionSources.domainExpired',
+  [SuspensionSource.Other]: 'client.services.suspensionSources.other',
+}
+
 /** Whether a cancellation is pending on the service, and of which type. */
 const cancelStatus = computed(() => mgmt.cancelStatus)
-
-/** The configurable options chosen when the service was ordered. */
-const configOptions = computed(() => service.value?.configoptions?.configoption ?? [])
 
 /**
  * What the client profile says the service amounts are denominated in.
@@ -143,11 +163,11 @@ const loadInvoices = (): Promise<void> => mgmt.loadInvoices(serviceId)
  *
  * @returns Resolves when the attempt has ended.
  */
-const loginToCpanel = (): Promise<void> => mgmt.openControlPanel(serviceId, service.value?.serverhostname)
+const loginToCpanel = (): Promise<void> => mgmt.openControlPanel(serviceId, service.value?.server?.hostname)
 
 // A service without a control-panel account is not manageable yet: send it to the setup wizard.
 watch(service, (current) => {
-  if (!pending.value && current && current.status !== ServiceStatus.Terminated && current.status !== ServiceStatus.Cancelled && !current.username) {
+  if (!pending.value && current && current.status !== ServiceStatus.Terminated && !current.username) {
     navigateTo(clientServiceSetupPath(serviceId))
   }
 }, { immediate: true })

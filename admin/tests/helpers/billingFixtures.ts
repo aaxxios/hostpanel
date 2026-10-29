@@ -1,20 +1,51 @@
 /**
- * Fixtures the billing screen tests share: an invoice with its lines and transactions, a quote
- * list row and a ledger transaction, shaped as the API sends them.
+ * Fixtures the billing screen tests share: an invoice with its lines and transactions, an invoice
+ * list row, a quote list row and a ledger transaction, shaped as the API sends them.
  */
-import type { Invoice } from '@/types/invoice'
+import type { Invoice, InvoiceDetail } from '@/types/invoice'
 import type { QuoteListItem } from '@/types/quote'
 import type { Transaction } from '@/types/transaction'
 
 /**
- * Builds an invoice with one line, one payment and one refund.
+ * Builds an invoice as the detail endpoint sends it, with one line, one payment and one refund.
  *
  * @param overrides - Fields to replace.
  * @returns The invoice.
  */
-export const invoiceFixture = (overrides: Partial<Invoice> = {}): Invoice => ({
+export const invoiceFixture = (overrides: Partial<InvoiceDetail> = {}): InvoiceDetail => ({
   id: 1,
   clientId: 7,
+  clientName: 'Ada Lovelace',
+  status: 'Unpaid',
+  currency: 'USD',
+  dates: {
+    invoiceDate: '2026-10-14T00:00:00Z',
+    dueDate: '2026-12-31T00:00:00Z',
+    createdAt: '2026-10-14T09:00:00Z',
+    paidAt: null,
+  },
+  amounts: { subTotal: 100, credit: 5, tax: 0, taxRate: 0, total: 100 },
+  amountDue: 60,
+  payment: { method: 'Stripe', gatewayTransactionId: null },
+  notes: null,
+  items: [{ id: 11, description: 'Managed hosting', unitPrice: 100, quantity: 1, amount: 100 }],
+  transactions: [
+    { id: 21, date: '2026-10-15T00:00:00Z', gateway: 'Stripe', transactionId: 'ch_1', amount: 40, fees: 1.5, type: 'Payment' },
+    { id: 22, date: '2026-10-16T00:00:00Z', gateway: 'Stripe', transactionId: 'rf_1', amount: 10, fees: 0, type: 'Refund', notes: 'Goodwill' },
+  ],
+  ...overrides,
+})
+
+/**
+ * Builds an invoice list row as the list endpoints send it.
+ *
+ * @param overrides - Fields to replace.
+ * @returns The invoice row.
+ */
+export const invoiceRowFixture = (overrides: Partial<Invoice> = {}): Invoice => ({
+  id: 1,
+  clientId: 7,
+  clientName: 'Ada Lovelace',
   status: 'Unpaid',
   dueDate: '2026-12-31T00:00:00Z',
   createdAt: '2026-10-14T09:00:00Z',
@@ -22,15 +53,7 @@ export const invoiceFixture = (overrides: Partial<Invoice> = {}): Invoice => ({
   total: 100,
   subTotal: 100,
   tax: 0,
-  taxRate: 0,
-  credit: 5,
-  clientName: 'Ada Lovelace',
   paymentMethod: 'Stripe',
-  items: [{ id: 11, description: 'Managed hosting', unitPrice: 100, quantity: 1, amount: 100 }],
-  transactions: [
-    { id: 21, date: '2026-10-15T00:00:00Z', gateway: 'Stripe', transactionId: 'ch_1', amount: 40, fees: 1.5, type: 'Payment' },
-    { id: 22, date: '2026-10-16T00:00:00Z', gateway: 'Stripe', transactionId: 'rf_1', amount: 10, fees: 0, type: 'Refund', notes: 'Goodwill' },
-  ],
   ...overrides,
 })
 

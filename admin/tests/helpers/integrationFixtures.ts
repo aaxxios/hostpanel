@@ -2,6 +2,7 @@
  * Fixtures of the integrations tests: a summary and a detail as the admin API returns them.
  */
 import type { IntegrationDetailDto, IntegrationDto } from '@/types/integration'
+import { IntegrationFieldType } from '@/types/integration'
 
 /**
  * Builds an integration summary.
@@ -12,10 +13,10 @@ import type { IntegrationDetailDto, IntegrationDto } from '@/types/integration'
 export const integrationDto = (overrides: Partial<IntegrationDto> = {}): IntegrationDto => ({
   slug: 'stripe',
   name: 'Stripe',
-  description: 'Card payments',
   category: 'payments',
   isEnabled: true,
-  lastTestedAt: null,
+  isConfigured: true,
+  isPlugin: false,
   ...overrides,
 })
 
@@ -27,7 +28,9 @@ export const integrationDto = (overrides: Partial<IntegrationDto> = {}): Integra
  * @returns The detail.
  */
 export const integrationDetail = (overrides: Partial<IntegrationDetailDto> = {}): IntegrationDetailDto => ({
-  ...integrationDto(),
+  slug: 'stripe',
+  name: 'Stripe',
+  isEnabled: true,
   config: {
     secretKey: { value: null, isSecret: true, hasValue: true },
     mode: { value: 'Test', isSecret: false, hasValue: true },
@@ -35,10 +38,10 @@ export const integrationDetail = (overrides: Partial<IntegrationDetailDto> = {})
     live: { value: 'false', isSecret: false, hasValue: true },
   },
   fieldDefinitions: [
-    { key: 'secretKey', label: 'Secret key', type: 'password', required: true },
-    { key: 'mode', label: 'Mode', type: 'select', required: false, options: ['Live', 'Test'] },
-    { key: 'note', label: 'Note', type: 'textarea', required: false },
-    { key: 'live', label: 'Live payments', type: 'toggle', required: false },
+    { key: 'secretKey', label: 'Secret key', type: IntegrationFieldType.Password, required: true },
+    { key: 'mode', label: 'Mode', type: IntegrationFieldType.Select, required: false, options: ['Live', 'Test'] },
+    { key: 'note', label: 'Note', type: IntegrationFieldType.Textarea, required: false },
+    { key: 'live', label: 'Live payments', type: IntegrationFieldType.Toggle, required: false },
   ],
   ...overrides,
 })

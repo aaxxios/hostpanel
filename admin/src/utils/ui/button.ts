@@ -1,9 +1,8 @@
 /**
  * Button looks shared by `UiButton`, `UiIconButton` and `UiLink`.
  *
- * `plain` is the compatibility look: the control adds no colours of its own and the screen's
- * classes decide everything, which keeps screens that still paste classes rendering exactly as
- * before. Every other look is fully owned by the kit and reads the theme tokens only.
+ * `plain` adds no colours of its own, so the screen's classes decide everything. Every other look
+ * is fully owned by the kit and reads the theme tokens only.
  */
 
 /** Closed set of button looks. */

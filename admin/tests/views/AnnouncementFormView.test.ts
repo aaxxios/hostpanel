@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import AnnouncementFormView from '@/views/AnnouncementFormView.vue'
-import { callOf, json } from '../helpers/fetch'
+import { callOf, json, problem } from '../helpers/fetch'
 import { mountRouted, mountView } from '../helpers/mount'
 import { stubPathRoutes, stubRoutes } from '../helpers/routes'
 
@@ -78,5 +78,39 @@ describe('AnnouncementFormView without a date', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="announcement-form-created-on"]').text()).toContain('2026-03-04')
+  })
+
+  it('shows a refused load with a Retry instead of the form, and loads again from it', async () => {
+    let refused = true
+    stubRoutes({
+      'GET /api/announcements/9': () =>
+        refused
+          ? problem('Announcement is unavailable.', 503)
+          : json({ id: 9, title: 'Old', content: 'Body', isPublished: true, createdAt: '2026-03-04T10:00:00Z' }),
+    })
+    const { wrapper } = await mountRouted(AnnouncementFormView, '/support/announcements/:id', '/support/announcements/9')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="announcement-form-load-error"]').text()).toBe('Announcement is unavailable.')
+    expect(wrapper.find('[data-testid="announcement-form-save"]').exists()).toBe(false)
+
+    refused = false
+    await wrapper.get('[data-testid="announcement-form-load-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="announcement-form-load-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="announcement-form-save"]').exists()).toBe(true)
+  })
+
+  it('shows the API sentence next to the form when the save is refused', async () => {
+    stubRoutes({ 'POST /api/announcements': () => problem('Title is taken.', 409) })
+    const { wrapper } = await mountRouted(AnnouncementFormView, '/support/announcements/new', '/support/announcements/new')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="announcement-form-title"]').setValue('News')
+    await wrapper.get('[data-testid="announcement-form-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="announcement-form-error"]').text()).toBe('Title is taken.')
   })
 })

@@ -5,9 +5,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import IntegrationsView from '@/views/IntegrationsView.vue'
 import { stubRoutes } from '../helpers/routes'
-import { json, problem } from '../helpers/fetch'
+import { json, problem, stubFetch } from '../helpers/fetch'
 import { mountView } from '../helpers/mount'
 import { integrationDto } from '../helpers/integrationFixtures'
+import { flushPromises } from '@vue/test-utils'
 
 describe('IntegrationsView', () => {
   afterEach(() => {
@@ -50,5 +51,18 @@ describe('IntegrationsView', () => {
     const wrapper = await mountView(IntegrationsView, { path: '/integrations/payments', pattern: '/integrations/:category?' })
 
     expect(wrapper.get('[data-testid="integrations-error"]').text()).toContain('Integrations are unavailable.')
+  })
+
+  it('loads again from the Retry of a refused load', async () => {
+    stubFetch(problem('Not allowed.', 403))
+    const wrapper = await mountView(IntegrationsView, { path: '/integrations/payments', pattern: '/integrations/:category?' })
+    await flushPromises()
+    const fetchMock = vi.mocked(fetch)
+    const before = fetchMock.mock.calls.length
+
+    await wrapper.get('[data-testid="integrations-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(before)
   })
 })

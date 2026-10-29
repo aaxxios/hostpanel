@@ -3,7 +3,7 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <summary>DTO representing a single transaction returned by the API.</summary>
 /// <param name="Id">Transaction primary key.</param>
 /// <param name="ClientId">FK to the owning client.</param>
-/// <param name="ClientName">Full name of the owning client. <c>null</c> when it cannot be resolved; the caller renders its own fallback.</param>
+/// <param name="ClientName">Full name of the owning client; every transaction has one, since its client cannot be deleted.</param>
 /// <param name="Date">UTC timestamp of the transaction.</param>
 /// <param name="Description">Human-readable description.</param>
 /// <param name="TransactionId">External transaction reference.</param>
@@ -14,10 +14,10 @@ namespace Innovayse.Hostpanel.Application.Billing.Common;
 /// <param name="Fees">Transaction fees charged.</param>
 /// <param name="AddedToCredit">Whether this affected the client's credit balance.</param>
 /// <param name="Currency">ISO 4217 code the transaction's amounts are in.</param>
-public record TransactionDto(
+public sealed record TransactionDto(
     int Id,
     int ClientId,
-    string? ClientName,
+    string ClientName,
     DateTimeOffset Date,
     string Description,
     string TransactionId,

@@ -28,8 +28,8 @@ export const PRODUCT_TYPE_ICON: Readonly<Record<ProductType, string>> = {
 /**
  * The icon of a product type.
  *
- * @param type The type as the API sent it; may be missing or unknown.
+ * @param type The type as the API sent it; may be missing, or a value newer than this build knows.
  * @returns The type's icon, or {@link DEFAULT_PRODUCT_ICON} when there is none.
  */
-export const productTypeIcon = (type: string | null | undefined): string =>
-  PRODUCT_TYPE_ICON[type as ProductType] ?? DEFAULT_PRODUCT_ICON
+export const productTypeIcon = (type: ProductType | null | undefined): string =>
+  (type ? PRODUCT_TYPE_ICON[type] : undefined) ?? DEFAULT_PRODUCT_ICON

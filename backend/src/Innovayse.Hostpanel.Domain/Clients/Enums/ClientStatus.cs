@@ -1,4 +1,5 @@
 namespace Innovayse.Hostpanel.Domain.Clients.Enums;
+
 /// <summary>Lifecycle status of a client account.</summary>
 public enum ClientStatus
 {

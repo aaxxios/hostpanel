@@ -41,7 +41,7 @@ import { FOCUS_RING } from '~/utils/ui/tones'
 interface Props {
   /** Query text (v-model). */
   modelValue?: string
-  /** Placeholder; defaults to the translated "Search...". */
+  /** Placeholder; defaults to the translated "Search". */
   placeholder?: string
   /** Size step: `sm` or `md`. */
   size?: `${UiSize.Sm | UiSize.Md}`

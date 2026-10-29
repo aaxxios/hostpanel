@@ -82,7 +82,7 @@ describe('PartnerFormView', () => {
     stubRouteTable(routes)
     const { wrapper } = await mountScreen(PartnerFormView, {}, '/storefront/partners/99/edit', '/storefront/partners/:id/edit')
 
-    expect(wrapper.get('[data-testid="partner-form-error"]').text()).toBe('Entry #99 was not found.')
+    expect(wrapper.get('[data-testid="partner-form-load-error"]').text()).toBe('Entry #99 was not found.')
   })
 
   it('shows the API sentence when saving is refused and stays on the form', async () => {

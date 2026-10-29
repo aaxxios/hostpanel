@@ -10,6 +10,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountAuthPage, stubAuthRuntime } from '~/tests/helpers/authScreens'
 import { Permission } from '~/composables/usePermissions'
+import { makeClientUser } from '~/tests/helpers/clientUser'
+import { makeClientService } from '~/tests/helpers/clientServiceFixture'
+import { DomainStatus } from '~/types/domainstatus'
 
 /** The mocked identity call, re-created for every test. */
 const fetchMe = vi.fn()
@@ -56,12 +59,12 @@ beforeEach(() => {
   for (const call of [fetchMe, fetchServices, fetchInvoices, fetchDomains, fetchTickets, fetchRecentAnnouncements]) {
     call.mockReset()
   }
-  fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.All })
-  fetchServices.mockResolvedValue([{ id: 1, name: 'Starter', domain: 'a.test', username: 'ada', status: 'Active', serverhostname: '' }])
+  fetchMe.mockResolvedValue(makeClientUser({ email: 'ada@example.com', permissions: Permission.All }))
+  fetchServices.mockResolvedValue([makeClientService({ id: 1, productName: 'Starter', domain: 'a.test', username: 'ada', server: null })])
   fetchInvoices.mockResolvedValue([{ id: 7, status: 'Unpaid', dueDate: '2026-11-01', total: 25, currency: 'USD' }])
-  fetchDomains.mockResolvedValue([{ id: 3, name: 'a.test', status: 'Active', expiresAt: '2030-01-01', nextDueDate: '', registeredAt: '' }])
+  fetchDomains.mockResolvedValue([{ id: 3, name: 'a.test', status: DomainStatus.Active, expiresAt: '2030-01-01', nextDueDate: '', registeredAt: '' }])
   fetchTickets.mockResolvedValue([{ id: 9, subject: 'Help', departmentName: 'Support', status: 'Open' }])
-  fetchRecentAnnouncements.mockResolvedValue([{ id: 5, title: 'Maintenance', date: '2026-10-01' }])
+  fetchRecentAnnouncements.mockResolvedValue({ items: [{ id: 5, title: 'Maintenance', content: '', publishedAt: '2026-10-01T00:00:00Z' }], pageNumber: 1, pageSize: 20, totalCount: 1, totalPages: 1 })
 })
 
 describe('client dashboard page', () => {
@@ -139,7 +142,7 @@ describe('client dashboard page', () => {
 
 describe('client dashboard page permissions', () => {
   it('neither asks for nor shows the sections the person has no permission for', async () => {
-    fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.ViewDomains })
+    fetchMe.mockResolvedValue(makeClientUser({ email: 'ada@example.com', permissions: Permission.ViewDomains }))
 
     const wrapper = await mountAuthPage(DashboardPage)
 
@@ -156,7 +159,7 @@ describe('client dashboard page permissions', () => {
   })
 
   it('offers the domain search card to a person who may place orders', async () => {
-    fetchMe.mockResolvedValue({ firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com', permissions: Permission.PlaceNewOrders })
+    fetchMe.mockResolvedValue(makeClientUser({ email: 'ada@example.com', permissions: Permission.PlaceNewOrders }))
 
     const wrapper = await mountAuthPage(DashboardPage)
 

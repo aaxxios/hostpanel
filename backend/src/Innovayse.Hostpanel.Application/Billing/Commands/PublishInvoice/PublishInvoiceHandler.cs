@@ -23,7 +23,7 @@ public sealed class PublishInvoiceHandler
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Success, or <c>INVOICE_NOT_FOUND</c> when the id names no invoice. The invoice's own status
-    /// invariant (must be Draft) still throws — see <see cref="Domain.Billing.Invoice.Publish"/>.
+    /// invariant (must be Draft) still throws: see <see cref="Domain.Billing.Invoice.Publish"/>.
     /// </returns>
     public async Task<Result> HandleAsync(PublishInvoiceCommand cmd, CancellationToken ct)
     {

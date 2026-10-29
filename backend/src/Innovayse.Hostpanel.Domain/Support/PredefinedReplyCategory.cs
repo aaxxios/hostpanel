@@ -2,10 +2,11 @@ using Innovayse.Hostpanel.SharedKernel.Domain;
 using Innovayse.Hostpanel.SharedKernel.Domain.Interfaces;
 
 namespace Innovayse.Hostpanel.Domain.Support;
+
 /// <summary>
 /// Represents a category that groups predefined replies for support staff.
 /// Supports one level of nesting via <see cref="ParentCategoryId"/>.
-/// Created via <see cref="Create"/> factory — no public constructor.
+/// Created via <see cref="Create"/> factory: no public constructor.
 /// </summary>
 public sealed class PredefinedReplyCategory : BaseEntity
 {
@@ -15,7 +16,7 @@ public sealed class PredefinedReplyCategory : BaseEntity
     /// <summary>Gets the FK to the parent category, or <see langword="null"/> if this is a root category.</summary>
     public int? ParentCategoryId { get; private set; }
 
-    /// <summary>EF Core parameterless constructor — do not call directly.</summary>
+    /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private PredefinedReplyCategory() { }
 
     /// <summary>

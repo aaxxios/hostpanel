@@ -1,6 +1,6 @@
 /**
  * Mount tests for ServersView: servers grouped by module, the groups table, the connection test
- * result in the row, the delete confirmation, and the empty and refused states.
+ * result in the row, the delete confirmation, the empty and refused states, and the SSH dialog.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
@@ -8,7 +8,7 @@ import ServersView from '@/views/ServersView.vue'
 import { mountRouted } from '../helpers/mount'
 import { stubRoutes } from '../helpers/routes'
 import { json, problem } from '../helpers/fetch'
-import { serverDto, serverGroupDto } from '../helpers/serverFixtures'
+import { serverDto, serverGroupDto, serverSshSettingsDto, serverSshSetupDto } from '../helpers/serverFixtures'
 
 /**
  * Mounts the screen and waits for the first load.
@@ -96,6 +96,55 @@ describe('ServersView', () => {
     await flushPromises()
 
     expect(mock.mock.calls.some(([url, init]) => String(url) === '/api/admin/servers/1' && init?.method === 'DELETE')).toBe(true)
+    expect(wrapper.get('[data-testid="servers-feedback"]').text()).toBe('Record deleted.')
+  })
+
+  it('shows the API sentence when a server delete is refused', async () => {
+    stubRoutes({
+      'GET /api/admin/servers': () => json([serverDto()]),
+      'GET /api/admin/server-groups': () => json([]),
+      'DELETE /api/admin/servers/1': () => problem('The server has services.', 409),
+    })
+    const wrapper = await mountServers()
+
+    await wrapper.get('[data-testid="server-delete-1"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="servers-feedback"]').text()).toBe('The server has services.')
+    expect(wrapper.find('[data-testid="dialog-confirm"]').exists()).toBe(false)
+  })
+
+  it('does not delete when the confirmation is dismissed', async () => {
+    const mock = stubRoutes({
+      'GET /api/admin/servers': () => json([serverDto()]),
+      'GET /api/admin/server-groups': () => json([]),
+    })
+    const wrapper = await mountServers()
+
+    await wrapper.get('[data-testid="server-delete-1"]').trigger('click')
+    await wrapper.get('[data-testid="dialog-cancel"]').trigger('click')
+    await flushPromises()
+
+    expect(mock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false)
+  })
+
+  it('loads again from the retry of a refused load', async () => {
+    let calls = 0
+    stubRoutes({
+      'GET /api/admin/servers': () => {
+        calls += 1
+        return calls === 1 ? problem('Not allowed.', 403) : json([serverDto()])
+      },
+      'GET /api/admin/server-groups': () => json([]),
+    })
+    const wrapper = await mountServers()
+
+    expect(wrapper.get('[data-testid="servers-error"]').text()).toBe('Not allowed.')
+    await wrapper.get('[data-testid="servers-error-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="servers-list"]').exists()).toBe(true)
   })
 
   it('shows the empty states when there are no servers or groups', async () => {
@@ -121,21 +170,14 @@ describe('ServersView', () => {
     expect(wrapper.find('[data-testid="server-form-name"]').exists()).toBe(true)
   })
 
-  it('opens the SSH key management dialog for the row\'s server', async () => {
+  it('opens the SSH key management dialog for the server of the row', async () => {
+    // The first key the request line starts with answers, so the SSH routes go before the list
+    // route they extend; listed after it, the dialog would be filled from the server list.
     stubRoutes({
+      'GET /api/admin/servers/1/ssh-settings': () => json(serverSshSettingsDto()),
+      'GET /api/admin/servers/1/ssh-setup': () => json(serverSshSetupDto()),
       'GET /api/admin/servers': () => json([serverDto()]),
       'GET /api/admin/server-groups': () => json([]),
-      'GET /api/admin/servers/1/ssh-settings': () =>
-        json({
-          serverId: 1, isSupported: true, isEnabled: false, sshHostname: '', sshPort: 22, agentHost: '', agentPort: 22,
-          agentUsername: '', hasAgentPrivateKey: false, agentHostKeyFingerprint: '', connectTimeoutSeconds: 10,
-          operationTimeoutSeconds: 20, isHealthy: null, lastHealthCheckAt: null,
-        }),
-      'GET /api/admin/servers/1/ssh-setup': () =>
-        json({
-          serverId: 1, profile: 'cwp', publicKey: null, binding: null, agentUsername: 'hpsshkeys',
-          bundleVersion: '1.1.0', bundleSha256: 'd'.repeat(64), bundlePath: '/api/public/ssh-agent/bundle.tar.gz', sourceAddresses: [],
-        }),
     })
     const wrapper = await mountServers()
 
@@ -145,5 +187,28 @@ describe('ServersView', () => {
     expect(wrapper.find('[data-testid="server-ssh-hostname"]').exists()).toBe(true)
     await wrapper.get('[data-testid="server-ssh-cancel"]').trigger('click')
     expect(wrapper.find('[data-testid="server-ssh-hostname"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="servers-feedback"]').text()).toBe('')
+  })
+
+  it('keeps the SSH dialog open after a save, with the confirmation inside it', async () => {
+    const settings = serverSshSettingsDto()
+    // The SSH routes go before the list route they extend: the first matching key answers.
+    stubRoutes({
+      'GET /api/admin/servers/1/ssh-settings': () => json(settings),
+      'PUT /api/admin/servers/1/ssh-settings': () => json(settings),
+      'GET /api/admin/servers/1/ssh-setup': () => json(serverSshSetupDto()),
+      'GET /api/admin/servers': () => json([serverDto()]),
+      'GET /api/admin/server-groups': () => json([]),
+    })
+    const wrapper = await mountServers()
+
+    await wrapper.get('[data-testid="server-ssh-1"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="server-ssh-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="server-ssh-hostname"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="server-ssh-saved"]').text()).toBe('Saved')
+    expect(wrapper.get('[data-testid="servers-feedback"]').text()).toBe('')
   })
 })

@@ -1,12 +1,12 @@
 /**
- * Loads the main portal's shared header widget — the app launcher and account chip the
+ * Loads the main portal's shared header widget: the app launcher and account chip the
  * client area shows (layouts/client.vue and the classic template's header carry its mounts).
  *
  * A plugin rather than nuxt.config's app.head on purpose: process.env inside nuxt.config
  * is read at BUILD time, so the src would bake whatever NUXT_PUBLIC_MAIN_URL the image was
  * built with. Read from runtimeConfig, the container's own environment decides.
  *
- * Not .client — runtimeConfig.public is available during SSR too, so the tag is rendered
+ * Not .client: runtimeConfig.public is available during SSR too, so the tag is rendered
  * into <head> with the document instead of appearing after hydration.
  *
  * Only an `sso` deployment loads it: the widget's account chip and switcher call the SSO-backed

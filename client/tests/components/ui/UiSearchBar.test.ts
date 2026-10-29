@@ -43,7 +43,13 @@ describe('SearchBar', () => {
   it('gives the field and the button the same size step, large by default', () => {
     const large = mountWithKit(SearchBar, { props: { placeholder: 'x' } })
     const medium = mountWithKit(SearchBar, { props: { placeholder: 'x', size: 'md' } })
-    /** Reads the minimum-height class of the element with the given test id. */
+    /**
+     * Reads the minimum-height class of the element with the given test id.
+     *
+     * @param wrapper Mounted search bar.
+     * @param id Test id of the element.
+     * @returns The `min-h-*` class, or undefined when there is none.
+     */
     const height = (wrapper: typeof large, id: string): string | undefined =>
       wrapper.find(`[data-testid="${id}"]`).classes().find(c => c.startsWith('min-h-'))
 

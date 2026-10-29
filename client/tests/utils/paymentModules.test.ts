@@ -1,15 +1,25 @@
 /**
- * Unit tests for `utils/paymentModules.ts`: the module ids are the strings the API returns.
+ * Unit tests for `utils/paymentModules.ts`: which module ids are hosted gateways.
  *
  * @module tests/utils/paymentModules.test
  */
 
 import { describe, expect, it } from 'vitest'
-import { PAYMENT_MODULE_BANK_TRANSFER, PAYMENT_MODULE_STRIPE } from '~/utils/paymentModules'
+import { PaymentModule } from '~/types/paymentmodule'
+import { isHostedGatewayModule } from '~/utils/paymentModules'
 
-describe('payment module ids', () => {
-  it('match the backend built-in module ids', () => {
-    expect(PAYMENT_MODULE_STRIPE).toBe('stripe')
-    expect(PAYMENT_MODULE_BANK_TRANSFER).toBe('bank_transfer')
+describe('isHostedGatewayModule', () => {
+  it('reads a plugin-backed module as a hosted gateway', () => {
+    expect(isHostedGatewayModule(PaymentModule.Inecobank)).toBe(true)
+    expect(isHostedGatewayModule('otherbank')).toBe(true)
+  })
+
+  it('does not read the built-in methods as hosted gateways', () => {
+    expect(isHostedGatewayModule(PaymentModule.Stripe)).toBe(false)
+    expect(isHostedGatewayModule(PaymentModule.BankTransfer)).toBe(false)
+  })
+
+  it('does not read an empty choice as a hosted gateway', () => {
+    expect(isHostedGatewayModule('')).toBe(false)
   })
 })

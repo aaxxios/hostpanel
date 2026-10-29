@@ -23,7 +23,7 @@ const TRANSPORT_FORBIDDEN_IMPORTS = [
 ]
 
 /**
- * The conformance rules (spec 3.6), errors on every source file of the client.
+ * The conformance rules, errors on every source file of the client.
  *
  * @type {import('eslint').Linter.RulesRecord}
  */

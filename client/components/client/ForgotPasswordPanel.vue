@@ -41,8 +41,8 @@
 /**
  * The password-reset request form and its "mail sent" state.
  *
- * Shared by `/client/forgot` and `/client/forgot-password`, which used to carry two copies of
- * this form that had already drifted apart. The request, its in-flight flag and a refusal's
+ * Shared by `/client/forgot` and `/client/forgot-password`, so the two routes cannot drift
+ * apart. The request, its in-flight flag and a refusal's
  * sentence belong to the auth store; this component renders them.
  */
 import { CLIENT_LOGIN_PATH } from '~/constants/clientRoutes'

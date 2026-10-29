@@ -2,6 +2,7 @@ using Innovayse.Hostpanel.Application.Services.Common;
 using Innovayse.Hostpanel.Application.Common.Interfaces;
 
 namespace Innovayse.Hostpanel.Application.Provisioning.Queries.GetMyServiceControlPanelSsoUrl;
+
 /// <summary>
 /// Query for a signed-in client to obtain a control-panel single-sign-on URL for one of their own
 /// services.
