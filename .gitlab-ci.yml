@@ -625,7 +625,11 @@ deploy:prod:
       : > "$DEPLOY_DIR/.deploy/previous-images"
       for svc in hostpanel-api hostpanel-client hostpanel-admin; do
         cid=$(docker ps -q --filter "label=com.docker.compose.service=$svc" | head -1)
-        [ -n "$cid" ] && echo "$svc $(docker inspect "$cid" --format '{{.Config.Image}} {{.Image}}')" >> "$DEPLOY_DIR/.deploy/previous-images"
+        [ -n "$cid" ] || continue
+        # The build below moves the service's tag to the new image, leaving the old one untagged,
+        # and an untagged image is gone by the time a rollback wants it. A tag of its own keeps it.
+        docker tag "$(docker inspect "$cid" --format '{{.Image}}')" "hostpanel-rollback/$svc:previous"
+        echo "$svc $(docker inspect "$cid" --format '{{.Config.Image}}') hostpanel-rollback/$svc:previous" >> "$DEPLOY_DIR/.deploy/previous-images"
       done
       cat "$DEPLOY_DIR/.deploy/previous-images"
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
@@ -696,8 +700,8 @@ deploy:prod:
       done
       echo "──── rolling back to $(cat "$state/previous-commit") ────"
       git checkout -f "$(cat "$state/previous-commit")"
-      while read -r svc tag id; do
-        docker tag "$id" "$tag"
+      while read -r svc tag previous; do
+        docker tag "$previous" "$tag"
         docker compose up -d --no-deps --force-recreate --no-build "$svc"
       done < "$state/previous-images"
       sh scripts/wait-for-health.sh "$HEALTH_URL" "$HEALTH_TIMEOUT_SECONDS" && echo "Rolled back; the site answers."
