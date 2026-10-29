@@ -107,6 +107,38 @@ const failureOf = async (response: Response): Promise<ApiError> => {
   return new ApiError(response.status, failureBody)
 }
 
+/** A file the API answered with, and the name it gave it. */
+export interface DownloadedFile {
+  /** The file's contents. */
+  blob: Blob
+  /** The name from the `Content-Disposition` header, null when the response gave none. */
+  fileName: string | null
+}
+
+/**
+ * Reads the file name a response offers in its `Content-Disposition` header.
+ *
+ * @param response - A successful response.
+ * @returns The file name, or null when the header is missing or names no file.
+ */
+const fileNameOf = (response: Response): string | null => {
+  const header = response.headers.get('Content-Disposition')
+  if (header === null) {
+    return null
+  }
+  const encoded = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header)
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1].trim())
+    } catch {
+      // Malformed escape: fall back to the plain `filename`.
+    }
+  }
+  const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(header)
+  const name = plain?.[1]?.trim()
+  return name ? name : null
+}
+
 /**
  * Composable for making authenticated API calls via the same-origin proxy.
  *
