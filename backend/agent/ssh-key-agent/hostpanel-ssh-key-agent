@@ -60,7 +60,7 @@ import sys
 import time
 
 CONTRACT_VERSION = 1
-AGENT_VERSION = "1.2.1"
+AGENT_VERSION = "1.2.2"
 CONFIG_PATH = "/etc/hostpanel-ssh-key-agent/agent.conf"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_AUTHORIZED_KEYS_BYTES = 256 * 1024
@@ -101,7 +101,7 @@ DEFAULTS = {
     # Copied into every jail with jk_cp on each enrolment (binaries with their libraries), so a
     # jail built before an entry was added gets it on the next key. A bare jailkit tree on CWP lacks
     # uname, which a login profile script calls, and /etc/profile.d/colorls.sh, where `ll` is defined.
-    "jail_extras": "/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/usr/bin/dircolors,/etc/bashrc,/etc/profile.d/colorls.sh,/etc/DIR_COLORS",
+    "jail_extras": "/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/usr/bin/dircolors,/usr/bin/rsync,/usr/bin/tar,/usr/bin/gzip,/usr/bin/unzip,/etc/bashrc,/etc/profile.d/colorls.sh,/etc/DIR_COLORS",
     "systemd_unit_dir": "/etc/systemd/system",
 }
 

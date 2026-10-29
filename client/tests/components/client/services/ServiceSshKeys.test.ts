@@ -61,6 +61,22 @@ describe('ServiceSshKeys', () => {
     expect(wrapper.find('[data-testid="service-ssh-form"]').exists()).toBe(true)
   })
 
+  it('offers a deployment guide filled in with this account', async () => {
+    const wrapper = await mountIn(SshAccessState.Available)
+
+    expect(wrapper.find('[data-testid="service-ssh-howto"]').text()).toContain('client.services.ssh.deploy.title')
+    await wrapper.find('[data-testid="ui-accordion-toggle-1"]').trigger('click')
+    const html = wrapper.find('[data-testid="service-ssh-deploy"]').html()
+    expect(html).toContain('ssh -p 2222 -i ~/.ssh/deploy_key')
+    expect(html).toContain('web@cwp.example.test:public_html/')
+  })
+
+  it('offers no deployment guide without a form', async () => {
+    const wrapper = await mountIn(SshAccessState.NotConfigured)
+
+    expect(wrapper.find('[data-testid="service-ssh-howto"]').exists()).toBe(false)
+  })
+
   it('lets keys be revoked when SSH was switched off on the server, but offers no form', async () => {
     const wrapper = await mountIn(SshAccessState.NotConfigured, [KEY_ROW])
 

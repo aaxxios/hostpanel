@@ -221,6 +221,21 @@
           "privateKey": "That looks like a private key. It was not sent. Paste the public key (.pub) instead.",
           "invalidKey": "Only ED25519 public keys are accepted (they start with ssh-ed25519).",
           "labelRequired": "Enter a label for the key."
+        },
+        "deploy": {
+          "title": "Deploy automatically from GitHub or GitLab",
+          "intro": "Every push to your main branch can upload your site here by itself. Set it up once:",
+          "step1": "1. Create a key just for deployments",
+          "step1Hint": "Run this on your computer. It makes two files: deploy_key (private) and deploy_key.pub (public). Use a separate key so you can switch deployments off without touching your own access.",
+          "step2": "2. Add deploy_key.pub above",
+          "step2Hint": "Paste the contents of deploy_key.pub into \"Add a key\" and give it a label like \"GitHub deploy\".",
+          "step3": "3. Save the private key in your repository as {secret}",
+          "step3Hint": "GitHub: Settings → Secrets and variables → Actions → New repository secret. GitLab: Settings → CI/CD → Variables, tick Masked and Protected. Paste the whole contents of deploy_key.",
+          "step4GitHub": "4. GitHub: save this as .github/workflows/deploy.yml",
+          "step4GitHubHint": "Your server details are already filled in. Commit the file to main and the first deployment starts.",
+          "step4GitLab": "4. GitLab: add this job to .gitlab-ci.yml instead",
+          "step4GitLabHint": "Use this one if your code is on GitLab. Your server details are already filled in.",
+          "step5": "5. To stop deployments, revoke the deploy key in the list above."
         }
       },
       "tabCancel": "Request Cancellation",
