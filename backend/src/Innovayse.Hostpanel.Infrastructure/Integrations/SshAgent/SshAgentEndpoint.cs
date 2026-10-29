@@ -9,7 +9,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// <param name="HostKeyFingerprint">Pinned host key fingerprint, <c>SHA256:</c> prefixed.</param>
 /// <param name="ConnectTimeout">Connect timeout.</param>
 /// <param name="OperationTimeout">Per-operation timeout.</param>
-internal sealed record SshAgentEndpoint(
+public sealed record SshAgentEndpoint(
     int ServerId,
     string Host,
     int Port,

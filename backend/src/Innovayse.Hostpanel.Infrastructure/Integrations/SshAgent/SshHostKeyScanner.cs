@@ -14,7 +14,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// nobody has verified yet. The key observed is the one SSH.NET negotiates, i.e. exactly what the
 /// agent transport will later compare against the pin.
 /// </summary>
-internal sealed class SshHostKeyScanner : ISshHostKeyScanner
+public sealed class SshHostKeyScanner : ISshHostKeyScanner
 {
     /// <summary>Logger.</summary>
     private readonly ILogger<SshHostKeyScanner> _logger;

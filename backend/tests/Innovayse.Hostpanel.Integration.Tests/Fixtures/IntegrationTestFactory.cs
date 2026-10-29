@@ -31,6 +31,12 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
     /// </summary>
     private readonly string _databaseName = $"it_{Guid.NewGuid():N}";
 
+    /// <summary>
+    /// Whether the host keeps every adapter the composition root registered instead of swapping the
+    /// network-bound ones for test doubles. Set only by <see cref="WithProductionAdapters"/>.
+    /// </summary>
+    private readonly bool _keepsProductionAdapters;
+
     /// <summary>Connection string of <see cref="_databaseName"/>; set by <see cref="InitializeAsync"/>.</summary>
     private string? _connectionString;
 
@@ -52,9 +58,28 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
     /// these client options. A test about plain HTTP asks for an <c>http://</c> client itself.
     /// </summary>
     public IntegrationTestFactory()
+        : this(keepsProductionAdapters: false)
     {
+    }
+
+    /// <summary>Creates the factory, with or without the test doubles.</summary>
+    /// <param name="keepsProductionAdapters">Whether every adapter the composition root registered is kept.</param>
+    private IntegrationTestFactory(bool keepsProductionAdapters)
+    {
+        _keepsProductionAdapters = keepsProductionAdapters;
         ClientOptions.BaseAddress = new Uri("https://localhost");
     }
+
+    /// <summary>
+    /// Creates a factory whose host keeps the production container: no adapter is replaced by a test
+    /// double, and the registrations the composition root made are published as a
+    /// <see cref="ServiceRegistrationSnapshot"/>. For the guards that must judge what a deployment runs,
+    /// such as the service location rule, which a public test double would otherwise hide. Its hosts
+    /// would reach real networks if a test sent them a message, so nothing is dispatched on them.
+    /// The caller owns the factory and runs <see cref="InitializeAsync"/> before using it.
+    /// </summary>
+    /// <returns>A factory whose hosts carry only production registrations.</returns>
+    public static IntegrationTestFactory WithProductionAdapters() => new(keepsProductionAdapters: true);
 
     /// <inheritdoc/>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -80,6 +105,14 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
 
         builder.ConfigureServices(services =>
         {
+            // This callback runs after the composition root, so the list is what a deployment with
+            // this configuration registers; taken before the snapshot itself is added.
+            if (_keepsProductionAdapters)
+            {
+                services.AddSingleton(new ServiceRegistrationSnapshot(services.ToList()));
+                return;
+            }
+
             // Replace the real registrar provider with a no-op stub so tests never hit the network.
             services.RemoveAll<IRegistrarProvider>();
             services.AddScoped<IRegistrarProvider, StubRegistrarProvider>();

@@ -40,7 +40,7 @@ namespace Innovayse.Hostpanel.Infrastructure.ImageProcessing;
 /// <c>backend/Directory.Packages.props</c>.
 /// </para>
 /// </remarks>
-internal sealed class BrandingImageProcessor : IBrandingImageProcessor
+public sealed class BrandingImageProcessor : IBrandingImageProcessor
 {
     /// <summary>
     /// The square icon set generated from a favicon upload: the file name each rendition is

@@ -218,13 +218,16 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
 - **No service location in generated handler code.** `opts.ServiceLocationPolicy = NotAllowed` in every
   environment: Wolverine builds each handler's dependencies as constructor calls, so an adapter is
   registered by type (no `sp => ...` factory for a scoped or transient service), is `public` with a public
-  constructor, and never takes `IServiceProvider`. The services only the container can build are named in
-  `MessagingRegistration.UseServiceLocationForContainerBuiltServices`: the data context and its
+  constructor whose parameters are public too, and never takes `IServiceProvider`. A vendor type stays `internal` by
+  never appearing in an adapter's public signature, not by hiding the adapter. The services only the container
+  can build are named once in `MessagingRegistration.ContainerBuiltServices`: the data context and its
   `IHostpanelDbContext` port, Identity's `UserManager<AppUser>`, `IPaymentPluginResolver` (it activates a
   plugin type loaded at run time) and every typed HTTP client `AddHttpClient<T>` registers. A test double
   is registered as an instance (`AddSingleton<IPort>(fake)`) or by type, never through a factory.
-  `MessagingRegistrationTests` builds every chain, with and without the demo, and fails on the first
-  offender.
+  `MessagingRegistrationTests` builds every chain, with and without the demo, both on the test host and on a
+  host that keeps the production container (`IntegrationTestFactory.WithProductionAdapters`, no test double), and
+  walks the production registrations for a type, constructor or constructor parameter that is not public; the
+  test host's public fakes would otherwise hide a production adapter that is not.
 - **No identity on a message** (`NoIdentityOnMessagesTests`); handlers read it from
   `ICurrentUserService` (`Shared/MultiTenancy/`).
 - **Client portal permissions are enforced on the server, per action.** Every action behind `Policies.Client` carries

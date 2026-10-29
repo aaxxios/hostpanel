@@ -12,7 +12,7 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// <see cref="ISshIdentityGenerator"/> on BouncyCastle (already a dependency of SSH.NET): an ED25519
 /// pair, the private half in the OpenSSH v1 format SSH.NET and OpenSSH both read.
 /// </summary>
-internal sealed class SshIdentityGenerator : ISshIdentityGenerator
+public sealed class SshIdentityGenerator : ISshIdentityGenerator
 {
     /// <summary>Width of a base64 line in an OpenSSH private key file.</summary>
     private const int PemLineWidth = 70;
