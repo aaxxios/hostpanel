@@ -60,7 +60,7 @@ import sys
 import time
 
 CONTRACT_VERSION = 1
-AGENT_VERSION = "1.1.0"
+AGENT_VERSION = "1.2.0"
 CONFIG_PATH = "/etc/hostpanel-ssh-key-agent/agent.conf"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_AUTHORIZED_KEYS_BYTES = 256 * 1024
@@ -90,7 +90,22 @@ DEFAULTS = {
     "eligible_list": "",
     "account_check_command": "",
     "check_shadow_lock": "true",
+    # Jailed SSH enrolment, off unless the server opts in. With it on, the first key HostPanel
+    # adds to an account jails it (jailkit tree under jail_root, the home bind-mounted inside,
+    # jail_group membership, jail_shell), and removing the last managed key takes that away.
+    "jail_enrol": "false",
+    "jail_root": "/home/jail",
+    "jail_group": "sftp-ssh",
+    "jail_sections": "basicshell,editors,extendedshell,netutils,terminfo",
+    "jail_shell": "/bin/bash",
+    "systemd_unit_dir": "/etc/systemd/system",
 }
+
+# Replaced by the tests; every jail command goes through it.
+JAIL_RUN = subprocess.run
+JAIL_ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin"}
+JAIL_TIMEOUT_SECONDS = 30
+WITHDRAWN_SHELL = "/sbin/nologin"
 
 
 class AgentError(Exception):
@@ -130,6 +145,12 @@ def load_config(path=CONFIG_PATH):
         "eligible_list": section["eligible_list"].strip(),
         "account_check_command": section["account_check_command"].strip(),
         "check_shadow_lock": section.getboolean("check_shadow_lock"),
+        "jail_enrol": section.getboolean("jail_enrol"),
+        "jail_root": os.path.realpath(section["jail_root"]),
+        "jail_group": section["jail_group"].strip(),
+        "jail_sections": [x.strip() for x in section["jail_sections"].split(",") if x.strip()],
+        "jail_shell": section["jail_shell"].strip(),
+        "systemd_unit_dir": section["systemd_unit_dir"].strip(),
     }
 
 
@@ -270,7 +291,10 @@ def resolve_account(name, config, getpwnam=pwd.getpwnam, getspnam=None, getgrnam
         _account_check(name, config["account_check_command"], run)
 
     suspended = bool(config.get("check_shadow_lock", True)) and _is_locked(name, getspnam)
-    shell_ok = entry.pw_shell not in DISABLED_SHELLS
+    jailed = bool(config.get("jail_enrol")) and _in_group(name, entry.pw_gid, config["jail_group"], getgrnam)
+    # With enrolment on, an account not yet jailed is still able to receive a key: adding the
+    # first one is what gives it SSH.
+    shell_ok = entry.pw_shell not in DISABLED_SHELLS or bool(config.get("jail_enrol"))
     eligible = True
     if config.get("ssh_group") and not _in_group(name, entry.pw_gid, config["ssh_group"], getgrnam):
         eligible = False
@@ -290,6 +314,8 @@ def resolve_account(name, config, getpwnam=pwd.getpwnam, getspnam=None, getgrnam
         "uid": entry.pw_uid,
         "gid": entry.pw_gid,
         "home": home,
+        "shell": entry.pw_shell,
+        "jailed": jailed,
         "shell_enabled": reason is None,
         "reason": reason,
     }
@@ -437,6 +463,106 @@ def perform(request, account, config):
     raise AgentError("unknown_operation")
 
 
+# --------------------------------------------------------------------------- jailed SSH (root)
+
+def _jail_run(argv):
+    """Runs one jail command: absolute path, no shell, fixed environment, bounded time."""
+    if not os.path.isabs(argv[0]):
+        raise AgentError("internal_error")
+    try:
+        done = JAIL_RUN(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                        env=dict(JAIL_ENV), timeout=JAIL_TIMEOUT_SECONDS, check=False, text=True)
+    except (OSError, subprocess.TimeoutExpired):
+        raise AgentError("internal_error")
+    if done.returncode != 0:
+        raise AgentError("internal_error")
+    return done.stdout or ""
+
+
+def _root_dir(path):
+    """Creates a directory owned by root, not writable by anyone else; refuses a symlink."""
+    if os.path.islink(path):
+        raise AgentError("internal_error")
+    os.makedirs(path, mode=0o755, exist_ok=True)
+    if os.geteuid() == 0:
+        os.chown(path, 0, 0)
+    os.chmod(path, 0o755)
+
+
+def _jail_identity(jail, account):
+    """Puts the account in the jail's own passwd/group so the shell inside knows who it is."""
+    etc = os.path.join(jail, "etc")
+    _root_dir(etc)
+    rows = {
+        "passwd": "%s:x:%d:%d::%s:%s\n" % (account["name"], account["uid"], account["gid"],
+                                            account["home"], account.get("jail_shell", "/bin/bash")),
+        "group": "%s:x:%d:\n" % (account["name"], account["gid"]),
+    }
+    for name, row in rows.items():
+        path = os.path.join(etc, name)
+        if os.path.islink(path):
+            raise AgentError("internal_error")
+        existing = ""
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                existing = handle.read()
+        if any(line.split(":", 1)[0] == account["name"] for line in existing.splitlines()):
+            continue
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(row)
+
+
+def enrol_jail(account, config):
+    """
+    Gives the account jailed SSH, matching the customer sshd's `Match Group <jail_group>` with
+    `ChrootDirectory <jail_root>/%u`. Every step is skipped when already done. Customer files are
+    never moved: the real home is bind-mounted into the jail by a persistent systemd mount unit.
+    """
+    name = account["name"]
+    jail_root = config["jail_root"]
+    jail = os.path.join(jail_root, name)
+    if os.path.dirname(jail) != jail_root:
+        raise AgentError("internal_error")
+    _root_dir(jail_root)
+    if not os.path.isdir(os.path.join(jail, "etc")):
+        _root_dir(jail)
+        _jail_run(["/usr/sbin/jk_init", "-f", "-j", jail] + list(config["jail_sections"]))
+    _jail_identity(jail, dict(account, jail_shell=config["jail_shell"]))
+
+    where = os.path.join(jail, "home", name)
+    _root_dir(os.path.join(jail, "home"))
+    if not os.path.isdir(where):
+        os.mkdir(where, 0o755)
+    if not os.path.ismount(where):
+        unit = _jail_run(["/usr/bin/systemd-escape", "-p", "--suffix=mount", where]).strip()
+        if not re.match(r"^[A-Za-z0-9_.\\-]+\.mount$", unit):
+            raise AgentError("internal_error")
+        unit_path = os.path.join(config["systemd_unit_dir"], unit)
+        if not os.path.exists(unit_path):
+            with open(unit_path, "w", encoding="utf-8") as handle:
+                handle.write(
+                    "[Unit]\nDescription=HostPanel jailed SSH: home of %s\n\n"
+                    "[Mount]\nWhat=%s\nWhere=%s\nType=none\nOptions=bind\n\n"
+                    "[Install]\nWantedBy=multi-user.target\n" % (name, account["home"], where))
+            _jail_run(["/usr/bin/systemctl", "daemon-reload"])
+        _jail_run(["/usr/bin/systemctl", "enable", "--now", unit])
+
+    if not account.get("jailed"):
+        _jail_run(["/usr/sbin/usermod", "-aG", config["jail_group"], name])
+    if account.get("shell") in DISABLED_SHELLS:
+        _jail_run(["/usr/sbin/usermod", "-s", config["jail_shell"], name])
+    audit_event(config, name, "jail_enrol")
+
+
+def withdraw_jail(account, config):
+    """Takes SSH away again; the jail and its mount stay so re-enrolment is cheap."""
+    name = account["name"]
+    _jail_run(["/usr/bin/gpasswd", "-d", name, config["jail_group"]])
+    if account.get("shell") == config["jail_shell"]:
+        _jail_run(["/usr/sbin/usermod", "-s", WITHDRAWN_SHELL, name])
+    audit_event(config, name, "jail_withdraw")
+
+
 # --------------------------------------------------------------------------- request handling (root)
 
 REQUIRED_FIELDS = {
@@ -508,6 +634,18 @@ def run_as_account(request, account, config):
     return body["result"]
 
 
+def audit_event(config, account, event):
+    """Appends one line for a root-side change that is not a key operation (jail enrol/withdraw)."""
+    entry = {"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "op": event, "account": account,
+             "outcome": "ok", "client": os.environ.get("SUDO_USER", "")}
+    try:
+        fd = os.open(config["audit_log"], os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "a") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError:
+        pass
+
+
 def audit(config, request, outcome):
     """Appends one line per mutating request. Never contains key material beyond the fingerprint."""
     if request is None or request.get("op") not in ("add", "revoke"):
@@ -547,7 +685,17 @@ def handle(raw, config):
                           os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            jail = bool(config.get("jail_enrol"))
+            if jail and request["op"] == "add" and account["shell_enabled"]:
+                # Before the key is written: a key that lands but cannot log in is worse than none.
+                enrol_jail(account, config)
             result = run_as_account(request, account, config)
+            if jail and request["op"] == "revoke" and result.get("changed") and account["jailed"]:
+                left = run_as_account({"v": CONTRACT_VERSION, "op": "list", "account": account["name"]},
+                                      account, config)
+                # Hand-installed keys are the customer's own way in; leave their access alone.
+                if not left["keys"] and not left["unmanaged_keys"]:
+                    withdraw_jail(account, config)
         finally:
             os.close(lock_fd)
         audit(config, request, "ok")

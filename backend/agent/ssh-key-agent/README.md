@@ -122,6 +122,45 @@ additive; older HostPanels ignore them and older agents simply omit them.
 | `ssh_group` | Only members may receive keys — set it when only one group may log in over SSH (e.g. a jailed-shell group). |
 | `eligible_list` | Root-owned, not group/world-writable file, one account per line: an SSH opt-in list. |
 
+## Jailed SSH enrolment (`jail_enrol`, agent 1.2.0+)
+
+Off by default. With `jail_enrol = true` a customer gets SSH by adding their first key in
+HostPanel; nobody runs anything on the server by hand. It assumes the customer sshd chroots
+`jail_group` into `jail_root/%u` (for example `Match Group sftp-ssh` with
+`ChrootDirectory /home/jail/%u`) and that jailkit is installed.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `jail_enrol` | `false` | Enrol on the first key, withdraw on the last. |
+| `jail_root` | `/home/jail` | Parent of every jail; root-owned. |
+| `jail_group` | `sftp-ssh` | Group the customer sshd chroots. Leave `ssh_group` empty when this is on. |
+| `jail_sections` | `basicshell,editors,extendedshell,netutils,terminfo` | `jk_init` sections copied into a new jail. |
+| `jail_shell` | `/bin/bash` | Login shell set on enrolment. |
+| `systemd_unit_dir` | `/etc/systemd/system` | Where the home bind-mount unit is written. |
+
+While it is on, an account that passes every other check reports `shell_enabled: true` even
+before it is jailed, because adding a key is what gives it SSH. Suspended and denied accounts
+are never enrolled.
+
+**On `add`, before the key is written** (each step skipped when already done; any failure
+refuses the add with `internal_error` and writes no key):
+
+1. `jk_init -f -j <jail_root>/<user> <jail_sections>` when the jail has no `etc/`.
+2. The user is appended to the jail's own `etc/passwd` and `etc/group`.
+3. `<jail>/home/<user>` is created and the real home is bind-mounted onto it by a persistent
+   unit (`systemd-escape -p --suffix=mount`, `What=/home/<user>`, `Options=bind`), then
+   `systemctl enable --now`. Customer files are never moved or copied.
+4. `usermod -aG <jail_group> <user>`, and `usermod -s <jail_shell> <user>` if the shell was a
+   disabled one.
+
+**On `revoke` of the last managed key**, when the account is in `jail_group` and has no
+hand-installed keys either: `gpasswd -d <user> <jail_group>`, and `usermod -s /sbin/nologin` if
+the shell is still `jail_shell`. The jail and its mount stay, so the next key re-enables SSH at
+once. Both events are written to the audit log (`jail_enrol`, `jail_withdraw`).
+
+To remove a jail entirely: `systemctl disable --now <unit>`, delete the unit file,
+`systemctl daemon-reload`, then `rm -rf <jail_root>/<user>` once nothing is mounted under it.
+
 ## Lifecycle
 
 | Task | Command (as root on the server, in the unpacked bundle) |

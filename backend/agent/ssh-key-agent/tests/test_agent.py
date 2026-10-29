@@ -291,6 +291,126 @@ class PolicyTests(AgentTestCase):
         self.assertEqual(self.call(op="list", account="alice")["error"], "internal_error")
 
 
+
+class JailEnrolTests(AgentTestCase):
+    """jail_enrol: the first key jails the account for SSH, the last managed key withdraws it."""
+
+    def setUp(self):
+        super().setUp()
+        self.shell = "/sbin/nologin"
+        self.jail_root = os.path.join(self.tmp.name, "jail")
+        self.unit_dir = os.path.join(self.tmp.name, "units")
+        os.makedirs(self.unit_dir)
+        self.config.update({
+            "jail_enrol": True,
+            "jail_root": self.jail_root,
+            "jail_group": "sftp-ssh",
+            "jail_sections": ["basicshell", "editors"],
+            "jail_shell": "/bin/bash",
+            "systemd_unit_dir": self.unit_dir,
+        })
+        self.groups["sftp-ssh"] = []
+        self.calls = []
+
+        def jail_run(argv, **kwargs):
+            self.calls.append(argv)
+            self.assertEqual(kwargs.get("env"), {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin"})
+            self.assertTrue(os.path.isabs(argv[0]))
+            if argv[0] == "/usr/sbin/jk_init":
+                os.makedirs(os.path.join(argv[argv.index("-j") + 1], "etc"), exist_ok=True)
+            if argv[0] == "/usr/bin/systemd-escape":
+                return SimpleNamespace(returncode=0, stdout=argv[-1].strip("/").replace("/", "-") + ".mount")
+            if argv[:2] == ["/usr/sbin/usermod", "-aG"]:
+                self.groups["sftp-ssh"].append(argv[-1])
+            if argv[:2] == ["/usr/sbin/usermod", "-s"]:
+                self.shell = argv[2]
+            if argv[0] == "/usr/bin/gpasswd":
+                self.groups["sftp-ssh"].remove(argv[2])
+            return SimpleNamespace(returncode=0, stdout="")
+
+        agent.JAIL_RUN = jail_run
+
+    def tearDown(self):
+        agent.JAIL_RUN = subprocess.run
+        super().tearDown()
+
+    def add(self, seed=1, key_id=KEY_ID_A):
+        return self.call(op="add", account="alice", key_id=key_id, public_key=make_key(seed))
+
+    def test_not_yet_enrolled_account_reports_ssh_available(self):
+        status = self.call(op="status", account="alice")
+        self.assertTrue(status["shell_enabled"])
+        self.assertEqual(self.calls, [])
+
+    def test_first_key_builds_jail_mount_group_and_shell(self):
+        self.assertTrue(self.add()["ok"])
+        programs = [c[0] for c in self.calls]
+        self.assertIn("/usr/sbin/jk_init", programs)
+        jk = next(c for c in self.calls if c[0] == "/usr/sbin/jk_init")
+        self.assertEqual(jk[jk.index("-j") + 1], os.path.join(self.jail_root, "alice"))
+        self.assertEqual(jk[-2:], ["basicshell", "editors"])
+        self.assertIn(["/usr/sbin/usermod", "-aG", "sftp-ssh", "alice"], self.calls)
+        self.assertIn(["/usr/sbin/usermod", "-s", "/bin/bash", "alice"], self.calls)
+        self.assertTrue(os.path.isdir(os.path.join(self.jail_root, "alice", "home", "alice")))
+        units = os.listdir(self.unit_dir)
+        self.assertEqual(len(units), 1)
+        with open(os.path.join(self.unit_dir, units[0])) as handle:
+            unit = handle.read()
+        self.assertIn("What=" + self.config["home_root"] + "/alice", unit)
+        self.assertIn("Where=" + os.path.join(self.jail_root, "alice", "home", "alice"), unit)
+        self.assertIn("Options=bind", unit)
+        self.assertIn(["/usr/bin/systemctl", "enable", "--now", units[0]], self.calls)
+        with open(os.path.join(self.jail_root, "alice", "etc", "passwd")) as handle:
+            self.assertIn("alice:x:", handle.read())
+        self.assertTrue(self.call(op="status", account="alice")["shell_enabled"])
+
+    def test_enrolment_is_idempotent(self):
+        self.assertTrue(self.add(1, KEY_ID_A)["ok"])
+        self.calls.clear()
+        self.assertTrue(self.add(2, KEY_ID_B)["ok"])
+        self.assertNotIn("/usr/sbin/jk_init", [c[0] for c in self.calls])
+        self.assertFalse([c for c in self.calls if c[0] == "/usr/sbin/usermod"])
+        with open(os.path.join(self.jail_root, "alice", "etc", "passwd")) as handle:
+            self.assertEqual(handle.read().count("alice:x:"), 1)
+
+    def test_last_managed_key_withdraws_group_and_shell(self):
+        self.add(1, KEY_ID_A)
+        self.add(2, KEY_ID_B)
+        self.calls.clear()
+        self.call(op="revoke", account="alice", key_id=KEY_ID_A)
+        self.assertEqual(self.calls, [])
+        self.call(op="revoke", account="alice", key_id=KEY_ID_B)
+        self.assertIn(["/usr/bin/gpasswd", "-d", "alice", "sftp-ssh"], self.calls)
+        self.assertIn(["/usr/sbin/usermod", "-s", "/sbin/nologin", "alice"], self.calls)
+        self.assertNotIn("alice", self.groups["sftp-ssh"])
+        self.assertTrue(os.path.isdir(os.path.join(self.jail_root, "alice")))
+
+    def test_withdrawal_spares_hand_installed_keys_and_other_shells(self):
+        self.add()
+        with open(os.path.join(self.home_root, "alice", ".ssh", "authorized_keys"), "a") as handle:
+            handle.write(make_key(9) + "\n")
+        self.calls.clear()
+        self.call(op="revoke", account="alice", key_id=KEY_ID_A)
+        self.assertEqual(self.calls, [])
+
+    def test_failed_enrolment_adds_no_key(self):
+        def failing(argv, **kwargs):
+            return SimpleNamespace(returncode=1, stdout="")
+        agent.JAIL_RUN = failing
+        self.assertEqual(self.add()["error"], "internal_error")
+        self.assertEqual(self.call(op="list", account="alice")["keys"], [])
+
+    def test_suspended_or_denied_accounts_are_never_enrolled(self):
+        self.shadow["alice"] = "!$6$salt$hash"
+        self.assertEqual(self.add()["error"], "account_suspended")
+        self.config["deny_accounts"] = {"alice"}
+        self.assertEqual(self.add()["error"], "account_not_eligible")
+        self.assertEqual(self.calls, [])
+
+    def test_off_by_default(self):
+        cfg = agent.load_config(os.path.join(self.tmp.name, "missing.conf"))
+        self.assertFalse(cfg["jail_enrol"])
+
 class TimeoutTests(unittest.TestCase):
     def test_silent_client_does_not_pin_the_process(self):
         code = ("import importlib.machinery as m, importlib.util as u, sys;"
