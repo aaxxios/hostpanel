@@ -142,8 +142,8 @@ const fileNameOf = (response: Response): string | null => {
 /**
  * Composable for making authenticated API calls via the same-origin proxy.
  *
- * @returns `request` for JSON calls, `upload` for one multipart file, `probe` for 401-tolerant reads
- * and `href` for an address the browser opens itself.
+ * @returns `request` for JSON calls, `upload` for one multipart file, `probe` for 401-tolerant reads,
+ * `download` for a file read as a blob, and `href` for an address the browser opens itself.
  */
 export const useApi = () => {
   /**
@@ -241,6 +241,26 @@ export const useApi = () => {
   }
 
   /**
+   * Fetches a file as a blob, so the page can save it and show a refusal instead of
+   * navigating to it.
+   *
+   * @param endpoint - API path (e.g. '/billing/5/pdf').
+   * @returns The file and the name the API gave it.
+   * @throws {ApiError} When the API answers with a non-2xx status; the problem+json body travels on the error.
+   */
+  const download = async (endpoint: string): Promise<DownloadedFile> => {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: { ...CSRF_HEADER, ...languageHeader() },
+    })
+
+    if (!response.ok) {
+      throw await failureOf(response)
+    }
+
+    return { blob: await response.blob(), fileName: fileNameOf(response) }
+  }
+
+  /**
    * The address of an endpoint the browser opens itself (a file download in a new tab) instead of
    * a request made here. The session cookie goes with it like with any same-origin request.
    *
@@ -249,5 +269,5 @@ export const useApi = () => {
    */
   const href = (endpoint: string): string => `${API_BASE}${endpoint}`
 
-  return { request, upload, probe, href }
+  return { request, upload, probe, href, download }
 }
