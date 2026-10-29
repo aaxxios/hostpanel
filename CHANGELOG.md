@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Client portal SSH keys: a "Deploy automatically from GitHub or GitLab" guide with a ready GitHub Actions workflow and GitLab CI job, filled in with the account's host, port and username (en, ru, hy).
 - SSH key agent 1.2.0: optional jailed SSH enrolment (`jail_enrol`). The first key HostPanel adds jails the account (jailkit tree, home bind-mounted by a systemd unit, `sftp-ssh` group, bash) and removing the last managed key withdraws it; off by default.
 - `PanelNetwork:HostAddresses` (`PANEL_HOST_ADDRESSES`): reach a control panel's API over a VPN address while requests and TLS keep its hostname, so customer links and certificate checks are unchanged.
 - Storefront content: testimonials, partners, projects and FAQs, with English, Russian and Armenian translations, served from `/api/public/{testimonials,partners,projects,faqs}`.
@@ -57,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SSH key agent 1.2.2: jails also get `rsync`, `tar`, `gzip` and `unzip`, so a CI job can deploy a site over SSH.
 - SSH key agent 1.2.1: jails get `uname`, `id`, `hostname`, `dircolors`, `/etc/bashrc` and `/etc/profile.d/colorls.sh` (`jail_extras`), so customer logins no longer print `/usr/bin/uname: No such file or directory` and `ll` works; existing jails get them on the next key.
 - The client setup wizard now provisions on a server from the product's server group; it picked from every server of the module, so a product tied to one server was set up on the default one.
 - A signed-in customer's first order now grants them the Client role. An SSO sign-up held none, so after ordering every portal page answered 403 and the portal called them "not a customer account"; an email sent as the display name is no longer stored as their first and last name.
