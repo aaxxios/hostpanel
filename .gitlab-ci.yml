@@ -616,6 +616,18 @@ deploy:prod:
       case "$BACKUP_KEEP" in
         ''|*[!0-9]*) echo "BACKUP_KEEP must be a whole number, got '$BACKUP_KEEP'" >&2; exit 1 ;;
       esac
+    # What is running now, recorded before anything changes, so that after_script can put it
+    # back when this deploy fails: the commit the stack was started from and the image each
+    # service's container was created from.
+    - mkdir -p "$DEPLOY_DIR/.deploy"
+    - git -C "$DEPLOY_DIR" rev-parse HEAD > "$DEPLOY_DIR/.deploy/previous-commit"
+    - |
+      : > "$DEPLOY_DIR/.deploy/previous-images"
+      for svc in hostpanel-api hostpanel-client hostpanel-admin; do
+        cid=$(docker ps -q --filter "label=com.docker.compose.service=$svc" | head -1)
+        [ -n "$cid" ] && echo "$svc $(docker inspect "$cid" --format '{{.Config.Image}} {{.Image}}')" >> "$DEPLOY_DIR/.deploy/previous-images"
+      done
+      cat "$DEPLOY_DIR/.deploy/previous-images"
     - git -C "$DEPLOY_DIR" fetch "$CI_REPOSITORY_URL" "$CI_COMMIT_SHA"
     - git -C "$DEPLOY_DIR" checkout -f "$CI_COMMIT_SHA"
     - cd "$DEPLOY_DIR"
@@ -668,6 +680,27 @@ deploy:prod:
       done
     # The job is green only when the site answers, not merely when its containers started.
     - sh scripts/wait-for-health.sh "$HEALTH_URL" "$HEALTH_TIMEOUT_SECONDS"
+  # A failed deploy left the site on whatever had half-started, and the reason was in the logs
+  # of a container the next deploy replaced. On failure: print the new containers' logs first,
+  # then put back the commit and images recorded above. Migrations the new API already applied
+  # stay applied; the dump taken above is the way back from those.
+  after_script:
+    - |
+      [ "$CI_JOB_STATUS" = "failed" ] || exit 0
+      state="$DEPLOY_DIR/.deploy"
+      [ -s "$state/previous-images" ] || { echo "Nothing recorded to roll back to."; exit 0; }
+      cd "$DEPLOY_DIR"
+      for svc in hostpanel-api hostpanel-client hostpanel-admin; do
+        echo "──── last 80 log lines of $svc ────"
+        docker logs --tail 80 "$svc" 2>&1 || true
+      done
+      echo "──── rolling back to $(cat "$state/previous-commit") ────"
+      git checkout -f "$(cat "$state/previous-commit")"
+      while read -r svc tag id; do
+        docker tag "$id" "$tag"
+        docker compose up -d --no-deps --force-recreate --no-build "$svc"
+      done < "$state/previous-images"
+      sh scripts/wait-for-health.sh "$HEALTH_URL" "$HEALTH_TIMEOUT_SECONDS" && echo "Rolled back; the site answers."
   environment: { name: production/hostpanel, url: "$PROD_PUBLIC_URL", deployment_tier: production }
   # Manual on purpose — merging should not by itself change what customers see.
   when: manual
