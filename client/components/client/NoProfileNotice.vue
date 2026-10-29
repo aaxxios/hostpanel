@@ -10,13 +10,10 @@
     <template #action>
       <UiStack direction="row" align="center" gap="xs" class="flex-shrink-0">
         <!--
-          The recovery action: a state the user cannot act on is a dead end. The admin panel
-          is a separate app on the same host, so it is an href rather than a route: a
-          NuxtLink would try to resolve it inside this app and 404.
+          The recovery action: a state the user cannot act on is a dead end. Most accounts that
+          land here are new customers who have not ordered yet, so the way out is the catalogue.
+          No admin panel link: this page cannot tell staff from customers, and staff know the way.
         -->
-        <UiButton size="sm" variant="subtle" href="/admin" data-testid="no-profile-admin">
-          {{ $t('client.noProfile.adminAction') }}
-        </UiButton>
         <UiButton size="sm" variant="subtle" to="/hosting" data-testid="no-profile-browse">
           {{ $t('client.noProfile.browseAction') }}
         </UiButton>

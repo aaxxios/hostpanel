@@ -85,6 +85,12 @@ export const useAuthStore = defineStore('auth', () => {
   /** True when a user session is active. */
   const isAuthenticated = computed(() => user.value !== null)
 
+  /**
+   * True when the signed-in account holds the Admin role. Any customer can sign in through the
+   * shared sign-on, so a session alone says nothing about access to this panel.
+   */
+  const isAdmin = computed(() => user.value?.roles.includes('Admin') === true)
+
   /** True when the sign-in is mid-flight and waiting on an authenticator code. */
   const awaitingTwoFactor = computed(() => pendingToken.value !== null)
 
@@ -374,6 +380,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
+    isAdmin,
     emailVerified,
     sessionChecked,
     mode,

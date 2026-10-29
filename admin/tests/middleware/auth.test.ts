@@ -31,13 +31,13 @@ const route = (
  * @param options - Deployment mode, whether setup is outstanding, and whether a session exists.
  * @returns The fetch mock.
  */
-const stubSession = (options: { mode: 'local' | 'sso'; setup: boolean; signedIn: boolean }) =>
+const stubSession = (options: { mode: 'local' | 'sso'; setup: boolean; signedIn: boolean; roles?: string[] }) =>
   stubRoutes({
     'GET /api/auth/mode': () => json({ mode: options.mode }),
     'GET /api/auth/setup-required': () => json({ required: options.setup }),
     'GET /api/auth/me': () =>
       options.signedIn
-        ? json({ email: 'a@b.c', roles: ['Admin'], emailVerified: true })
+        ? json({ email: 'a@b.c', roles: options.roles ?? ['Admin'], emailVerified: true })
         : problem('Unauthorized', 401),
   })
 
@@ -65,6 +65,18 @@ describe('authMiddleware', () => {
     stubSession({ mode: 'local', setup: false, signedIn: true })
 
     expect(await authMiddleware(route({ requiresAuth: true }))).toBe(true)
+  })
+
+  it('keeps a signed-in customer without the Admin role out of a protected route', async () => {
+    stubSession({ mode: 'sso', setup: false, signedIn: true, roles: ['Client'] })
+
+    expect(await authMiddleware(route({ requiresAuth: true }, '/dashboard'))).toBe('/login')
+  })
+
+  it('leaves a signed-in customer without the Admin role on the sign-in page', async () => {
+    stubSession({ mode: 'sso', setup: false, signedIn: true, roles: [] })
+
+    expect(await authMiddleware(route({ public: true }))).toBe(true)
   })
 
   it('passes the requested full path to /login as the redirect query', async () => {
