@@ -9,7 +9,12 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// by the agent-backed provider; every other module answers unsupported until it gets an
 /// implementation of its own.
 /// </summary>
-internal sealed class SshKeyProviderFactory : ISshKeyProviderFactory
+/// <remarks>
+/// Public, like every adapter the container registers: the SSH settings and setup queries take it, and
+/// Wolverine builds their handlers with plain constructor calls, refusing service location. The
+/// agent-backed provider it returns stays internal; callers see only <see cref="ISshKeyProvider"/>.
+/// </remarks>
+public sealed class SshKeyProviderFactory : ISshKeyProviderFactory
 {
     /// <summary>
     /// The agent profile for the v7 hosting panel module: the name of <c>profiles/cwp.conf</c> in the

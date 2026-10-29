@@ -20,8 +20,13 @@ namespace Innovayse.Hostpanel.Infrastructure.Integrations.SshAgent;
 /// authentication; a mismatch aborts the connection, so a spoofed host never receives a request.
 /// A fresh connection is opened per call: key operations are rare, and no long-lived session can
 /// outlive a settings change.
+/// <para>
+/// Public because <see cref="SshKeyProviderFactory"/> takes it in its constructor and Wolverine builds
+/// that factory with a plain constructor call (service location is refused). Its public surface carries
+/// only this product's own types; the SSH library stays inside the method body.
+/// </para>
 /// </remarks>
-internal sealed class SshAgentTransport
+public sealed class SshAgentTransport
 {
     /// <summary>Largest response accepted from an agent.</summary>
     private const int MaxResponseBytes = 64 * 1024;

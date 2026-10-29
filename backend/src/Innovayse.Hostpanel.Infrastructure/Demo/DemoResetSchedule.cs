@@ -3,7 +3,7 @@ using Innovayse.Hostpanel.Application.Common.Interfaces;
 namespace Innovayse.Hostpanel.Infrastructure.Demo;
 
 /// <summary>In-memory <see cref="IDemoResetSchedule"/>; registered as a singleton so every scope sees the same time.</summary>
-internal sealed class DemoResetSchedule : IDemoResetSchedule
+public sealed class DemoResetSchedule : IDemoResetSchedule
 {
     /// <summary>Guards <see cref="_nextResetAtTicks"/> against a torn read between the scheduler and a request.</summary>
     private readonly object _gate = new();

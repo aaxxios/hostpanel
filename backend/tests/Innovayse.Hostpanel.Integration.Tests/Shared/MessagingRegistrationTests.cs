@@ -110,6 +110,133 @@ public sealed class MessagingRegistrationTests(IntegrationTestFactory factory) :
         offenders.Should().BeEmpty("every chain must be built from constructors; offenders: {0}", string.Join("; ", offenders));
     }
 
+    /// <summary>
+    /// The production container, with no adapter swapped for a test double, builds every chain from
+    /// constructors too. The shared host replaces the network-bound ports (SSH agents, registrars,
+    /// provisioning, mail, probes) with public fakes, so a production adapter that is not public, or that
+    /// takes a dependency that is not, would pass the two tests above and fail only on a deployment.
+    /// </summary>
+    /// <param name="demo">Whether the public demo is switched on.</param>
+    /// <returns>A task that completes when every chain was built.</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EveryHandlerChain_OfTheProductionContainer_BuildsWithoutServiceLocation(bool demo)
+    {
+        await using var production = IntegrationTestFactory.WithProductionAdapters();
+        await production.InitializeAsync();
+
+        var offenders = ChainsThatFailToBuild(demo ? DemoTestHost.Enabled(production) : production);
+
+        offenders.Should().BeEmpty("every chain must be built from constructors; offenders: {0}", string.Join("; ", offenders));
+    }
+
+    /// <summary>
+    /// Every type the production composition root registers (Infrastructure, API, Application, the plugin
+    /// loader and the demo) is one Wolverine can construct: public, with a public constructor whose
+    /// parameters are all public, and no scoped or transient service of ours is built by a factory
+    /// lambda. The only exceptions are the services <see cref="MessagingRegistration.ContainerBuiltServices"/>
+    /// names. This holds for registrations no handler reaches today, so the next handler that takes one
+    /// does not fail on its first message.
+    /// </summary>
+    /// <param name="demo">Whether the public demo is switched on.</param>
+    /// <returns>A task that completes when every registration was checked.</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EveryProductionRegistration_IsConstructibleWithoutServiceLocation(bool demo)
+    {
+        await using var production = IntegrationTestFactory.WithProductionAdapters();
+        await production.InitializeAsync();
+        var host = demo ? DemoTestHost.Enabled(production) : production;
+
+        var offenders = RegistrationsThatNeedServiceLocation(host.Services.GetRequiredService<ServiceRegistrationSnapshot>());
+
+        offenders.Should().BeEmpty("every registration must be constructible by Wolverine; offenders: {0}", string.Join("; ", offenders));
+    }
+
+    /// <summary>
+    /// Names every registration of ours Wolverine could not construct: an implementation type that is not
+    /// public or has no public constructor, a public constructor parameter whose type is not public, or a
+    /// scoped or transient service built by a factory. Services named by
+    /// <see cref="MessagingRegistration.ContainerBuiltServices"/> are exempt.
+    /// </summary>
+    /// <param name="snapshot">The registrations the composition root made.</param>
+    /// <returns>One line per offending registration.</returns>
+    private static List<string> RegistrationsThatNeedServiceLocation(ServiceRegistrationSnapshot snapshot)
+    {
+        var exempt = MessagingRegistration.ContainerBuiltServices(snapshot.Descriptors).ToHashSet();
+        var offenders = new List<string>();
+
+        snapshot.Descriptors.Should().NotBeEmpty("the composition root registers the production services");
+        foreach (var descriptor in snapshot.Descriptors)
+        {
+            if (exempt.Contains(descriptor.ServiceType))
+            {
+                continue;
+            }
+
+            var implementation = descriptor.IsKeyedService ? descriptor.KeyedImplementationType : descriptor.ImplementationType;
+            if (implementation is null)
+            {
+                // A keyed descriptor throws on ImplementationFactory; keyed services are the plugins,
+                // which the exempt resolver activates, so only unkeyed factories are judged.
+                if (!descriptor.IsKeyedService
+                    && descriptor.ImplementationFactory is not null
+                    && descriptor.Lifetime != ServiceLifetime.Singleton
+                    && IsOurs(descriptor.ServiceType))
+                {
+                    offenders.Add($"{NameOf(descriptor.ServiceType)}: {descriptor.Lifetime} factory registration");
+                }
+
+                continue;
+            }
+
+            if (!IsOurs(implementation))
+            {
+                continue;
+            }
+
+            if (!implementation.IsVisible)
+            {
+                offenders.Add($"{NameOf(descriptor.ServiceType)} -> {NameOf(implementation)}: not public");
+            }
+
+            var constructors = implementation.GetConstructors();
+            if (constructors.Length == 0)
+            {
+                offenders.Add($"{NameOf(implementation)}: no public constructor");
+            }
+
+            foreach (var parameter in constructors.SelectMany(constructor => constructor.GetParameters()))
+            {
+                if (!parameter.ParameterType.IsVisible)
+                {
+                    offenders.Add($"{NameOf(implementation)}({parameter.Name}): {NameOf(parameter.ParameterType)} is not public");
+                }
+            }
+        }
+
+        return offenders.Distinct().ToList();
+    }
+
+    /// <summary>Whether a type is one of this solution's own, as opposed to the framework's or a vendor's.</summary>
+    /// <param name="type">The type.</param>
+    /// <returns><see langword="true"/> for the host, provider and SDK assemblies.</returns>
+    private static bool IsOurs(Type type)
+    {
+        var assembly = type.Assembly.GetName().Name ?? string.Empty;
+
+        return assembly.StartsWith("Innovayse.Hostpanel.", StringComparison.Ordinal)
+            || assembly.StartsWith("Innovayse.Providers.", StringComparison.Ordinal)
+            || assembly == "Innovayse.SDK";
+    }
+
+    /// <summary>A readable name for a type in an offender line.</summary>
+    /// <param name="type">The type.</param>
+    /// <returns>Its namespace-qualified name.</returns>
+    private static string NameOf(Type type) => $"{type.Namespace}.{type.Name}";
+
     /// <summary>Builds the handler of every chain the host discovered and names the ones that fail.</summary>
     /// <param name="host">The host whose chains are built.</param>
     /// <returns>One line per chain that could not be built: its message type and the first line of the reason.</returns>

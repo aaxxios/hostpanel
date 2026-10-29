@@ -113,11 +113,13 @@ public static class MessagingRegistration
     }
 
     /// <summary>
-    /// Names the services Wolverine's generated code takes from the message's container scope instead
-    /// of constructing them, so every other dependency is held to <see cref="ServiceLocationPolicy.NotAllowed"/>.
+    /// The documented exemption list: the service types only the container can build, which Wolverine's
+    /// generated code takes from the message's container scope. Every other registration must be a public
+    /// type with a public constructor whose parameters are public, and the integration tests walk the
+    /// production registrations against this one list.
     /// </summary>
-    /// <param name="opts">The Wolverine options being configured.</param>
-    /// <param name="services">The service collection, read for the typed HTTP clients registered in it.</param>
+    /// <param name="services">The registrations, a live service collection or a snapshot of one, read for the typed HTTP clients registered in it.</param>
+    /// <returns>The exempt service types, without duplicates.</returns>
     /// <remarks>
     /// Each kind below is built by the framework, not by a constructor Wolverine could call:
     /// <list type="bullet">
@@ -143,12 +145,9 @@ public static class MessagingRegistration
     /// </description></item>
     /// </list>
     /// </remarks>
-    private static void UseServiceLocationForContainerBuiltServices(WolverineOptions opts, IServiceCollection services)
+    public static IReadOnlyList<Type> ContainerBuiltServices(IEnumerable<ServiceDescriptor> services)
     {
-        opts.CodeGeneration.AlwaysUseServiceLocationFor<AppDbContext>();
-        opts.CodeGeneration.AlwaysUseServiceLocationFor<IHostpanelDbContext>();
-        opts.CodeGeneration.AlwaysUseServiceLocationFor<UserManager<AppUser>>();
-        opts.CodeGeneration.AlwaysUseServiceLocationFor<IPaymentPluginResolver>();
+        ArgumentNullException.ThrowIfNull(services);
 
         // The assembly AddHttpClient<T> lives in; the factory lambda it registers is compiled into it.
         var httpClientFactoryAssembly = typeof(HttpClientFactoryServiceCollectionExtensions).Assembly;
@@ -158,13 +157,30 @@ public static class MessagingRegistration
             .Where(descriptor => !descriptor.IsKeyedService
                 && descriptor.Lifetime == ServiceLifetime.Transient
                 && descriptor.ImplementationFactory?.Method.Module.Assembly == httpClientFactoryAssembly)
-            .Select(descriptor => descriptor.ServiceType)
-            .Distinct()
-            .ToList();
+            .Select(descriptor => descriptor.ServiceType);
 
-        foreach (var typedClient in typedClients)
+        Type[] containerBuilt =
+        [
+            typeof(AppDbContext),
+            typeof(IHostpanelDbContext),
+            typeof(UserManager<AppUser>),
+            typeof(IPaymentPluginResolver),
+        ];
+
+        return containerBuilt.Concat(typedClients).Distinct().ToList();
+    }
+
+    /// <summary>
+    /// Names the services Wolverine's generated code takes from the message's container scope instead
+    /// of constructing them, so every other dependency is held to <see cref="ServiceLocationPolicy.NotAllowed"/>.
+    /// </summary>
+    /// <param name="opts">The Wolverine options being configured.</param>
+    /// <param name="services">The service collection, read for the typed HTTP clients registered in it.</param>
+    private static void UseServiceLocationForContainerBuiltServices(WolverineOptions opts, IServiceCollection services)
+    {
+        foreach (var serviceType in ContainerBuiltServices(services))
         {
-            opts.CodeGeneration.AlwaysUseServiceLocationFor(typedClient);
+            opts.CodeGeneration.AlwaysUseServiceLocationFor(serviceType);
         }
     }
 }

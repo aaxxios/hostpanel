@@ -15,7 +15,7 @@ namespace Innovayse.Hostpanel.Shared.Authorization;
 /// it first, then writes the product's own <see cref="ErrorResponse"/> body if the default
 /// handling left the response unwritten.
 /// </summary>
-internal sealed class ProblemDetailsAuthorizationMiddlewareResultHandler : IAuthorizationMiddlewareResultHandler
+public sealed class ProblemDetailsAuthorizationMiddlewareResultHandler : IAuthorizationMiddlewareResultHandler
 {
     /// <summary>
     /// The stock handler this class wraps. Stateless and safe to share: it holds no per-request
