@@ -448,6 +448,11 @@ public sealed class PlaceOrderHandler
 
         var (saved, created) = await _clientRecords.AddOrGetAsync(client, ct);
 
+        // The row is reachable only through the Client role. An SSO sign-up holds none, so without
+        // this grant every portal call answered 403 and the portal told the customer who had just
+        // ordered that theirs was not a customer account. The store ignores a role already held.
+        await _roles.AddAsync(subject, Roles.Client, ct);
+
         return created ? saved.Id : null;
     }
 
@@ -473,6 +478,13 @@ public sealed class PlaceOrderHandler
     private static (string? First, string? Last) SplitDisplayName(string? displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return (null, null);
+        }
+
+        // An SSO that knows no name sends the email as the display name; that is not a name, and
+        // stored as one it greeted the customer as "Welcome back, a@b.c a@b.c".
+        if (displayName.Contains('@'))
         {
             return (null, null);
         }
