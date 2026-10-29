@@ -67,6 +67,7 @@ variables:
     - { job: "backend:test:integration:b", optional: true }
     - { job: "backend:test:integration:c", optional: true }
     - { job: "backend:test:integration:d", optional: true }
+    - { job: "backend:test:integration:e", optional: true }
     - { job: "backend:test:migration-addon", optional: true }
     - { job: "client:test", optional: true }
     - { job: "client:e2e", optional: true }
@@ -120,7 +121,7 @@ variables:
     # and a dump beside it. Costs nothing on a passing run.
     #
     # The solution is no longer tested in one `dotnet test`: the Integration suite is split
-    # into four jobs by test namespace (see backend:test:integration:a-d below), because one
+    # into five jobs by test namespace (see backend:test:integration:a-e below), because one
     # host running the whole suite held the EF model plus a Postgres container for every
     # test and exhausted the runner's memory. Each job names its projects in TEST_PROJECTS
     # (folders under tests/) and, optionally, a --filter in TEST_FILTER.
@@ -278,10 +279,13 @@ backend:test:shards:
         - .gitlab-ci.yml
         - .github/workflows/ci.yml
 
-# The Integration suite, in four shards that run ONE AT A TIME. Every top-level folder of the
-# test project belongs to exactly one shard; a new folder must be added to one of them or its
-# tests run nowhere, which backend:test:shards enforces. (Fixtures/ holds fakes only, no tests.)
-# The split is the same as the four shards of .github/workflows/ci.yml.
+# The Integration suite, in five shards that run ONE AT A TIME. Every top-level folder of the
+# test project belongs to exactly one shard, except Billing, which is split by the first letter of
+# the test class name (A to K in b, L to Z in c); a new folder
+# must be added to one of them or its tests run nowhere, and the Billing letters must cover A to Z
+# exactly once, which backend:test:shards enforces. (Fixtures/ holds fakes only, no tests.)
+# The split is the same as the five shards of .github/workflows/ci.yml, where they run in
+# parallel on hosted runners that the whole of Billing in one shard took to their limit.
 #
 # Each test class starts a full API host on a database of its own on one shared Postgres
 # container, and the test project's integration.runsettings (picked up by dotnet test) sets the
@@ -307,21 +311,27 @@ backend:test:integration:a:
   extends: .test-integration
   variables:
     TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
+      FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
 
 backend:test:integration:b:
   extends: .test-integration
   variables:
     TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Time.|FullyQualifiedName~Integration.Tests.Scheduling.
+      FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Scheduling.|FullyQualifiedName~Integration.Tests.Time.|FullyQualifiedName~Integration.Tests.Billing.A|FullyQualifiedName~Integration.Tests.Billing.B|FullyQualifiedName~Integration.Tests.Billing.C|FullyQualifiedName~Integration.Tests.Billing.D|FullyQualifiedName~Integration.Tests.Billing.E|FullyQualifiedName~Integration.Tests.Billing.F|FullyQualifiedName~Integration.Tests.Billing.G|FullyQualifiedName~Integration.Tests.Billing.H|FullyQualifiedName~Integration.Tests.Billing.I|FullyQualifiedName~Integration.Tests.Billing.J|FullyQualifiedName~Integration.Tests.Billing.K
 
 backend:test:integration:c:
   extends: .test-integration
   variables:
     TEST_FILTER: >-
-      FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
+      FullyQualifiedName~Integration.Tests.Billing.L|FullyQualifiedName~Integration.Tests.Billing.M|FullyQualifiedName~Integration.Tests.Billing.N|FullyQualifiedName~Integration.Tests.Billing.O|FullyQualifiedName~Integration.Tests.Billing.P|FullyQualifiedName~Integration.Tests.Billing.Q|FullyQualifiedName~Integration.Tests.Billing.R|FullyQualifiedName~Integration.Tests.Billing.S|FullyQualifiedName~Integration.Tests.Billing.T|FullyQualifiedName~Integration.Tests.Billing.U|FullyQualifiedName~Integration.Tests.Billing.V|FullyQualifiedName~Integration.Tests.Billing.W|FullyQualifiedName~Integration.Tests.Billing.X|FullyQualifiedName~Integration.Tests.Billing.Y|FullyQualifiedName~Integration.Tests.Billing.Z|FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
 
 backend:test:integration:d:
+  extends: .test-integration
+  variables:
+    TEST_FILTER: >-
+      FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Support.
+
+backend:test:integration:e:
   extends: .test-integration
   variables:
     TEST_FILTER: >-
