@@ -70,13 +70,16 @@ jobs:
       - name: Check every test folder is in exactly one shard
         run: sh scripts/check-integration-shards.sh .github/workflows/ci.yml .gitlab-ci.yml
 
-  # The Integration suite starts a full API host for every test class (about 430 of them), each on
+  # The Integration suite starts a full API host for every test class (about 690 of them), each on
   # a database of its own on one shared PostgreSQL container. The test project's
   # integration.runsettings (picked up by dotnet test) bounds its native memory, and the suite is
-  # split for speed by top-level test folder into four shards that run
-  # in parallel, mirroring backend:test:integration:a-d in .gitlab-ci.yml (which runs them one at a time). Every
-  # folder under the test project belongs to exactly one shard; a new folder must be added to
-  # one of them or its tests run nowhere, which integration-shards above enforces. (Fixtures/ holds fakes only, no tests.)
+  # split by top-level test folder into five shards that run in parallel, mirroring
+  # backend:test:integration:a-e in .gitlab-ci.yml (which runs them one at a time). Billing alone
+  # took a hosted runner to its limit, so it is split by the first letter of the test class name
+  # (a filter per letter, Billing.Currencies falls under C):
+  # A to K in shard 2, L to Z in shard 3. Every other folder belongs to exactly one shard; a new
+  # folder must be added to one of them or its tests run nowhere, and the Billing letters must cover
+  # A to Z exactly once, which integration-shards above enforces. (Fixtures/ holds fakes only, no tests.)
   integration:
     name: Backend integration (${{ matrix.shard }})
     runs-on: ubuntu-latest
@@ -85,16 +88,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: 1 of 4
+          - shard: 1 of 5
             filter: >-
-              FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
-          - shard: 2 of 4
+              FullyQualifiedName~Integration.Tests.Adapters.|FullyQualifiedName~Integration.Tests.Admin.|FullyQualifiedName~Integration.Tests.Audit.|FullyQualifiedName~Integration.Tests.Common.|FullyQualifiedName~Integration.Tests.Health.|FullyQualifiedName~Integration.Tests.Identity.|FullyQualifiedName~Integration.Tests.Security.|FullyQualifiedName~Integration.Tests.Shared.
+          - shard: 2 of 5
             filter: >-
-              FullyQualifiedName~Integration.Tests.Billing.|FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Time.|FullyQualifiedName~Integration.Tests.Scheduling.
-          - shard: 3 of 4
+              FullyQualifiedName~Integration.Tests.Auth.|FullyQualifiedName~Integration.Tests.Clients.|FullyQualifiedName~Integration.Tests.Demo.|FullyQualifiedName~Integration.Tests.Scheduling.|FullyQualifiedName~Integration.Tests.Time.|FullyQualifiedName~Integration.Tests.Billing.A|FullyQualifiedName~Integration.Tests.Billing.B|FullyQualifiedName~Integration.Tests.Billing.C|FullyQualifiedName~Integration.Tests.Billing.D|FullyQualifiedName~Integration.Tests.Billing.E|FullyQualifiedName~Integration.Tests.Billing.F|FullyQualifiedName~Integration.Tests.Billing.G|FullyQualifiedName~Integration.Tests.Billing.H|FullyQualifiedName~Integration.Tests.Billing.I|FullyQualifiedName~Integration.Tests.Billing.J|FullyQualifiedName~Integration.Tests.Billing.K
+          - shard: 3 of 5
             filter: >-
-              FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Support.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
-          - shard: 4 of 4
+              FullyQualifiedName~Integration.Tests.Billing.L|FullyQualifiedName~Integration.Tests.Billing.M|FullyQualifiedName~Integration.Tests.Billing.N|FullyQualifiedName~Integration.Tests.Billing.O|FullyQualifiedName~Integration.Tests.Billing.P|FullyQualifiedName~Integration.Tests.Billing.Q|FullyQualifiedName~Integration.Tests.Billing.R|FullyQualifiedName~Integration.Tests.Billing.S|FullyQualifiedName~Integration.Tests.Billing.T|FullyQualifiedName~Integration.Tests.Billing.U|FullyQualifiedName~Integration.Tests.Billing.V|FullyQualifiedName~Integration.Tests.Billing.W|FullyQualifiedName~Integration.Tests.Billing.X|FullyQualifiedName~Integration.Tests.Billing.Y|FullyQualifiedName~Integration.Tests.Billing.Z|FullyQualifiedName~Integration.Tests.Reports.|FullyQualifiedName~Integration.Tests.Slides.|FullyQualifiedName~Integration.Tests.Faqs.|FullyQualifiedName~Integration.Tests.Partners.|FullyQualifiedName~Integration.Tests.Locations.|FullyQualifiedName~Integration.Tests.Projects.|FullyQualifiedName~Integration.Tests.Testimonials.
+          - shard: 4 of 5
+            filter: >-
+              FullyQualifiedName~Integration.Tests.Domains.|FullyQualifiedName~Integration.Tests.Support.
+          - shard: 5 of 5
             filter: >-
               FullyQualifiedName~Integration.Tests.Migration.|FullyQualifiedName~Integration.Tests.Notifications.|FullyQualifiedName~Integration.Tests.Orders.|FullyQualifiedName~Integration.Tests.Persistence.|FullyQualifiedName~Integration.Tests.Products.|FullyQualifiedName~Integration.Tests.Provisioning.|FullyQualifiedName~Integration.Tests.Services.
     defaults:
