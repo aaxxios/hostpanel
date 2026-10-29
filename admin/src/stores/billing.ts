@@ -10,6 +10,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useInvoicesApi } from '@/composables/apis/useInvoicesApi'
 import { runAction } from '@/lib/runAction'
+import type { DownloadedFile } from '@/composables/useApi'
 import type {
   CreateInvoicePayload,
   Invoice,
@@ -289,7 +290,18 @@ export const useBillingStore = defineStore('billing', () => {
    */
   const pdfUrl = (id: number): string => api.pdfUrl(id)
 
-  return {
+    /**
+   * Downloads an invoice's PDF as a file.
+   *
+   * @param id - Invoice id.
+   * @returns The PDF and its name, or null when refused (see `error`).
+   */
+  const downloadPdf = async (id: number): Promise<DownloadedFile | null> => {
+    const result = await run(() => api.pdf(id))
+    return result.ok ? result.value : null
+  }
+
+ return {
     invoices,
     totalCount,
     loading,
@@ -302,6 +314,7 @@ export const useBillingStore = defineStore('billing', () => {
     fetchAll,
     fetchById,
     pdfUrl,
+    downloadPdf,
     fetchClientInvoices,
     createInvoice,
     updateItems,
