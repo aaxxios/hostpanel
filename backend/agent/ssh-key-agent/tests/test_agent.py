@@ -364,6 +364,23 @@ class JailEnrolTests(AgentTestCase):
             self.assertIn("alice:x:", handle.read())
         self.assertTrue(self.call(op="status", account="alice")["shell_enabled"])
 
+    def test_jail_gets_login_comforts_on_every_enrolment(self):
+        # Missing in a bare jailkit tree on srv4: uname (a profile.d script calls it at login)
+        # and /etc/bashrc (where `ll` is defined). Only paths present on the host are copied.
+        extra = os.path.join(self.tmp.name, "bashrc")
+        open(extra, "w").close()
+        missing = os.path.join(self.tmp.name, "absent")
+        self.config["jail_extras"] = [extra, missing]
+        self.assertTrue(self.add(1, KEY_ID_A)["ok"])
+        cp = [c for c in self.calls if c[0] == "/usr/sbin/jk_cp"]
+        self.assertEqual(len(cp), 1)
+        self.assertEqual(cp[0][:4], ["/usr/sbin/jk_cp", "-f", "-j", os.path.join(self.jail_root, "alice")])
+        self.assertEqual(cp[0][4:], [extra])
+        self.calls.clear()
+        self.assertTrue(self.add(2, KEY_ID_B)["ok"])
+        self.assertTrue([c for c in self.calls if c[0] == "/usr/sbin/jk_cp"],
+                        "a jail built before an extra was added gets it on the next key")
+
     def test_enrolment_is_idempotent(self):
         self.assertTrue(self.add(1, KEY_ID_A)["ok"])
         self.calls.clear()

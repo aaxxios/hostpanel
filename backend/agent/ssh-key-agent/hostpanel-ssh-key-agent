@@ -60,7 +60,7 @@ import sys
 import time
 
 CONTRACT_VERSION = 1
-AGENT_VERSION = "1.2.0"
+AGENT_VERSION = "1.2.1"
 CONFIG_PATH = "/etc/hostpanel-ssh-key-agent/agent.conf"
 MAX_REQUEST_BYTES = 16 * 1024
 MAX_AUTHORIZED_KEYS_BYTES = 256 * 1024
@@ -98,6 +98,10 @@ DEFAULTS = {
     "jail_group": "sftp-ssh",
     "jail_sections": "basicshell,editors,extendedshell,netutils,terminfo",
     "jail_shell": "/bin/bash",
+    # Copied into every jail with jk_cp on each enrolment (binaries with their libraries), so a
+    # jail built before an entry was added gets it on the next key. A bare jailkit tree on CWP lacks
+    # uname, which a login profile script calls, and /etc/bashrc, where `ll` is defined.
+    "jail_extras": "/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/etc/bashrc",
     "systemd_unit_dir": "/etc/systemd/system",
 }
 
@@ -150,6 +154,7 @@ def load_config(path=CONFIG_PATH):
         "jail_group": section["jail_group"].strip(),
         "jail_sections": [x.strip() for x in section["jail_sections"].split(",") if x.strip()],
         "jail_shell": section["jail_shell"].strip(),
+        "jail_extras": [x.strip() for x in section["jail_extras"].split(",") if x.strip()],
         "systemd_unit_dir": section["systemd_unit_dir"].strip(),
     }
 
@@ -527,6 +532,9 @@ def enrol_jail(account, config):
     if not os.path.isdir(os.path.join(jail, "etc")):
         _root_dir(jail)
         _jail_run(["/usr/sbin/jk_init", "-f", "-j", jail] + list(config["jail_sections"]))
+    extras = [p for p in config.get("jail_extras", []) if os.path.isabs(p) and os.path.exists(p)]
+    if extras:
+        _jail_run(["/usr/sbin/jk_cp", "-f", "-j", jail] + extras)
     _jail_identity(jail, dict(account, jail_shell=config["jail_shell"]))
 
     where = os.path.join(jail, "home", name)
