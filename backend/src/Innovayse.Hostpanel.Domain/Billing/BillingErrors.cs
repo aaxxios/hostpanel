@@ -52,8 +52,9 @@ public static class BillingErrors
     public const string InvoiceCancelNotAllowed = "INVOICE_CANCEL_NOT_ALLOWED";
 
     /// <summary>
-    /// The invoice must be Paid for this action (400): <see cref="Invoice.MarkUnpaid"/> and
-    /// <see cref="Invoice.Refund"/>.
+    /// The invoice must be Paid for this action (400): <see cref="Invoice.MarkUnpaid"/>; or Paid or
+    /// PartiallyRefunded for a refund: <see cref="Invoice.Refund"/>, <see cref="Invoice.AddRefund"/>
+    /// and <see cref="Invoice.BeginRefund"/>.
     /// </summary>
     public const string InvoiceNotPaid = "INVOICE_NOT_PAID";
 

@@ -26,6 +26,14 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// </summary>
     public static readonly TimeSpan RefundClaimLease = TimeSpan.FromMinutes(15);
 
+    /// <summary>
+    /// The statuses of an invoice that was paid and still holds at least part of that money: Paid,
+    /// and PartiallyRefunded after a refund that did not reach the whole amount. The one list a query
+    /// filters on (<c>PaidStatuses.Contains(i.Status)</c>) and <see cref="IsPaid"/> reads, so a report,
+    /// a renewal sweep and the entity itself never disagree on which invoices count as paid.
+    /// </summary>
+    public static readonly InvoiceStatus[] PaidStatuses = [InvoiceStatus.Paid, InvoiceStatus.PartiallyRefunded];
+
     /// <summary>Gets the FK to the owning client.</summary>
     public int ClientId { get; private set; }
 
@@ -136,7 +144,7 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// may still have taken money the ledger does not hold.
     /// </summary>
     public static Expression<Func<Invoice, bool>> SettledWithUnrecordedSessionFilter =>
-        i => (i.Status == InvoiceStatus.Paid || i.Status == InvoiceStatus.Refunded)
+        i => (PaidStatuses.Contains(i.Status) || i.Status == InvoiceStatus.Refunded)
             && i.GatewayModule != null
             && i.GatewayOrderId != null
             && !i.Transactions.Any(t => t.Type == InvoiceTransactionType.Payment && t.Gateway == i.GatewayModule);
@@ -152,8 +160,14 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <summary>Gets whether the invoice is open for payment: Unpaid or Overdue.</summary>
     public bool IsPayable => Status is InvoiceStatus.Unpaid or InvoiceStatus.Overdue;
 
-    /// <summary>Gets whether the invoice's money question is closed: Paid or Refunded.</summary>
-    public bool IsSettled => Status is InvoiceStatus.Paid or InvoiceStatus.Refunded;
+    /// <summary>
+    /// Gets whether the invoice was paid and still holds at least part of that money: Paid or
+    /// PartiallyRefunded (<see cref="PaidStatuses"/>). Only such an invoice can be refunded.
+    /// </summary>
+    public bool IsPaid => PaidStatuses.Contains(Status);
+
+    /// <summary>Gets whether the invoice's money question is closed: Paid, PartiallyRefunded or Refunded.</summary>
+    public bool IsSettled => IsPaid || Status == InvoiceStatus.Refunded;
 
     /// <summary>
     /// Gets whether <see cref="Cancel"/> is allowed: Draft, Unpaid or Overdue, and no payment
@@ -201,22 +215,24 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <summary>
     /// Gets what is still owed: <see cref="Total"/> (already net of credit) less the recorded
     /// payments, never negative, while the invoice can still take money. A closed invoice (Paid,
-    /// Refunded or Cancelled) owes nothing, whatever its transactions add up to: one closed without a
+    /// PartiallyRefunded, Refunded or Cancelled) owes nothing, whatever its transactions add up to: one closed without a
     /// payment row (credit, imported history) would otherwise show its whole total as owed.
     /// Every path that settles the invoice charges this, not the total, so a payment recorded
     /// earlier is never charged again.
     /// </summary>
     public decimal AmountDue => IsClosed ? 0m : Math.Max(0m, Total - PaymentsRecorded);
 
-    /// <summary>Gets whether the invoice's money question is over and nothing more is owed: Paid, Refunded or Cancelled.</summary>
+    /// <summary>Gets whether the invoice's money question is over and nothing more is owed: Paid, PartiallyRefunded, Refunded or Cancelled.</summary>
     private bool IsClosed => IsSettled || Status == InvoiceStatus.Cancelled;
 
     /// <summary>
     /// Gets what can still be refunded: <see cref="AmountPaid"/> less <see cref="AmountRefunded"/>
-    /// while the invoice is Paid, otherwise zero. Only a Paid invoice is refunded, and an imported
-    /// Refunded invoice has no refund rows, so without the status rule it would offer its whole total again.
+    /// while the invoice <see cref="IsPaid"/> (Paid or PartiallyRefunded), otherwise zero. Only such an
+    /// invoice is refunded, and an imported Refunded invoice has no refund rows, so without the status
+    /// rule it would offer its whole total again. This is the cap every refund is held to: what was
+    /// paid less every earlier refund, so two partial refunds in a row can never return more than was paid.
     /// </summary>
-    public decimal RefundableAmount => Status == InvoiceStatus.Paid ? Math.Max(0m, AmountPaid - AmountRefunded) : 0m;
+    public decimal RefundableAmount => IsPaid ? Math.Max(0m, AmountPaid - AmountRefunded) : 0m;
 
     /// <summary>
     /// Gets the credit the invoice holds beyond what it still needs: the amount <see cref="Total"/>
@@ -259,8 +275,12 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         && now - started < RefundClaimLease
         && !_transactions.Any(t => t.Type == InvoiceTransactionType.Refund && t.Date >= started);
 
-    /// <summary>Gets whether the invoice is Paid and the money covers it.</summary>
-    public bool IsPaidInFull => Status is InvoiceStatus.Paid && AmountPaid >= Total;
+    /// <summary>
+    /// Gets whether the invoice was paid (<see cref="IsPaid"/>) and the money covers it. A partial
+    /// refund since does not undo it: the payment covered the invoice, and a refund of one line (a
+    /// domain the registrar refused) leaves the other lines paid for.
+    /// </summary>
+    public bool IsPaidInFull => IsPaid && AmountPaid >= Total;
 
     /// <summary>EF Core parameterless constructor: do not call directly.</summary>
     private Invoice() { }
@@ -876,8 +896,9 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
 
     /// <summary>
     /// Records a refund against this paid invoice, full or partial, never more than
-    /// <see cref="RefundableAmount"/>. The invoice turns Refunded only once the refunds cover
-    /// everything it took; a partial refund leaves it Paid.
+    /// <see cref="RefundableAmount"/>. The invoice turns Refunded once the refunds cover everything
+    /// it took; a refund that leaves part of the money turns it PartiallyRefunded, and a further
+    /// refund of a PartiallyRefunded invoice is held to what is left.
     /// </summary>
     /// <param name="date">When the refund was made.</param>
     /// <param name="gateway">Name of the payment gateway or method.</param>
@@ -889,19 +910,14 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// <returns>The client ledger row for this refund, to be saved with the invoice.</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="amount"/> is not positive.</exception>
     /// <exception cref="DomainRuleException">
-    /// The invoice is not Paid, the amount is more than can still be refunded, or another refund
-    /// begun at a different moment is still in flight.
+    /// The invoice is not Paid or PartiallyRefunded, the amount is more than can still be refunded,
+    /// or another refund begun at a different moment is still in flight.
     /// </exception>
     public Transaction AddRefund(
         DateTimeOffset date, string gateway, string transactionId, decimal amount, decimal fees, string? notes, bool addedToCredit = false)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
-
-        if (Status != InvoiceStatus.Paid)
-        {
-            throw new DomainRuleException(
-                BillingErrors.InvoiceNotPaid, $"Only Paid invoices can be refunded; current status is {Status}.");
-        }
+        EnsureRefundable();
 
         if (amount > RefundableAmount)
         {
@@ -926,6 +942,10 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
         {
             Refund();
         }
+        else
+        {
+            Status = InvoiceStatus.PartiallyRefunded;
+        }
 
         return Transaction.CreateInvoiceRefund(this, date, gateway, transactionId, amount, addedToCredit);
     }
@@ -938,14 +958,10 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// the claim is given back with <see cref="ReleaseRefundClaim"/> when it returned nothing.
     /// </summary>
     /// <param name="at">When the refund begins (UTC); also the date its parts are recorded under.</param>
-    /// <exception cref="DomainRuleException">The invoice is not Paid, or another refund is still in flight.</exception>
+    /// <exception cref="DomainRuleException">The invoice is not Paid or PartiallyRefunded, or another refund is still in flight.</exception>
     public void BeginRefund(DateTimeOffset at)
     {
-        if (Status != InvoiceStatus.Paid)
-        {
-            throw new DomainRuleException(
-                BillingErrors.InvoiceNotPaid, $"Only Paid invoices can be refunded; current status is {Status}.");
-        }
+        EnsureRefundable();
 
         if (IsRefundInFlight(at))
         {
@@ -1032,16 +1048,24 @@ public sealed class Invoice : BaseEntity, IAggregateRoot
     /// Refunds a paid invoice and marks it as Refunded. <see cref="PaidAt"/> stays: the invoice
     /// was paid at that moment, and Refunded already says the money was given back.
     /// </summary>
+    /// <exception cref="DomainRuleException"><c>INVOICE_NOT_PAID</c> when the invoice is not Paid or PartiallyRefunded.</exception>
     public void Refund()
     {
-        if (Status != InvoiceStatus.Paid)
-        {
-            throw new DomainRuleException(
-                BillingErrors.InvoiceNotPaid, $"Only Paid invoices can be refunded; current status is {Status}.");
-        }
+        EnsureRefundable();
 
         Status = InvoiceStatus.Refunded;
         GatewayTransactionId = null;
+    }
+
+    /// <summary>Refuses a refund of an invoice that holds no paid money: anything but Paid or PartiallyRefunded.</summary>
+    /// <exception cref="DomainRuleException"><c>INVOICE_NOT_PAID</c> when <see cref="IsPaid"/> is false.</exception>
+    private void EnsureRefundable()
+    {
+        if (!IsPaid)
+        {
+            throw new DomainRuleException(
+                BillingErrors.InvoiceNotPaid, $"Only Paid or PartiallyRefunded invoices can be refunded; current status is {Status}.");
+        }
     }
 
     /// <summary>Refuses any payment while the invoice is not open for one.</summary>
