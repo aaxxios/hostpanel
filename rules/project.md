@@ -171,11 +171,26 @@ docker/                              compose set (shared·dev·prod·platform), 
   stages exactly two files — the provider assembly and its `plugin.json`. Never widen that to a
   `**\*.*` glob: the provider's `bin` also holds a build-time copy of `Innovayse.SDK.dll`, and
   `Assembly.LoadFrom` over it would give the process two distinct `IPaymentPlugin` types with the
-  same name, after which every cast in `PaymentPluginResolver` fails. The CWP providers are
+  same name, after which every cast in `PluginActivator` fails. The CWP providers are
   deliberately **not** staged, so they cannot activate at runtime by accident.
-- **`PaymentPluginResolver` takes `IConfiguration` (documented exception to configuration.md rule 6).**
-  The plugin SDK's payment plugin base classes take an `IConfiguration` in their constructor, so the
-  resolver hands each plugin a configuration built from **its own section only**: the host's
+- **Six plugin types, one activator.** The loader registers each plugin under the SDK contract of the
+  type its manifest declares: provisioning, payment, registrar, identity (`IClientResolver`),
+  fulfilment (`IFulfilmentPlugin`) and hosted (`IHostedPlugin`). Every plugin becomes an instance in
+  one place, `Infrastructure/Plugins/PluginActivator`: it checks the loaded type really implements the
+  contract, that `integration:{id}:is_enabled` is `true` and that every required manifest field is
+  stored, then builds the plugin with its own configuration. The resolvers only choose:
+  `PaymentPluginResolver` (`IPaymentPluginResolver`, one plugin by module id),
+  `FulfilmentPluginResolver` (`IFulfilmentPluginResolver`, every enabled fulfilment plugin in id order) and
+  `IdentityPluginResolver` (`IIdentityPluginResolver`, the one enabled identity plugin; two or more
+  enabled throw `IdentityPluginConflictException` rather than picking one). `HostedPluginRunner` starts
+  every enabled hosted plugin (manifest type `Hosted`, or any plugin that also implements
+  `IHostedPlugin`) once the host has started and stops them as it begins to stop; an activation, start or
+  stop that throws is logged with the plugin id and never stops the host or the other plugins. A plugin
+  is enabled from the admin Integrations page, where it is listed (with its type) when its manifest sets
+  `showInIntegrations`.
+- **`PluginActivator` takes `IConfiguration` (documented exception to configuration.md rule 6).**
+  The plugin SDK's base classes take an `IConfiguration` in their constructor, so the
+  activator hands each plugin a configuration built from **its own section only**: the host's
   `integration:{id}` section with the plugin's `integration:{id}:*` settings rows layered over it
   (the rows are filtered by prefix in SQL, never the whole `Settings` table). Connection strings,
   signing keys and other integrations never reach a plugin. The keys keep their full path because
@@ -226,8 +241,8 @@ folder per use case under `Application/<Feature>/{Commands,Queries}/<UseCase>/`.
   constructor whose parameters are public too, and never takes `IServiceProvider`. A vendor type stays `internal` by
   never appearing in an adapter's public signature, not by hiding the adapter. The services only the container
   can build are named once in `MessagingRegistration.ContainerBuiltServices`: the data context and its
-  `IHostpanelDbContext` port, Identity's `UserManager<AppUser>`, `IPaymentPluginResolver` (it activates a
-  plugin type loaded at run time) and every typed HTTP client `AddHttpClient<T>` registers. A test double
+  `IHostpanelDbContext` port, Identity's `UserManager<AppUser>`, `PluginActivator` (it builds a
+  plugin type loaded at run time, for every plugin resolver) and every typed HTTP client `AddHttpClient<T>` registers. A test double
   is registered as an instance (`AddSingleton<IPort>(fake)`) or by type, never through a factory.
   `MessagingRegistrationTests` builds every chain, with and without the demo, both on the test host and on a
   host that keeps the production container (`IntegrationTestFactory.WithProductionAdapters`, no test double), and
