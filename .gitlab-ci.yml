@@ -253,6 +253,11 @@ backend:test:
       Innovayse.CWP.Tests
       Innovayse.Inecobank.Tests
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [backend/**/*]
 
@@ -290,6 +295,11 @@ backend:test:shards:
     SERVICE: backend
     TEST_PROJECTS: Innovayse.Hostpanel.Integration.Tests
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [backend/**/*]
 
@@ -366,6 +376,11 @@ client:test:
   extends: .test-node-yarn
   variables: { SERVICE: client }
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [client/**/*]
 
@@ -388,6 +403,11 @@ client:e2e:
     expire_in: 3 days
     paths: [client/test-results/, client/e2e-results.xml]
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [client/**/*]
 
@@ -426,6 +446,11 @@ admin:test:
     - npm test -- --maxWorkers=2
     - npm run build-only
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [admin/**/*]
 
@@ -441,6 +466,11 @@ admin:e2e:
     - npm ci
     - npm run e2e
   rules:
+    # main is reached only through a GitHub PR whose CI ran these same suites before the
+    # merge; running them again here only delayed the deploy by ~20 minutes. Set
+    # RUN_MAIN_TESTS=true on a pipeline to run them anyway.
+    - if: $CI_COMMIT_BRANCH == "main" && $RUN_MAIN_TESTS != "true"
+      when: never
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST
       changes: [admin/**/*]
 

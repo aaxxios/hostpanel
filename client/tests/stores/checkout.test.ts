@@ -321,6 +321,21 @@ describe('useCheckoutStore.placeOrder', () => {
     expect(withoutInvoice).toEqual({ kind: CheckoutDestinationKind.Route, target: '/en/client/invoices' })
   })
 
+  it('sends a free order straight to the success page, whatever the method, without paying', async () => {
+    billing.createOrder.mockResolvedValue({ ...placed, total: 0 })
+    const store = arrange('inecobank')
+
+    const destination = await store.placeOrder(input())
+
+    expect(billing.startOrderGatewayPayment).not.toHaveBeenCalled()
+    expect(billing.createOrderPaymentIntent).not.toHaveBeenCalled()
+    expect(destination).toEqual({
+      kind: CheckoutDestinationKind.Route,
+      target: '/en/client/order-success?order=A+42&invoice=77'
+    })
+    expect(useCartStore().items).toEqual([])
+  })
+
   it('keeps the API sentence and the field messages when the order is refused, and keeps the cart', async () => {
     billing.createOrder.mockRejectedValue({
       data: { detail: 'Fix the form.', type: 'VALIDATION_ERROR', errors: { email: ['Email is required.'] } }
@@ -410,12 +425,14 @@ describe('useCheckoutStore.placeOrder', () => {
     expect(billing.createOrder).toHaveBeenCalledTimes(2)
   })
 
-  it('skips the payment step for a zero-total order and goes to the success page', async () => {
+  it('skips the card and the total confirmation for an order the backend settled as free', async () => {
     billing.createOrder.mockResolvedValue({ ...placed, total: 0 })
-    const store = arrange('stripe', [{ ...hosting, amount: 0 }])
+    const confirmTotalChange = vi.fn(() => false)
+    const store = arrange('stripe')
 
-    const destination = await store.placeOrder(input())
+    const destination = await store.placeOrder(input(undefined, confirmTotalChange))
 
+    expect(confirmTotalChange).not.toHaveBeenCalled()
     expect(billing.createOrderPaymentIntent).not.toHaveBeenCalled()
     expect(billing.startOrderGatewayPayment).not.toHaveBeenCalled()
     expect(destination).toEqual({

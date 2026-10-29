@@ -3,6 +3,7 @@ using Innovayse.Hostpanel.Domain.Provisioning;
 using Innovayse.Hostpanel.Domain.Provisioning.Enums;
 using Innovayse.Providers.CWP7;
 using Innovayse.Providers.CWP7.Models;
+using Innovayse.SDK.Plugins;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Innovayse.Hostpanel.Integration.Tests.Adapters.Integrations.Cwp7;
@@ -238,5 +239,38 @@ public sealed class Cwp7ApiClientTests : IAsyncLifetime
         var act = () => provider.SuspendAsync(new SuspendAccountOrder(1, "testuser", "overdue"), CancellationToken.None);
 
         (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Message.Should().NotContain("Unauthorized");
+    }
+
+    /// <summary>
+    /// A packages-list refusal ("Error" with a text <c>msj</c>) surfaces the panel's own reason
+    /// instead of a JSON conversion error, so a wrong API key reads as one in the server log.
+    /// </summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Fact]
+    public async Task GetServerInfo_Refusal_ThrowsWithThePanelsReasonAsync()
+    {
+        var client = new Cwp7ApiClient(
+            new HttpClient(new FixedReplyHttpMessageHandler("""{"status":"Error","msj":"key does not exist"}""")),
+            NullLogger<Cwp7ApiClient>.Instance);
+
+        var act = () => client.GetServerInfoAsync(
+            new HostingPanelConnection("panel.example.test", 2304, "wrong-key"), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).WithMessage("*key does not exist*");
+    }
+
+    /// <summary>A packages list answers with its entry count.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Fact]
+    public async Task GetServerInfo_PackageList_ReturnsTheCountAsync()
+    {
+        var client = new Cwp7ApiClient(
+            new HttpClient(new FixedReplyHttpMessageHandler("""{"status":"OK","msj":[{"id":1},{"id":2}]}""")),
+            NullLogger<Cwp7ApiClient>.Instance);
+
+        var info = await client.GetServerInfoAsync(
+            new HostingPanelConnection("panel.example.test", 2304, "key"), CancellationToken.None);
+
+        info.PackagesCount.Should().Be(2);
     }
 }

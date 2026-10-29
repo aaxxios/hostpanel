@@ -343,17 +343,19 @@ export const useCheckoutStore = defineStore('checkout', () => {
     try {
       const result = await ensureOrder(method, input)
 
+      if (result.total === 0) {
+        // Nothing was due: the backend settles the invoice and fulfils a zero-total order while
+        // placing it, so there is nothing to pay and no total to confirm; the payer goes straight
+        // to the confirmation, whatever the method.
+        const destination = successDestination(result, input)
+        cart.clear()
+        return destination
+      }
+
       if (!totalAccepted(result, input)) {
         error.value = translate('checkout.errors.totalNotAccepted')
         submitting.value = false
         return null
-      }
-
-      if (result.total === 0) {
-        // Nothing to charge: the backend settles and fulfils a zero-total order itself.
-        const destination = successDestination(result, input)
-        cart.clear()
-        return destination
       }
 
       if (method === PaymentModule.Stripe) {

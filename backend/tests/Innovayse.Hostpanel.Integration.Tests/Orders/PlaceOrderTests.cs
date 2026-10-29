@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Innovayse.Hostpanel.Application.Auth.Common;
 using Innovayse.Hostpanel.Application.Common.Errors;
+using Innovayse.Hostpanel.Application.Common.Interfaces;
+using Innovayse.Hostpanel.Domain.Auth.Enums;
 using Innovayse.Hostpanel.Domain.Billing;
 using Innovayse.Hostpanel.Domain.Billing.Enums;
 using Innovayse.Hostpanel.Domain.Domains;
@@ -159,6 +162,29 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
     }
 
     /// <summary>
+    /// A priced order is left for the payer to pay: it bills its full total, its invoice stays
+    /// Unpaid and the order stays Pending. Only an order that owes nothing is settled at checkout.
+    /// </summary>
+    [Fact]
+    public async Task PricedOrderIsNotSettledAtCheckout()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/orders", GuestOrder(productId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        body.RootElement.GetProperty("total").GetDecimal().Should().Be(UsdMonthly);
+        var orderId = body.RootElement.GetProperty("orderId").GetInt32();
+        var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.Invoices.AsNoTracking().SingleAsync(i => i.Id == invoiceId)).Status.Should().Be(InvoiceStatus.Unpaid);
+        (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).Status.Should().Be(OrderStatus.Pending);
+    }
+
+    /// <summary>
     /// Orders placed at the same moment each get their own number and none fails. A number taken as
     /// the stored maximum plus one would collide under concurrency, and the unique index would
     /// refuse all but one with a server error.
@@ -284,6 +310,93 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
         // The body rides along as the reason: a bare 500 says nothing about which side failed.
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+
+        // The new client row is only reachable through the Client role: without it every portal
+        // call answers 403 and the portal tells a paying customer they are not one. An SSO
+        // sign-up holds no Client role until this order grants it.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var placed = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var orderId = placed.RootElement.GetProperty("orderId").GetInt32();
+        var clientId = (await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId)).ClientId;
+        var subject = (await db.Clients.AsNoTracking().SingleAsync(c => c.Id == clientId)).UserId;
+        (await db.SubjectRoles.AsNoTracking().AnyAsync(r => r.Subject == subject && r.Role == Role.Client))
+            .Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A signed-in caller whose client row already exists but who holds no Client role (a sign-up
+    /// through the external sign-on, whose row the registration handler wrote first) is granted
+    /// the role by their order. Without it every portal call answered 403 after they had ordered.
+    /// </summary>
+    [Fact]
+    public async Task SignedInCallerWithAClientRowButNoRoleIsGrantedTheClientRoleByTheirOrder()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var subject = await ClientsTestSeeds.CreateUnlinkedSubjectAsync(factory, "orderer-no-role");
+        using (var seed = factory.Services.CreateScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Clients.Add(Domain.Clients.Client.Create(subject.UserId, "Fresh", "Subject", subject.Email, DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync();
+            (await seed.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+                .GetRolesAsync(subject.UserId, CancellationToken.None)).Should().NotContain(Role.Client);
+        }
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await factory.GetClientTokenAsync(subject.Email, TestPassword));
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+            .GetRolesAsync(subject.UserId, CancellationToken.None)).Should().Contain(Role.Client);
+    }
+
+    /// <summary>
+    /// A credential whose display name is only an email address (a sign-on provider that knows no
+    /// name sends the address instead) is not stored as the first and last name. The new client row
+    /// is named after the email's local part, and the caller is granted the Client role.
+    /// </summary>
+    [Fact]
+    public async Task SignedInCallerWhoseDisplayNameIsAnEmailIsNotNamedAfterTheWholeAddress()
+    {
+        await EnableBankTransferAsync();
+        var productId = await SeedProductAsync();
+        var email = $"mail-as-name-{Guid.NewGuid():N}@example.test";
+        string userId;
+        using (var seed = factory.Services.CreateScope())
+        {
+            userId = await seed.ServiceProvider.GetRequiredService<IUserService>().CreateAsync(
+                new CreateUserInput(email, TestPassword, email, null), CancellationToken.None);
+        }
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await factory.GetClientTokenAsync(email, TestPassword));
+
+        var response = await client.PostAsJsonAsync("/api/orders", new
+        {
+            paymentMethod = "bank_transfer",
+            items = new[] { new { productId, billingCycle = nameof(BillingCycle.Monthly) } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        using var scope = factory.Services.CreateScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Clients
+            .AsNoTracking()
+            .SingleAsync(c => c.UserId == userId);
+        stored.FirstName.Should().Be(email.Split('@')[0]);
+        stored.LastName.Should().BeEmpty();
+        (await scope.ServiceProvider.GetRequiredService<ISubjectRoleStore>()
+            .GetRolesAsync(userId, CancellationToken.None)).Should().Contain(Role.Client);
     }
 
     /// <summary>A checkout naming a product id nothing in the catalogue carries is refused.</summary>
@@ -533,6 +646,9 @@ public sealed class PlaceOrderTests(IntegrationTestFactory factory) : IClassFixt
 
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        // A zero total is what tells the checkout there is nothing to pay and no payment step to open.
+        body.RootElement.GetProperty("total").GetDecimal().Should().Be(0m);
         var orderId = body.RootElement.GetProperty("orderId").GetInt32();
         var invoiceId = body.RootElement.GetProperty("invoiceId").GetInt32();
         using var scope = factory.Services.CreateScope();

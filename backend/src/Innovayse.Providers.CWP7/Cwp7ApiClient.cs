@@ -19,6 +19,11 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     /// <summary>The panel's display name in fixed failure phrases and logs.</summary>
     private const string PanelName = "CWP7";
 
+    /// <summary>
+    /// The answer field that holds the payload on success and the panel's sentence on a refusal.
+    /// </summary>
+    private const string MessageField = "msj";
+
     /// <summary>The failure text for a session payload that issued nothing for the asked account.</summary>
     private const string NoSessionMessage = "CWP7 issued no session for the account.";
 
@@ -298,7 +303,10 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The number of packages configured on the server.</returns>
     /// <exception cref="HttpRequestException">Thrown when the API request fails.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the response body cannot be parsed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the panel refuses the call, with the panel's own reason in the message for the
+    /// server log (callers log it and answer with a fixed code), or when the body cannot be parsed.
+    /// </exception>
     public async Task<HostingPanelV7ServerInfo> GetServerInfoAsync(HostingPanelConnection connection, CancellationToken ct)
     {
         using var packagesContent = new FormUrlEncodedContent(
@@ -310,8 +318,21 @@ internal sealed class Cwp7ApiClient : IHostingPanelV7ApiClient
         using var packagesResponse = await _http.PostAsync($"{connection.BaseUrl}/v1/packages", packagesContent, ct);
         packagesResponse.EnsureSuccessStatusCode();
 
-        var packageList = await HostingPanelApiReader.ReadPayloadAsync<Cwp7PackageListResponse>(
+        using var body = await HostingPanelApiReader.ReadPayloadAsync<JsonDocument>(
             packagesResponse, PanelName, _logger, ct);
+
+        // A refusal (wrong key, address not allowed) is HTTP 200 with "Error" and a sentence in
+        // msj, which the list shape cannot hold. It is read first so the log says why the panel
+        // refused instead of reporting a JSON conversion error.
+        if (body.RootElement.ValueKind == JsonValueKind.Object
+            && body.RootElement.TryGetProperty(MessageField, out var refusal)
+            && refusal.ValueKind == JsonValueKind.String)
+        {
+            throw new InvalidOperationException($"{PanelName} API refused the packages list: {refusal.GetString()}");
+        }
+
+        var packageList = body.Deserialize<Cwp7PackageListResponse>()
+            ?? throw new InvalidOperationException($"{PanelName} API returned an empty packages response.");
 
         var packagesCount = packageList.Packages?.Count ?? 0;
 

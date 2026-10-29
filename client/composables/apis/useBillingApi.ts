@@ -99,7 +99,8 @@ export const useBillingApi = () => {
    * Places an order, creating the order and its invoice on the backend.
    *
    * @param order - Cart contents, billing details and chosen payment method.
-   * @returns The new order's id and number, its invoice id and the payment token that authorises paying for it.
+   * @returns The new order's id and number, its invoice id, the payment token that authorises paying for it,
+   * and the billed total; a total of zero means the backend already settled and fulfilled the order.
    * @throws Whatever `apiFetch` throws.
    */
   const createOrder = (order: Record<string, unknown>): Promise<PlaceOrderResult> =>

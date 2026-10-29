@@ -214,6 +214,16 @@ public sealed class PlaceOrderHandler
             clientId = created.Value;
         }
 
+        // A signed-in caller who orders is a customer, whoever created their client row: this
+        // handler, or the registration handler that can win the race to it. A sign-up through the
+        // external sign-on holds no Client role, and without it every portal call answered 403 and
+        // the portal told the customer who had just ordered that theirs was not a customer account.
+        // Granting a role already held is harmless, so a returning client is granted it again.
+        if (_caller.UserId is { } orderer)
+        {
+            await _roles.AddAsync(orderer, Role.Client, ct);
+        }
+
         // Taken from a database sequence, not derived from the stored maximum: reading the maximum
         // and claiming max + 1 are two steps, so two concurrent orders claimed the same number and
         // the second hit the unique index. A sequence also never frees a number for reuse, so a
@@ -683,6 +693,14 @@ public sealed class PlaceOrderHandler
     private static DisplayNameParts SplitDisplayName(string? displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return new DisplayNameParts(null, null);
+        }
+
+        // A sign-on provider that knows no name sends the email as the display name; that is not a
+        // name, and stored as one it greeted the customer as "Welcome back, a@b.c a@b.c". The row
+        // then falls back to the email's local part like any caller whose credential has no name.
+        if (displayName.Contains('@', StringComparison.Ordinal))
         {
             return new DisplayNameParts(null, null);
         }
