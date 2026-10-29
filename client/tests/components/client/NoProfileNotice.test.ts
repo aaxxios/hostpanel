@@ -26,10 +26,10 @@ describe('ClientNoProfileNotice', () => {
     expect(wrapper.text()).toContain('client.noProfile.body')
   })
 
-  it('offers the admin panel and the hosting catalogue as ways out', () => {
+  it('offers the hosting catalogue and never the admin panel', () => {
     const wrapper = mountClient(NoProfileNotice)
 
-    expect(wrapper.find('[data-testid="no-profile-admin"]').attributes('href')).toBe('/admin')
+    expect(wrapper.find('[data-testid="no-profile-admin"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="no-profile-browse"]').attributes('href')).toBe('/hosting')
   })
 

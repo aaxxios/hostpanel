@@ -46,13 +46,20 @@ export const authMiddleware = async (
 
   // A signed-in user on a public page (the sign-in screen, or the page an SSO round trip returns
   // to) goes where they were originally heading, if that target is a safe in-app path.
-  if (to.meta.public && auth.isAuthenticated) {
+  // Only an Admin is sent on: anyone else stays on the sign-in page, which tells them so.
+  if (to.meta.public && auth.isAuthenticated && auth.isAdmin) {
     return safeRedirectTarget(to.query[REDIRECT_QUERY_PARAM]) ?? AppRoute.Dashboard
   }
 
   // Protected route without a valid session → sign in first, remembering the full requested path
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return loginLocationFor(to.fullPath)
+  }
+
+  // Signed in without the Admin role (a customer through the shared sign-on): the API refuses
+  // every admin call anyway, but the panel must not open its screens either.
+  if (to.meta.requiresAuth && !auth.isAdmin) {
+    return AppRoute.Login
   }
 
   return true

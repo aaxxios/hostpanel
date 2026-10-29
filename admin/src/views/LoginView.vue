@@ -221,6 +221,15 @@ onMounted(async () => {
         {{ t('auth.login.noAccountHoldsTheAdmin') }}
       </UiAlert>
 
+      <!-- Signed in, but not as an Admin: say so and offer a way out instead of the panel. -->
+      <UiAlert
+        v-if="authStore.isAuthenticated && !authStore.isAdmin && !authStore.setupRequired"
+        variant="error"
+        data-testid="login-not-admin"
+      >
+        {{ t('auth.login.notAnAdmin') }}
+      </UiAlert>
+
       <!-- Whatever went wrong, in the API's own words. -->
       <UiAlert v-if="authStore.error" data-testid="login-error" variant="error">
         {{ authStore.error }}
