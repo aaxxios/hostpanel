@@ -82,8 +82,12 @@ public sealed class SetupServiceHandler
             module = MapProductTypeToModule(product.Type);
         }
 
-        // Select the best available server using proportional fill
-        var server = await _serverSelector.SelectAsync(module, ct);
+        // The product's server group decides where it lives, as in ProvisionServiceHandler; only a
+        // product with no group falls back to every server of its module. Ignoring the group put a
+        // product tied to one server (the only one with SSH key management) on the default one.
+        var server = product?.ServerGroupId is { } groupId
+            ? await _serverSelector.SelectFromGroupAsync(groupId, ct)
+            : await _serverSelector.SelectAsync(module, ct);
         if (server is null)
         {
             return Result.FailureCode(HostpanelErrorCodes.NO_ELIGIBLE_SERVER);
