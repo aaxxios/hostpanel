@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- SSH key agent 1.2.1: jails get `uname`, `id`, `hostname` and `/etc/bashrc` (`jail_extras`), so customer logins no longer print `/usr/bin/uname: No such file or directory` and `ll` works; existing jails get them on the next key.
+- SSH key agent 1.2.1: jails get `uname`, `id`, `hostname`, `dircolors`, `/etc/bashrc` and `/etc/profile.d/colorls.sh` (`jail_extras`), so customer logins no longer print `/usr/bin/uname: No such file or directory` and `ll` works; existing jails get them on the next key.
 - The client setup wizard now provisions on a server from the product's server group; it picked from every server of the module, so a product tied to one server was set up on the default one.
 - A signed-in customer's first order now grants them the Client role. An SSO sign-up held none, so after ordering every portal page answered 403 and the portal called them "not a customer account"; an email sent as the display name is no longer stored as their first and last name.
 - Free orders ($0 total) are settled at checkout and fulfilled at once; they used to wait on a payment that never came, so their services were never created and checkout still asked for a payment method's payment step.

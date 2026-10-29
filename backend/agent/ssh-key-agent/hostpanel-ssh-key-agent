@@ -100,8 +100,8 @@ DEFAULTS = {
     "jail_shell": "/bin/bash",
     # Copied into every jail with jk_cp on each enrolment (binaries with their libraries), so a
     # jail built before an entry was added gets it on the next key. A bare jailkit tree on CWP lacks
-    # uname, which a login profile script calls, and /etc/bashrc, where `ll` is defined.
-    "jail_extras": "/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/etc/bashrc",
+    # uname, which a login profile script calls, and /etc/profile.d/colorls.sh, where `ll` is defined.
+    "jail_extras": "/usr/bin/uname,/usr/bin/id,/usr/bin/hostname,/usr/bin/dircolors,/etc/bashrc,/etc/profile.d/colorls.sh,/etc/DIR_COLORS",
     "systemd_unit_dir": "/etc/systemd/system",
 }
 
