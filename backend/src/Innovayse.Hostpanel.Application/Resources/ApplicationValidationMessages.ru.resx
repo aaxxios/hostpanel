@@ -1328,4 +1328,13 @@
   <data name="ContactNotificationTopicInvalid" xml:space="preserve">
     <value>Недопустимый вид уведомления.</value>
   </data>
+  <data name="ClientExternalAccountPairRequired" xml:space="preserve">
+    <value>Укажите и внешнюю систему, и идентификатор аккаунта, либо ни одного, чтобы убрать связь.</value>
+  </data>
+  <data name="ClientExternalAccountProviderInvalid" xml:space="preserve">
+    <value>Название внешней системы обязательно и не длиннее 64 символов.</value>
+  </data>
+  <data name="ClientExternalAccountIdInvalid" xml:space="preserve">
+    <value>Идентификатор внешнего аккаунта обязателен и не длиннее 256 символов.</value>
+  </data>
 </root>
