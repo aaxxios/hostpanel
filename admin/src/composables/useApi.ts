@@ -20,6 +20,7 @@ import { i18n } from '@/i18n'
 import { API_BASE } from '@/lib/apiPaths'
 import { HttpMethod } from '@/types/http'
 import { MimeType } from '@/types/http'
+import type { DownloadedFile } from '@/types/download'
 
 /**
  * Builds the `X-Language` header from the active i18n locale, the only header the API reads
@@ -107,14 +108,6 @@ const failureOf = async (response: Response): Promise<ApiError> => {
   return new ApiError(response.status, failureBody)
 }
 
-/** A file the API answered with, and the name it gave it. */
-export interface DownloadedFile {
-  /** The file's contents. */
-  blob: Blob
-  /** The name from the `Content-Disposition` header, null when the response gave none. */
-  fileName: string | null
-}
-
 /**
  * Reads the file name a response offers in its `Content-Disposition` header.
  *
@@ -142,8 +135,8 @@ const fileNameOf = (response: Response): string | null => {
 /**
  * Composable for making authenticated API calls via the same-origin proxy.
  *
- * @returns `request` for JSON calls, `upload` for one multipart file, `probe` for 401-tolerant reads,
- * `download` for a file read as a blob, and `href` for an address the browser opens itself.
+ * @returns `request` for JSON calls, `upload` for one multipart file, `probe` for 401-tolerant reads
+ * and `download` for a file read as a blob.
  */
 export const useApi = () => {
   /**
@@ -260,14 +253,5 @@ export const useApi = () => {
     return { blob: await response.blob(), fileName: fileNameOf(response) }
   }
 
-  /**
-   * The address of an endpoint the browser opens itself (a file download in a new tab) instead of
-   * a request made here. The session cookie goes with it like with any same-origin request.
-   *
-   * @param endpoint - API path (e.g. '/billing/5/pdf').
-   * @returns The full address to open.
-   */
-  const href = (endpoint: string): string => `${API_BASE}${endpoint}`
-
-  return { request, upload, probe, href, download }
+  return { request, upload, probe, download }
 }
