@@ -557,6 +557,9 @@ public static class HostpanelErrorCodes
     /// </summary>
     public const string SERVICE_NOT_FOUND = "SERVICE_NOT_FOUND";
 
+    /// <summary>A service that is not terminated already holds that username on that server (409): <see cref="Services.Commands.AddExistingService.AddExistingServiceHandler"/>.</summary>
+    public const string SERVICE_HOSTING_ACCOUNT_EXISTS = "SERVICE_HOSTING_ACCOUNT_EXISTS";
+
     // Services: SSH key management
 
     /// <summary>The pasted text is not a single, valid ED25519 public key (400).</summary>
