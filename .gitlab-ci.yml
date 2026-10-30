@@ -57,8 +57,9 @@ variables:
   variables:
     PRIVATE_FEED_CREDENTIALS: "Username=gitlab-ci-token;Password=${CI_JOB_TOKEN}"
 
-# Every test job a deploy waits for. A job's rules may leave a test out of a pipeline (the `changes:`
-# filters), so each is optional: a test that did not run does not block, a test that failed does.
+# Every test job a deploy (and backend:publish:sdk) waits for. A job's rules may leave a test out of a
+# pipeline (the `changes:` filters), so each is optional: a test that did not run does not block, a test
+# that failed does.
 .deploy-needs-tests:
   needs:
     - { job: "backend:test", optional: true }
@@ -125,8 +126,16 @@ variables:
     # host running the whole suite held the EF model plus a Postgres container for every
     # test and exhausted the runner's memory. Each job names its projects in TEST_PROJECTS
     # (folders under tests/) and, optionally, a --filter in TEST_FILTER.
+    #
+    # Each project is built first and scripts/check-empty-plugins.sh then proves its output holds no
+    # plugin (plugins/ and plugins-installed/ beside the test binaries are what the host scans), so
+    # every backend suite is shown green with an empty plugins directory in the same jobs rather than in
+    # a duplicate set of them. The `dotnet test` after it finds the build up to date; do not turn that
+    # into --no-build, which on the integration suite exits 0 with no output (see rules/project.md).
     - |
       for project in $TEST_PROJECTS; do
+        dotnet build "tests/$project" --nologo -m:1 || exit 1
+        sh ../scripts/check-empty-plugins.sh "tests/$project" || exit 1
         if [ -n "$TEST_FILTER" ]; then
           dotnet test "tests/$project" --nologo -m:1 --blame-crash --filter "$TEST_FILTER" || exit 1
         else
@@ -379,6 +388,48 @@ backend:build:api:dev:
       changes: [backend/Dockerfile]
     - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "ci-test"
       changes: [backend/Dockerfile]
+
+# Packs the plugin SDK (backend/src/Innovayse.SDK, MIT) and pushes it to a NuGet feed, so plugin
+# authors pin a package version instead of referencing this repository. Main only.
+#
+# Idempotent per version: --skip-duplicate turns a version the feed already has into a no-op, so a
+# merge that does not raise <Version> in Innovayse.SDK.csproj publishes nothing and fails nothing.
+# The GitHub workflow .github/workflows/publish-sdk.yml does the same after CI is green on main;
+# with both configured the second push of a version is skipped, so either or both may be set up.
+#
+# The feed is two CI/CD variables: SDK_NUGET_SOURCE (the feed's push URL, e.g.
+# https://api.nuget.org/v3/index.json) and SDK_NUGET_API_KEY (masked, protected). Without them the
+# job says so and ends green: an unconfigured feed is not a broken pipeline. The SDK restores
+# nothing from the private feed, so this job does not extend .nuget-credentials and never sees the
+# job-token credential.
+backend:publish:sdk:
+  extends: .deploy-needs-tests
+  stage: build
+  tags: [builder]
+  image: $DOTNET_SDK_IMAGE
+  variables:
+    DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    DOTNET_NOLOGO: "1"
+  script:
+    - |
+      if [ -z "$SDK_NUGET_SOURCE" ] || [ -z "$SDK_NUGET_API_KEY" ]; then
+        echo "SDK package not published: set the CI/CD variables SDK_NUGET_SOURCE and SDK_NUGET_API_KEY to publish it."
+        exit 0
+      fi
+    - cd backend
+    - dotnet pack src/Innovayse.SDK/Innovayse.SDK.csproj -c Release -o "$CI_PROJECT_DIR/sdk-package" -p:ContinuousIntegrationBuild=true
+    - dotnet nuget push "$CI_PROJECT_DIR/sdk-package/*.nupkg" --source "$SDK_NUGET_SOURCE" --api-key "$SDK_NUGET_API_KEY" --skip-duplicate
+  artifacts:
+    expire_in: 1 week
+    paths: [sdk-package/]
+  rules:
+    - if: $CI_SERVER_HOST == $PIPELINE_SERVER_HOST && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - backend/src/Innovayse.SDK/**/*
+        - backend/Directory.Packages.props
+        - backend/Directory.Build.props
+        - backend/src/Directory.Build.props
+        - .gitlab-ci.yml
 
 # ── client (Nuxt frontend, yarn) ────────────────────────────────────────────────
 

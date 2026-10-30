@@ -17,7 +17,7 @@ products, billing, provisioning and integrations. A public demo
 is the same build with `Demo__Enabled=true` (`deploy:demo`); its sign-in page shows the demo accounts,
 served by `GET /api/public/demo` — they are not written in `README.md`.
 
-**This is a public, separately licensed repository.** AGPL-3.0-or-later. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
+**This is a public, separately licensed repository.** AGPL-3.0-or-later, except the plugin SDK (`backend/src/Innovayse.SDK`), which is MIT (its own `LICENSE`, packed into the package) so a plugin may be free or paid, open or closed; `SdkPackageTests` pins the package metadata. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
 is read by people who have never seen the rest of the workspace, and the repo must build from
 a clone of itself alone — that is why `Innovayse.Auth` is consumed as an optional package (only in an
 `InnovayseSso=true` build, see `backend/Directory.Build.props`) rather than a project reference, and why `backend/nuget.config` restricts `auditSources` to nuget.org.
@@ -559,8 +559,12 @@ backend on the shared network, and Docker's DNS round-robins between the two.
   `ssh <host> 'sh -s' < scripts/check-client-owner-ids.sh`.
 - `scripts/pack-cwp-plugin.sh` — publishes `Innovayse.Providers.CWP` (Release, net8.0) on the host, strips
   PDB/XML and framework DLLs, adds `plugin.json` and writes `dist/innovayse-cwp.zip`.
+- `scripts/check-empty-plugins.sh <test project> ...` — fails when `plugins/` or `plugins-installed/` in a
+  built test project's output holds anything. Every backend test job of both pipelines runs it between the
+  build and the tests, so the whole suite is proven green with no plugin loaded in the jobs that already
+  run it, not in a duplicate set. A test that needs a plugin stages it itself and removes it.
 
-Both are `*.sh`, which `.gitattributes` (`*.sh text eol=lf`) pins to LF: the ssh pipe above fails with
+All are `*.sh`, which `.gitattributes` (`*.sh text eol=lf`) pins to LF: the ssh pipe above fails with
 "Illegal option" on a CRLF copy.
 
 ## CI is on GitLab. Pull requests are on GitHub. Both halves are load-bearing.
@@ -578,6 +582,11 @@ starts the pipeline. The consequences are not obvious and cost time every few mo
   setting for.
 - Tests, image builds and both deploys live in `.gitlab-ci.yml`. `deploy:staging` runs on
   `develop` against the staging host; `deploy:prod` is **manual** on `main` against the production host.
+- **The plugin SDK package is published from `main` only**: `backend:publish:sdk` in `.gitlab-ci.yml` and
+  `.github/workflows/publish-sdk.yml` (after CI is green on a push to `main`) pack `Innovayse.SDK` and push it
+  with `--skip-duplicate`, so only a raised `<Version>` publishes. The feed is `SDK_NUGET_SOURCE` (GitLab CI/CD
+  variable, GitHub repository variable) and `SDK_NUGET_API_KEY` (masked and protected, GitHub secret); without
+  them each job says so and ends green.
 - `.gitlab-ci.yml` inlines its templates. This repo cannot see the workspace's shared
   `ci/templates.yml`, so the hidden jobs are copied in. Change one here and the workspace
   copy does not move with it.

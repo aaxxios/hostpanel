@@ -52,6 +52,12 @@ jobs:
         run: dotnet restore Innovayse.Hostpanel.sln -p:InnovayseSso=false
       - name: Build
         run: dotnet build Innovayse.Hostpanel.sln -c Release --no-restore -p:InnovayseSso=false
+      # The suites must be green with no plugin loaded: prove their outputs hold none before they run.
+      - name: No plugin in the test outputs
+        run: >-
+          sh ../scripts/check-empty-plugins.sh
+          tests/Innovayse.Hostpanel.Domain.Tests tests/Innovayse.Hostpanel.Architecture.Tests
+          tests/Innovayse.CWP.Tests tests/Innovayse.Inecobank.Tests
       - name: Unit tests
         run: |
           for suite in Hostpanel.Domain Hostpanel.Architecture CWP Inecobank; do
@@ -120,6 +126,9 @@ jobs:
         run: dotnet restore tests/Innovayse.Hostpanel.Integration.Tests -p:InnovayseSso=false
       - name: Build
         run: dotnet build tests/Innovayse.Hostpanel.Integration.Tests -c Release --no-restore -p:InnovayseSso=false
+      # Every shard starts its hosts with no plugin present (see scripts/check-empty-plugins.sh).
+      - name: No plugin in the test output
+        run: sh ../scripts/check-empty-plugins.sh tests/Innovayse.Hostpanel.Integration.Tests
       - name: Integration tests (Testcontainers, shard ${{ matrix.shard }})
         run: dotnet test tests/Innovayse.Hostpanel.Integration.Tests -c Release --no-build --blame-crash --filter "${{ matrix.filter }}"
 
