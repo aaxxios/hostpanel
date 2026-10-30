@@ -50,7 +50,7 @@ your own machine and extend.
 | Admin panel | Clients, orders, products, gateways, integrations, e-mail templates, plugins, reports, audit log |
 | Demo mode | Fake payments, registrar and provisioning, caught mail, fixed sample data reset on a schedule, on a network isolated from production |
 | Languages | English, Russian and Armenian in both the portal and the admin panel |
-| Plugin SDK | `Innovayse.SDK` for your own payment, registrar and provisioning providers |
+| Plugin SDK | `Innovayse.SDK` (MIT, a NuGet package) for your own payment, registrar, provisioning, identity, fulfilment and hosted plugins |
 | Data import | Importers for moving clients and data from another billing system |
 
 See the [open feature requests](https://github.com/innovayse/hostpanel/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
@@ -241,3 +241,6 @@ or control-panel integration is one of the most useful contributions: open an is
 - **License:** Copyright (c) 2024-2026 Innovayse LLC. Free software under the
   [GNU Affero General Public License v3.0 or later](LICENSE): use, modify and self-host it, including commercially. If you
   run a modified version as a network service, offer your users its source.
+- **Plugin SDK license:** the plugin SDK in [`backend/src/Innovayse.SDK`](backend/src/Innovayse.SDK) is under the
+  [MIT License](backend/src/Innovayse.SDK/LICENSE) and ships as the `Innovayse.SDK` NuGet package, so a plugin may
+  be free or paid, open or closed source, as its author decides. Everything else in this repository stays AGPL-3.0-or-later.
