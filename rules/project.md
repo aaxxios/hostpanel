@@ -17,9 +17,9 @@ products, billing, provisioning and integrations. A public demo
 is the same build with `Demo__Enabled=true` (`deploy:demo`); its sign-in page shows the demo accounts,
 served by `GET /api/public/demo` — they are not written in `README.md`.
 
-**This is a public, separately licensed repository.** AGPL-3.0-or-later, except the plugin SDK (`backend/src/Innovayse.SDK`), which is MIT (its own `LICENSE`, packed into the package) so a plugin may be free or paid, open or closed; `SdkPackageTests` pins the package metadata. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
+**This is a public, separately licensed repository.** AGPL-3.0-or-later, except the plugin SDK (`backend/src/Innovayse.SDK`), which is MIT (its own `LICENSE`, packed into the package) so a plugin may be free or paid, open or closed; `SdkPackageTests` pins the package metadata. The SDK lives in its own public repository, **github.com/innovayse/hostpanel-sdk**, and is a git submodule at that same path (`.gitmodules`): clone with `--recurse-submodules` (or run `git submodule update --init` after a plain clone), and an SDK change lands as a pull request there first, then as a submodule bump here. `origin` is **github.com/innovayse/hostpanel**, not GitLab. Anything written here
 is read by people who have never seen the rest of the workspace, and the repo must build from
-a clone of itself alone — that is why `Innovayse.Auth` is consumed as an optional package (only in an
+a clone of itself alone (with its submodule) — that is why `Innovayse.Auth` is consumed as an optional package (only in an
 `InnovayseSso=true` build, see `backend/Directory.Build.props`) rather than a project reference, and why `backend/nuget.config` restricts `auditSources` to nuget.org.
 
 **Read first:** the six rules files beside this one — [clean-architecture.md](clean-architecture.md),
@@ -127,7 +127,7 @@ backend/src/
                                      Common/Interfaces/ (every port), Common/Errors/, Resources/
   Innovayse.Hostpanel.Infrastructure/ AppDbContext, migrations, <Capability>/ adapters, Integrations/
   Innovayse.Hostpanel.API/           controllers, Program.cs, composition root
-  Innovayse.SDK/                     the plugin contract third parties compile against
+  Innovayse.SDK/                     the plugin contract third parties compile against (git submodule, own repository)
   Innovayse.Providers.CWP/ CWP7/ Inecobank/   provisioning and payment providers (Inecobank is net8.0)
 backend/tests/                       Domain, Integration, Architecture, CWP, Inecobank
 client/  admin/                    Nuxt 4 portal, Vite admin SPA — each owns its Dockerfile (backend/Dockerfile too)
@@ -582,11 +582,14 @@ starts the pipeline. The consequences are not obvious and cost time every few mo
   setting for.
 - Tests, image builds and both deploys live in `.gitlab-ci.yml`. `deploy:staging` runs on
   `develop` against the staging host; `deploy:prod` is **manual** on `main` against the production host.
-- **The plugin SDK package is published from `main` only**: `backend:publish:sdk` in `.gitlab-ci.yml` and
-  `.github/workflows/publish-sdk.yml` (after CI is green on a push to `main`) pack `Innovayse.SDK` and push it
-  with `--skip-duplicate`, so only a raised `<Version>` publishes. The feed is `SDK_NUGET_SOURCE` (GitLab CI/CD
-  variable, GitHub repository variable) and `SDK_NUGET_API_KEY` (masked and protected, GitHub secret); without
-  them each job says so and ends green.
+- **The plugin SDK package is not published from here.** `backend/src/Innovayse.SDK` is a submodule of
+  github.com/innovayse/hostpanel-sdk, whose own workflows build, pack and publish it (a raised `<Version>` on its
+  `main`, or a version tag). This repository only builds against the commit the submodule pins. Every checkout
+  fetches it: `submodules: true` on each `actions/checkout`, `GIT_SUBMODULE_STRATEGY: recursive` in
+  `.gitlab-ci.yml`, and the deploy jobs (`GIT_STRATEGY: none`) run `git submodule sync --recursive` and
+  `git submodule update --init --recursive` after every checkout of their deploy directory, the rollback included.
+  The SDK project opts out of central package management and pins its two package versions itself, so it
+  builds alone; keep those versions equal to the ones in `backend/Directory.Packages.props`.
 - `.gitlab-ci.yml` inlines its templates. This repo cannot see the workspace's shared
   `ci/templates.yml`, so the hidden jobs are copied in. Change one here and the workspace
   copy does not move with it.

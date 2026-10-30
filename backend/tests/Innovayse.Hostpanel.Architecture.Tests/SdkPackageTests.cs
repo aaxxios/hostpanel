@@ -10,7 +10,7 @@ namespace Innovayse.Hostpanel.Architecture.Tests;
 /// </summary>
 public sealed class SdkPackageTests
 {
-    /// <summary>The SDK project's folder, found from the solution root.</summary>
+    /// <summary>The SDK project's folder, found from the solution root (a git submodule of its own repository).</summary>
     private static readonly string SdkRoot = Path.Combine(
         UseCaseShapeTests.FindBackendRoot(AppContext.BaseDirectory), "src", "Innovayse.SDK");
 
@@ -46,7 +46,7 @@ public sealed class SdkPackageTests
         File.ReadAllText(Path.Combine(SdkRoot, "README.md")).Should().Contain("dotnet add package Innovayse.SDK --version");
     }
 
-    /// <summary>The metadata a feed shows is filled in and points at the public repository.</summary>
+    /// <summary>The metadata a feed shows is filled in and points at the SDK's own public repository.</summary>
     [Fact]
     public void Package_MetadataIsComplete()
     {
@@ -56,7 +56,8 @@ public sealed class SdkPackageTests
         Property(project, "Version").Should().MatchRegex(@"^\d+\.\d+\.\d+$");
         Property(project, "Description").Should().NotBeNullOrWhiteSpace();
         Property(project, "PackageTags").Should().NotBeNullOrWhiteSpace();
-        Property(project, "RepositoryUrl").Should().StartWith("https://github.com/innovayse/hostpanel");
+        Property(project, "RepositoryUrl").Should().Be("https://github.com/innovayse/hostpanel-sdk.git");
+        Property(project, "PackageProjectUrl").Should().Be("https://github.com/innovayse/hostpanel-sdk");
         Property(project, "IsPackable").Should().Be("true");
     }
 
